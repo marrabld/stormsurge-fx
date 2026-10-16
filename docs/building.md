@@ -134,6 +134,16 @@ to capture only that editor using DGL's picture export. This environment variabl
 is supported only by the GUI test target, not by the plugin/standalone binaries.
 The PPM can be converted to PNG with an image editor for documentation.
 
+To leave the mockup open for inspection without connecting any audio device:
+
+```sh
+build/linux-debug/foundation_gui --view
+```
+
+Close the window to exit. On Windows, the debug GUI helper is
+`build/windows-debug/Debug/foundation_gui.exe`. This preview does not process or
+monitor audio; it displays the same editor used by the plugin.
+
 Optional independent VST3 validation uses the separately downloaded pluginval tool:
 
 ```sh

@@ -29,6 +29,11 @@ optional browser generator-expression flags as true. Our CMake removes those
 unused definitions consistently from DGL and its interface; upstream source is
 not modified. This workaround must be reviewed on dependency updates.
 
+Windows configuration also fetches hash/commit-pinned MIT-licensed Khronos
+extension headers for NanoVG. DPF's optional POSIX-threaded bundled self-test is
+disabled for MSVC; our processor harness tests still run on Windows. Both measures
+are documented in the build guide and notices, rather than hidden in CI scripts.
+
 ## Tradeoffs
 
 - Standalone begins as JACK-only to avoid implicit native-device fallback.

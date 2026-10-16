@@ -72,6 +72,9 @@ int main(int argc, char **argv)
         d_nextSampleRate = 48000;
         PluginExporter processor(nullptr, nullptr, nullptr, nullptr);
         require(processor.getParameterCount() == (standalone ? 2u : 0u), "Unexpected parameters");
+        require(processor.getStateCount() == 1 && processor.getStateKey(0) == "foundation_schema" &&
+                    processor.getStateDefaultValue(0) == "1",
+                "Missing fixed foundation state marker");
         processor.activate();
 
         for (const double rate : {8000.0, 44100.0, 48000.0, 96000.0, 192000.0}) {
@@ -120,6 +123,7 @@ int main(int argc, char **argv)
                     processor.deactivate();
                     processor.activate();
                     require(processor.getParameterValue(0) == 0, "Restart restored monitoring");
+                    require(processor.getParameterValue(1) == 0, "Monitor status did not reset");
                     processor.run(inputs, inPlace, frames);
                     require(std::all_of(left.begin(), left.begin() + frames,
                                         [](float value) { return value == 0; }),
@@ -128,6 +132,15 @@ int main(int argc, char **argv)
             }
         }
         require(callbackAllocations == 0, "Processor allocated in audio callback");
+        if (standalone) {
+            PluginExporter second(nullptr, nullptr, nullptr, nullptr);
+            second.activate();
+            processor.setParameterValue(0, 1);
+            require(second.getParameterValue(0) == 0, "New instance inherited monitor consent");
+            processor.setState("foundation_schema", "1");
+            require(second.getParameterValue(1) == 0, "State restore unmuted another instance");
+            second.deactivate();
+        }
         processor.deactivate();
         std::printf("PASS: %s, five rates, eight block sizes, separate/in-place buffers, unchanged "
                     "over-range audio, allocation check\n",
