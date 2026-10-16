@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     editor.setWindowVisible(true);
     editor.focus();
 #ifdef STORMSURGE_PREVIEW
-    if (!view && (!previewExerciseControls() || edits != 17 || gesturesStarted != gesturesEnded ||
+    if (!view && (!previewExerciseControls() || edits != 23 || gesturesStarted != gesturesEnded ||
                   monitorRequests != (standalonePreview ? 1u : 0u))) {
         std::fprintf(stderr, "FAIL: preview control events or host edit gestures\n");
         return 1;
@@ -95,7 +95,12 @@ int main(int argc, char **argv)
     uint width = 0, height = 0;
     bool aspect = false;
     editor.getGeometryConstraints(width, height, aspect);
-    if (width != 390 || height != 510 || !aspect) {
+#ifdef STORMSURGE_PREVIEW
+    const uint expectedHeight = 630;
+#else
+    const uint expectedHeight = 510;
+#endif
+    if (width != 390 || height != expectedHeight || !aspect) {
         std::fprintf(stderr, "Unexpected GUI geometry constraints\n");
         return 1;
     }

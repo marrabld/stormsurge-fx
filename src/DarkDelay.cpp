@@ -129,8 +129,8 @@ double DarkDelay::read(std::size_t channel, double delay) const noexcept
     return buffers[channel][first] * (1.0 - fraction) + buffers[channel][second] * fraction;
 }
 
-void DarkDelay::process(const float *const *inputs, float *const *outputs,
-                        std::uint32_t frames) noexcept
+void DarkDelay::process(const float *const *inputs, float *const *outputs, std::uint32_t frames,
+                        WetInsert insert, void *context) noexcept
 {
     for (std::uint32_t frame = 0; frame < frames; ++frame) {
         const double f = feedback.tick();
@@ -157,6 +157,7 @@ void DarkDelay::process(const float *const *inputs, float *const *outputs,
         const double mono = (dry[0] + dry[1]) * 0.5;
         const std::array<double, 2> incoming{dry[0] * (1.0 - mode) + mono * mode,
                                              dry[1] * (1.0 - mode)};
+        const auto wet = insert != nullptr ? insert(context, filtered) : filtered;
         for (std::size_t channel = 0; channel < 2; ++channel) {
             // A convex self/cross-feedback matrix stays non-boosting during switches.
             // Ping-pong injects only left; writing identical inputs to both lines
@@ -164,8 +165,8 @@ void DarkDelay::process(const float *const *inputs, float *const *outputs,
             const double returned = filtered[channel] * (1.0 - mode) + filtered[1 - channel] * mode;
             buffers[channel][write] = flushTiny(incoming[channel] * inputGain + f * returned);
             // Bypass restores unity dry while preserving the existing wet tail.
-            outputs[channel][frame] = static_cast<float>(
-                (dry[channel] * (1.0 - m * inputGain) + filtered[channel] * m) * g);
+            outputs[channel][frame] =
+                static_cast<float>((dry[channel] * (1.0 - m * inputGain) + wet[channel] * m) * g);
         }
         write = (write + 1) % buffers[0].size();
         if (fadeRemaining != 0 && --fadeRemaining == 0) {

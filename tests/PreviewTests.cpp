@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "DarkDelay.hpp"
+#include "DarkReverb.hpp"
 #include "PreviewParameters.hpp"
 #include "PreviewTempoBridge.hpp"
 #include "TempoSync.hpp"
@@ -56,6 +57,9 @@ END_NAMESPACE_DISTRHO
 
 using namespace DISTRHO;
 using namespace stormsurge;
+static constexpr std::array<std::uint32_t, 13> inputIds{
+    Time, Feedback, Mix,           Tone,        Level,          Bypass,      PingPong,
+    Sync, Division, InternalTempo, ReverbSpace, ReverbDarkness, ReverbAmount};
 
 static void require(bool condition, const char *message)
 {
@@ -100,7 +104,10 @@ static void prepare(PluginExporter &plugin)
 
 static void mappings()
 {
-    for (std::uint32_t i = 0; i < EffectParameterCount; ++i) {
+    require(std::count_if(previewSpecs.begin(), previewSpecs.end(),
+                          [](const auto &p) { return !p.readOnly; }) == inputIds.size(),
+            "Input coverage list is incomplete");
+    for (auto i : inputIds) {
         const auto &spec = previewSpecs[i];
         require(denormalizedPreview(i, 0) == spec.minimum, "Knob minimum wrong");
         require(std::abs(denormalizedPreview(i, 1) - spec.maximum) < 0.002f, "Knob maximum wrong");
@@ -111,14 +118,14 @@ static void mappings()
     require(sanitizePreview(Bypass, 0.9f) == 1, "Boolean mapping wrong");
     for (double scale : {0.75, 1.0, 1.5}) {
         for (const auto &knob : previewKnobs) {
-            const auto point =
-                pedalPoint(knob.x * scale + 40, knob.y * scale, 520 * scale + 80, 680 * scale);
+            const auto point = pedalPoint(knob.x * scale + 40, knob.y * scale, 520 * scale + 80,
+                                          PreviewHeight * scale);
             require(knobAt(point) == static_cast<int>(knob.parameter),
                     "Scaled knob hit test wrong");
         }
     }
-    require(knobAt({260, 540}) == -1, "Footswitch overlaps a knob");
-    require(pingPongButtonAt({260, 467}) && !pingPongButtonAt({260, 540}),
+    require(knobAt({260, PreviewFootY}) == -1, "Footswitch overlaps a knob");
+    require(pingPongButtonAt({260, PreviewModeTop + 13}) && !pingPongButtonAt({260, PreviewFootY}),
             "Mode switch hit test wrong");
     require(previewHostIndex(PingPong, false) == 6 && previewHostIndex(PingPong, true) == 8 &&
                 MonitorRequest == 6 && MonitorActive == 7,
@@ -126,8 +133,10 @@ static void mappings()
     require(Sync == 7 && Division == 8 && InternalTempo == 9 && EffectiveTempo == 10 &&
                 TempoSource == 11 && EffectiveTime == 12 && SyncLimited == 13,
             "Published sync/status indices moved");
+    require(ReverbSpace == 14 && ReverbDarkness == 15 && ReverbAmount == 16,
+            "Reverb parameters did not append after timing readouts");
     for (bool app : {false, true}) {
-        for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
+        for (auto i : inputIds)
             require(previewEffectIndex(previewHostIndex(i, app), app) == static_cast<int>(i),
                     "Host/effect mapping not invertible");
     }
@@ -167,6 +176,10 @@ static void integration(PluginExporter &plugin, bool pingPong)
                 float *outputs[] = {expected[0].data(), expected[1].data()};
                 reference.process(inputs, outputs, count);
                 require(output == expected, "Plugin differs from delay core");
+                for (std::size_t channel = 0; channel < 2; ++channel)
+                    require(std::memcmp(output[channel].data(), expected[channel].data(),
+                                        output[channel].size() * sizeof(float)) == 0,
+                            "Zero reverb Amount is not bit-identical to the original delay");
                 const auto firstEcho = static_cast<std::size_t>(rate * 0.020);
                 require(output[0][firstEcho] > 0, "Plugin produced no echo");
                 if (pingPong) {
@@ -188,7 +201,8 @@ static void integration(PluginExporter &plugin, bool pingPong)
 
 static void parametersAndRecall(PluginExporter &plugin)
 {
-    const std::array<float, EffectParameterCount> settings{800, 52, 37, 1800, 0.6f, 1, 1, 1, 4, 90};
+    const std::array<float, PreviewParameterCount> settings{800, 52, 37, 1800, 0.6f, 1, 1,  1, 4,
+                                                            90,  0,  0,  0,    0,    9, 80, 45};
     const std::array<const char *, 6> legacySymbols{"time_ms", "feedback",    "mix",
                                                     "tone_hz", "output_gain", "bypass"};
     for (std::uint32_t i = 0; i < legacySymbols.size(); ++i)
@@ -197,7 +211,7 @@ static void parametersAndRecall(PluginExporter &plugin)
         require(plugin.getParameterSymbol(6) == "monitor_request" &&
                     plugin.getParameterSymbol(7) == "monitor_active",
                 "Legacy monitor indices moved");
-    for (std::uint32_t i = 0; i < EffectParameterCount; ++i) {
+    for (auto i : inputIds) {
         const auto host = previewHostIndex(i, standalone);
         require(plugin.getParameterSymbol(host) == previewSpecs[i].symbol, "Parameter ID drift");
         require(plugin.getParameterHints(host) & kParameterIsAutomatable,
@@ -207,15 +221,15 @@ static void parametersAndRecall(PluginExporter &plugin)
         trackAllocations = false;
         require(plugin.getParameterValue(host) == settings[i], "Parameter value did not persist");
     }
-    std::array<float, EffectParameterCount> saved{};
-    for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
+    std::array<float, PreviewParameterCount> saved{};
+    for (auto i : inputIds)
         saved[i] = plugin.getParameterValue(previewHostIndex(i, standalone));
     PluginExporter reopened(nullptr, nullptr, nullptr, nullptr);
     reopened.setState("undertow_preview_schema", "1");
-    for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
+    for (auto i : inputIds)
         reopened.setParameterValue(previewHostIndex(i, standalone), saved[i]);
     reopened.activate();
-    for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
+    for (auto i : inputIds)
         require(reopened.getParameterValue(previewHostIndex(i, standalone)) == settings[i],
                 "Reconstructed settings differ");
     if (standalone)
@@ -231,12 +245,14 @@ static void parametersAndRecall(PluginExporter &plugin)
             "Old project settings did not retain Normal mode");
     require(legacy.getParameterValue(previewHostIndex(Sync, standalone)) == 0,
             "Old project settings enabled sync");
+    require(legacy.getParameterValue(previewHostIndex(ReverbAmount, standalone)) == 0,
+            "Old project settings enabled reverb");
     legacy.setParameterValue(previewHostIndex(PingPong, standalone), 1);
     require(legacy.getParameterValue(previewHostIndex(PingPong, standalone)) == 1 &&
                 legacy.getParameterValue(previewHostIndex(Sync, standalone)) == 0,
             "Old Ping-pong settings did not retain free timing");
     legacy.deactivate();
-    for (std::uint32_t i = 0; i < EffectParameterCount; ++i) {
+    for (auto i : inputIds) {
         const auto host = previewHostIndex(i, standalone);
         plugin.setParameterValue(host, std::numeric_limits<float>::quiet_NaN());
         require(plugin.getParameterValue(host) == previewSpecs[i].initial,
@@ -267,7 +283,7 @@ static void bypassAndAutomation(PluginExporter &plugin)
     for (std::size_t i = 0; i < input[0].size(); ++i)
         input[0][i] = static_cast<float>(0.1 * std::sin(i * 0.01));
     for (std::size_t offset = 0; offset < input[0].size(); offset += 80) {
-        for (std::uint32_t i = 0; i < EffectParameterCount; ++i) {
+        for (auto i : inputIds) {
             trackAllocations = true;
             plugin.setParameterValue(previewHostIndex(i, standalone),
                                      offset % 160 == 0 ? previewSpecs[i].minimum
@@ -295,6 +311,7 @@ static void monitorSafety(PluginExporter &plugin, bool pingPong, bool sync)
     plugin.setParameterValue(Mix, 20);
     plugin.setParameterValue(Bypass, 0);
     plugin.setParameterValue(Time, 20);
+    plugin.setParameterValue(previewHostIndex(ReverbAmount, standalone), 100);
     plugin.setParameterValue(previewHostIndex(PingPong, standalone), pingPong ? 1.0f : 0.0f);
     prepare(plugin);
     run(plugin, input, output, 0, 48000); // load the delay with a sustained signal
@@ -342,7 +359,9 @@ static void syncIntegration(PluginExporter &plugin)
     auto get = [&](std::uint32_t id) {
         return plugin.getParameterValue(previewHostIndex(id, standalone));
     };
-    for (std::uint32_t id = EffectiveTempo; id < PreviewParameterCount; ++id) {
+    for (std::uint32_t id = 0; id < PreviewParameterCount; ++id) {
+        if (!previewSpecs[id].readOnly)
+            continue;
         const auto host = previewHostIndex(id, standalone);
         require(plugin.getParameterHints(host) & kParameterIsOutput, "Timing status not read-only");
         const float before = get(id);
@@ -350,6 +369,7 @@ static void syncIntegration(PluginExporter &plugin)
         require(get(id) == before, "Host wrote a timing readout");
     }
     set(Time, 777);
+    set(ReverbAmount, 0);
     set(Sync, 1);
     set(InternalTempo, 100);
     set(Feedback, 0);
@@ -482,6 +502,113 @@ static void syncIntegration(PluginExporter &plugin)
     set(Bypass, 1);
 }
 
+static std::array<double, 2> reverbInsert(void *context,
+                                          const std::array<double, 2> &input) noexcept
+{
+    return static_cast<DarkReverb *>(context)->processSample(input);
+}
+
+static void reverbIntegration(PluginExporter &plugin)
+{
+    auto set = [&](std::uint32_t id, float value) {
+        plugin.setParameterValue(previewHostIndex(id, standalone), value);
+    };
+    plugin.setSampleRate(8000, true);
+    set(Time, 40);
+    set(Feedback, 35);
+    set(Mix, 40);
+    set(Tone, 2500);
+    set(Level, 1);
+    set(Bypass, 0);
+    set(Division, 0);
+    set(InternalTempo, 120);
+    set(ReverbSpace, 6);
+    set(ReverbDarkness, 55);
+    set(ReverbAmount, 65);
+    struct Context {
+        std::uint32_t state;
+        double bpm;
+    } context{1, 120};
+    supplyPreviewTempo(plugin.getInstancePointer(), &context, 1);
+    auto input = audio(16000);
+    for (std::size_t i = 0; i < 1200; ++i) {
+        input[0][i] = static_cast<float>(0.2 * std::sin(i * 0.11));
+        input[1][i] = static_cast<float>(0.1 * std::cos(i * 0.07));
+    }
+    for (bool sync : {false, true}) {
+        set(Sync, sync ? 1 : 0);
+        for (bool ping : {false, true}) {
+            set(PingPong, ping ? 1 : 0);
+            for (std::uint32_t size : {63u, 512u}) {
+                for (bool inPlace : {false, true}) {
+                    prepare(plugin);
+                    auto output = audio(16000), expected = audio(16000);
+                    for (std::size_t offset = 0; offset < 16000;) {
+                        const auto count =
+                            static_cast<std::uint32_t>(std::min<std::size_t>(size, 16000 - offset));
+                        run(plugin, input, output, offset, count, inPlace);
+                        offset += count;
+                    }
+                    DarkDelay reference;
+                    DelayParameters p;
+                    p.timeMs = sync ? 500 : 40;
+                    p.mix = 0.4;
+                    p.pingPong = ping;
+                    reference.prepare(8000, p, 8000);
+                    DarkReverb verb;
+                    verb.prepare(8000, {6, 55, 0.65});
+                    const float *inputs[] = {input[0].data(), input[1].data()};
+                    float *outputs[] = {expected[0].data(), expected[1].data()};
+                    reference.process(inputs, outputs, 16000, reverbInsert, &verb);
+                    require(output == expected,
+                            "Wet reverb plugin differs from independent chain reference");
+                }
+            }
+        }
+    }
+    set(Mix, 0);
+    set(ReverbAmount, 100);
+    prepare(plugin);
+    auto dry = audio(16000);
+    run(plugin, input, dry, 0, 16000, true);
+    require(dry == input, "Reverb changed the original guitar when Mix is dry-only");
+    set(Mix, 100);
+    set(Sync, 0);
+    set(Feedback, 0);
+    prepare(plugin);
+    auto pulse = audio(32000), output = audio(32000);
+    pulse[0][0] = pulse[1][0] = 1;
+    run(plugin, pulse, output, 0, 32000);
+    require(
+        std::all_of(output[0].begin(), output[0].begin() + 559, [](float v) { return v == 0; }) &&
+            output[0][559] != 0,
+        "Reverb is not strictly after the delayed wet path");
+
+    auto tail = [&](bool newNote) {
+        set(Bypass, 0);
+        prepare(plugin);
+        auto signal = pulse, result = audio(32000);
+        if (newNote)
+            signal[0][16000] = 1;
+        run(plugin, signal, result, 0, 8000);
+        set(Bypass, 1);
+        run(plugin, signal, result, 8000, 24000);
+        return result;
+    };
+    const auto originalTail = tail(false), bypassedNote = tail(true);
+    double lateEnergy = 0;
+    for (std::size_t i = 16001; i < 32000; ++i) {
+        lateEnergy +=
+            originalTail[0][i] * originalTail[0][i] + originalTail[1][i] * originalTail[1][i];
+        require(originalTail[0][i] == bypassedNote[0][i] &&
+                    originalTail[1][i] == bypassedNote[1][i],
+                "New bypassed note entered the reverb");
+    }
+    require(lateEnergy > 1e-12, "Bypass cut the long reverb tail");
+    require(std::abs(bypassedNote[0][16000] - originalTail[0][16000] - 1) < 1e-6,
+            "Effect bypass did not preserve clean new guitar");
+}
+
 int main(int argc, char **argv)
 {
     try {
@@ -496,7 +623,7 @@ int main(int argc, char **argv)
                     (standalone ? StandaloneParameterCount : PreviewParameterCount),
                 "Parameter count wrong");
         require(plugin.getStateKey(0) == "undertow_preview_schema", "Schema marker missing");
-        for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
+        for (auto i : inputIds)
             require(plugin.getParameterValue(previewHostIndex(i, standalone)) ==
                         previewSpecs[i].initial,
                     "Default wrong");
@@ -507,6 +634,7 @@ int main(int argc, char **argv)
         parametersAndRecall(plugin);
         bypassAndAutomation(plugin);
         syncIntegration(plugin);
+        reverbIntegration(plugin);
         if (standalone) {
             for (bool sync : {false, true}) {
                 monitorSafety(plugin, false, sync);

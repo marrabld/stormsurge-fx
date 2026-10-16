@@ -11,7 +11,7 @@ namespace stormsurge
 
 // Logical effect IDs. Host indices differ for new controls in standalone because
 // its original monitor request/status already occupy slots 6/7. Use the helpers.
-// Future parameters append after SyncLimited, not before the published readouts.
+// New parameters append at the end, never before the published readouts.
 enum PreviewParameter : std::uint32_t {
     Time = 0,
     Feedback,
@@ -23,11 +23,13 @@ enum PreviewParameter : std::uint32_t {
     Sync,
     Division,
     InternalTempo,
-    EffectParameterCount,
-    EffectiveTempo = EffectParameterCount,
+    EffectiveTempo,
     TempoSource,
     EffectiveTime,
     SyncLimited,
+    ReverbSpace,
+    ReverbDarkness,
+    ReverbAmount,
     PreviewParameterCount
 };
 
@@ -73,6 +75,9 @@ inline constexpr std::array<ParameterSpec, PreviewParameterCount> previewSpecs{{
     {"Tempo source", "tempo_source", "", 0, 0, 3, false, true},
     {"Delay target", "delay_target_ms", "ms", 400, 20, 8000, false, true},
     {"Sync time limited", "sync_limited", "", 0, 0, 1, false, true},
+    {"Reverb Space", "reverb_space", "s", 6, 1, 12, false},
+    {"Reverb Darkness", "reverb_darkness", "%", 65, 0, 100, false},
+    {"Reverb Amount", "reverb_amount", "%", 0, 0, 100, false},
 }};
 
 inline int previewEffectIndex(std::uint32_t host, bool standalone) noexcept
@@ -113,12 +118,19 @@ struct KnobPosition {
     std::uint32_t parameter;
     float x, y;
 };
-inline constexpr std::array<KnobPosition, 5> previewKnobs{{
+inline constexpr double PreviewHeight = 840;
+inline constexpr double PreviewFootY = 696;
+inline constexpr double PreviewModeTop = 610;
+inline constexpr double PreviewMonitorTop = 763;
+inline constexpr std::array<KnobPosition, 8> previewKnobs{{
     {Time, 155, 220},
     {Feedback, 365, 220},
     {Tone, 105, 365},
     {Mix, 260, 365},
     {Level, 415, 365},
+    {ReverbSpace, 105, 530},
+    {ReverbDarkness, 260, 530},
+    {ReverbAmount, 415, 530},
 }};
 
 // Coordinates shared by drawing, hit testing and display-independent UI tests.
@@ -128,9 +140,9 @@ struct PedalPoint {
 
 inline PedalPoint pedalPoint(double x, double y, double width, double height) noexcept
 {
-    const double factor = std::min(width / 520.0, height / 680.0);
+    const double factor = std::min(width / 520.0, height / PreviewHeight);
     return {(x - (width - 520 * factor) * 0.5) / factor,
-            (y - (height - 680 * factor) * 0.5) / factor};
+            (y - (height - PreviewHeight * factor) * 0.5) / factor};
 }
 
 inline int knobAt(PedalPoint point) noexcept
@@ -143,7 +155,8 @@ inline int knobAt(PedalPoint point) noexcept
 
 inline bool pingPongButtonAt(PedalPoint point) noexcept
 {
-    return point.x >= 105 && point.x <= 415 && point.y >= 454 && point.y <= 480;
+    return point.x >= 105 && point.x <= 415 && point.y >= PreviewModeTop &&
+           point.y <= PreviewModeTop + 26;
 }
 
 // Header controls: free/sync, note division, internal/fallback BPM.

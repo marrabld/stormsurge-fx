@@ -59,9 +59,11 @@ engineering starting points separately from remaining integration proposals.
 PR #8 brought the foundation and guides into `main`; that merge is complete.
 PR #9 added the basic delay core; merged PR #10 connected separate **Undertow Preview**
 VST3/JACK targets and working controls. Merged PR #12 adds a Normal/Ping-pong switch,
-with left-first alternating new repeats and unchanged dry routing. Issue #13 adds
+with left-first alternating new repeats and unchanged dry routing. Merged PR #14 adds
 tempo sync with nine note values, held/fallback/internal tempo and up to eight-second
-synced intervals. Foundation remains pass-through. Native device usability and
+synced intervals. Issue #16 adds optional long dark reverb after the wet delay, with
+Space/Darkness/Amount controls. It defaults off and is a listening experiment, not
+the complete proposed artist-reference chain. Foundation remains pass-through. Native device usability and
 accurate host tails remain work.
 
 | PR | Branch | State | Contents |
@@ -72,6 +74,7 @@ accurate host tails remain work.
 | #9 | `feat/3-dark-delay-core` | Merged into `main` | Tested reusable basic dark delay |
 | #10 | `feat/4-playable-delay` | Merged into `main` | Audible Preview controls, automation/state and monitor safety |
 | #12 | `feat/11-stereo-ping-pong` | Merged into `main` | Normal/Ping-pong switch and compatibility/safety tests |
+| #14 | `feat/13-tempo-sync` | Merged into `main` | Nine synced divisions and explicit tempo source/hold/fallback |
 
 The foundation builds and passes automated tests on Linux and Windows, including
 sanitizers. The VST3 passed pluginval at strictness 5, with DPF teardown warnings
@@ -80,14 +83,18 @@ recorded-guitar playback and saved-project reopening in Bitwig Studio Producer
 6.1.3 on Omarchy, then audible basic Preview repeats, knob changes, bypass spillover
 and non-default saved-setting reopening for PR #10. Linux, Windows and sanitizer CI
 passed for that PR and PR #12. The maintainer also confirmed Ping-pong alternation,
-Normal/bypass behaviour and mode reopening. New Sync still needs its own listening/
-reopening check; none of these results proves Windows playback or standalone hardware.
+Normal/bypass behaviour and mode reopening. Sync had a successful first check for
+PR #14, not an exhaustive all-division/stop/export result. The maintainer likes the
+delay sound, finds the UI clumsy and deferred broader UI work to #15. Reverb is newly
+authorised and still needs listening. None of this proves Windows playback or
+standalone hardware usability.
 
 ## Suggested order
 
-1. Review the issue #13 Sync PR and CI. Do not merge without approval.
-2. Follow [preview.md](docs/preview.md) to check note values/tempo source, stopped
-   transport and Sync save/reopen in Bitwig. Test automation and exports manually too.
+1. Review the issue #16 Reverb PR and CI. Do not merge without approval.
+2. Follow [preview.md](docs/preview.md) to compare Amount zero and a long wet wash,
+   check dry attacks, Space/Darkness, bypass spillover and saved reverb settings.
+   Complete remaining tempo/automation/export checks too.
 3. Agree and implement remaining channel/device policies under issue #4.
 4. Resolve DPF's hardcoded zero VST3 tail report before claiming correct automatic
    tail export. Test standalone input routing and playtest under issue #5.

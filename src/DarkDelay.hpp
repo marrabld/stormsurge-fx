@@ -26,13 +26,16 @@ struct DelayParameters {
 class DarkDelay
 {
   public:
+    using WetInsert = std::array<double, 2> (*)(void *, const std::array<double, 2> &) noexcept;
     void prepare(double sampleRate, const DelayParameters &parameters = {},
                  double maximumDelayMs = 2000.0);
     void reset() noexcept;
     void setParameters(const DelayParameters &parameters) noexcept;
     // Planar stereo, separate or corresponding in-place buffers, including zero frames.
     // prepare() is required first; invalid input samples are treated as silence.
-    void process(const float *const *inputs, float *const *outputs, std::uint32_t frames) noexcept;
+    // Optional wet-only insert runs outside feedback, before the final Mix/Level.
+    void process(const float *const *inputs, float *const *outputs, std::uint32_t frames,
+                 WetInsert insert = nullptr, void *context = nullptr) noexcept;
 
   private:
     struct Smoother {
