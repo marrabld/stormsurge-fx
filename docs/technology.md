@@ -3,7 +3,9 @@
 ## Scope and approval
 
 The maintainer authorised the pass-through/plugin/standalone foundation and a
-pedal-face mockup, not the delay engine. They selected DPF after being informed of
+pedal-face mockup, and has since authorised implementing Undertow's delay engine.
+Publishing a release remains unauthorised. The repository is already public; it was
+created with the maintainer's approval. They selected DPF after being informed of
 JUCE's AGPL/commercial terms. Own project code stays **GPL-3.0-only**.
 
 The initial host target is **Bitwig 6.0.11**. Audio-interface details and whether

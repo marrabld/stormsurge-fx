@@ -1,24 +1,27 @@
 # Roadmap
 
-This is a direction, not a release schedule. The pass-through build foundation is
-in development; the delay and later effects are not implemented yet.
-The first useful release is one delay, not an entire pedalboard.
+This is a direction, not a release schedule. The pass-through build foundation
+builds and passes tests; Undertow's delay engine is the current implementation
+work. The first useful release is one delay, not an entire pedalboard.
 
 ## First work plan
 
-Work through one issue at a time. Creating issues does not authorise implementation
-or publication. The maintainer has now authorised the pass-through build foundation
-and pedal-face mockup, not the delay engine. Discuss the design first; implement
-further processing only after the maintainer's
-go-ahead, then test and review a PR. Do not merge automatically.
+Work through one issue at a time. The maintainer has authorised implementing the
+delay engine; publishing a release is still not authorised. Approve the proposed
+defaults in [design.md](docs/design.md), implement to the approved spec, then test
+and review a PR. Do not merge automatically.
 
-| Order | Issue | Outcome |
-| --- | --- | --- |
-| 1 | [Define the sound and controls](https://github.com/marrabld/stormsurge-fx/issues/1) | Agreed dark-delay/ping-pong behaviour and headroom policy |
-| 2 | [Choose framework and prove builds](https://github.com/marrabld/stormsurge-fx/issues/2) | GPL-compatible foundation, Linux/Windows build targets |
-| 3 | [Build the basic dark delay](https://github.com/marrabld/stormsurge-fx/issues/3) | Numerically tested reusable DSP before live monitoring |
-| 4 | [Make it playable](https://github.com/marrabld/stormsurge-fx/issues/4) | Bitwig and standalone, with ping-pong and tempo sync |
-| 5 | [Playtest the preview](https://github.com/marrabld/stormsurge-fx/issues/5) | Listening and workflow evidence, limitations and fixes |
+| Order | Issue | Outcome | State |
+| --- | --- | --- | --- |
+| 1 | [Define the sound and controls](https://github.com/marrabld/stormsurge-fx/issues/1) | Agreed dark-delay/ping-pong behaviour and headroom policy | Defaults proposed, awaiting approval |
+| 2 | [Choose framework and prove builds](https://github.com/marrabld/stormsurge-fx/issues/2) | GPL-compatible foundation, Linux/Windows build targets | Built and CI-verified; host testing pending |
+| 3 | [Build the basic dark delay](https://github.com/marrabld/stormsurge-fx/issues/3) | Numerically tested reusable DSP before live monitoring | Next |
+| 4 | [Make it playable](https://github.com/marrabld/stormsurge-fx/issues/4) | Bitwig and standalone, with ping-pong and tempo sync | Later |
+| 5 | [Playtest the preview](https://github.com/marrabld/stormsurge-fx/issues/5) | Listening and workflow evidence, limitations and fixes | Later |
+
+Planning PR #6 is merged into `main`; foundation PR #7 merged into the
+`docs/undertow-work-plan` branch, which is not yet in `main`. Merge that before
+starting issue #3, so delay work does not branch off an unmerged stack.
 
 ## 1. Agree on Undertow's sound
 
@@ -30,34 +33,33 @@ An internet recipe suggesting 800 ms delay, 75% feedback, long reverb and a seco
 ping-pong delay is unverified. Use its numbers only as experiments, not guaranteed
 safe settings. Preserve dry-guitar clarity while the wet ambience fills the gaps.
 
-- Choose supported mono/stereo layouts and the first delay-time range.
-- Decide how time changes sound: pitch glide, crossfade, or another explicit policy.
-- Define mix law, feedback topology, tone behaviour and output headroom.
-- Define bypass/tail behaviour, including what happens when bypass changes.
-- Evaluate framework, SDK and dependency licences for a GPL-3.0-only release.
-- Choose stable plugin identifiers and parameter IDs before distributing sessions.
-- Agree what Linux/Bitwig and standalone setups the first release will support.
+Proposed answers to each of these now sit in
+[design.md](docs/design.md) under "Proposed defaults", each with its tradeoff stated.
+They are **not yet approved**. The maintainer's outstanding input is the audio
+interface model, whether they will play live or process recorded tracks, and a
+permitted short dry guitar recording with gaps, palm-muted notes and a sustained
+chord. No private music needs to be uploaded publicly.
 
 Ping-pong and tempo sync belong in the first playable preview. Millisecond timing
-also remains useful for offset echoes. Collect the Bitwig version, interface and
-a short dry riff with gaps, palm-muted notes and a sustained chord. No private
-music needs to be uploaded publicly.
+also remains useful for offset echoes.
 
 ## 2. Choose the build foundation
+
+Done, subject to merge:
 
 - Selected foundation: C++20, CMake and DPF, after reviewing JUCE's current
   AGPL/commercial terms and obtaining maintainer approval for the GPL-compatible
   alternative. See [technology decision](docs/technology.md).
-- Document a GPL-3.0-only-compatible choice, pinned dependencies and required notices.
-- Once authorised, prove a minimal plugin/standalone shell builds on both Linux
-  and Windows. Keep DSP separate from hosts, interfaces and devices.
-- Windows builds begin early to avoid Linux-only assumptions. Host playback,
-  real-device testing and distributable Windows releases remain distinct later work.
+- Pinned dependencies, retained notices and a minimised pass-through shell.
+- The shell builds and passes automated tests on Linux and Windows, including
+  sanitizers, with DSP kept separate from hosts, interfaces and devices.
+
+Still outstanding: Bitwig 6.0.11 host testing, real-device testing, and distributable
+Windows releases. A successful build is not playback evidence. Issue #2 remains open
+until the maintainer reviews it.
 
 The first standalone uses JACK-compatible routing and an initially muted monitor
 gate, not a finished in-app device selector. Generated artwork is not embedded.
-Read [build instructions](docs/building.md) and actual CI results before claiming
-the foundation is verified on a platform. Issue #2 remains open for evidence/review.
 
 ## 3. Understand and test the basic delay
 
