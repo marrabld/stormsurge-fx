@@ -10,10 +10,11 @@ milestone is to use Undertow on that track.
 
 ## Status
 
-**Under construction.** A stereo pass-through VST3 and JACK-only standalone shell
-build and pass automated tests on Linux and Windows, with a procedural pedal-face
-mockup. Undertow's delay DSP is the current work; there is no public release yet and
-the pictured knobs are still placeholders, not working effects.
+**Under construction.** Undertow Preview connects the dark-delay core to a VST3 and
+JACK-only standalone with working pedal controls. It is an early independent-stereo
+delay, not yet ping-pong or tempo-synced. See [listening instructions](docs/preview.md).
+The pictured Foundation mockup remains a separate pass-through plugin; its knobs
+are still placeholders. There is no public release yet.
 This is a separate project from [Omazone](https://github.com/marrabld/omazone),
 not a port of its offline mastering chain.
 
@@ -59,18 +60,21 @@ monitoring volume. Avoid accidentally monitoring both the interface's direct
 signal and a delayed software copy. Recording latency depends on the complete
 audio path; an effect's delay-time knob is a separate thing.
 
-## Build and try the foundation
+## Build and try it
 
 See [build instructions](docs/building.md) and the [technology decision](docs/technology.md).
-The plugin deliberately leaves audio unchanged. Standalone requires JACK-compatible
-routing and starts muted until monitoring is explicitly enabled. Device selection,
-delay integration and finished standalone usability are not implemented yet.
+Use **Undertow Preview** for audible echoes and **Undertow Foundation** for the old
+pass-through experiment. Standalone requires JACK-compatible routing and starts
+muted until monitoring is explicitly enabled. Device selection and finished
+standalone usability are not implemented yet.
 
 To view the pedal face without opening any audio device:
 
 ```sh
 cmake --preset linux-debug && cmake --build --preset linux-debug
 ./build/linux-debug/foundation_gui --view
+# Working-control editor, also without an audio device:
+./build/linux-debug/preview_gui --view
 ```
 
 No automatic installation, live-input monitoring or release publication is part of
@@ -86,10 +90,9 @@ The roadmap links five ordered GitHub issues for design, build foundations,
 delay DSP, playable integration and preview validation. `docs/design.md` separates
 approved basic-delay behaviour from remaining integration proposals.
 
-The host-independent basic delay core is under test in issue #3; it is not connected
-to the plugin or its pictured controls yet. Publishing a release is not authorised.
-Contributions and listening reports will be welcome as the effect
-develops.
+The tested basic core from issue #3 is connected in a first integration slice of
+issue #4. Host tail reporting, ping-pong, sync and standalone usability remain work.
+Publishing a release is not authorised. Listening reports are welcome.
 
 ## Working on this
 

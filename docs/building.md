@@ -1,7 +1,8 @@
-# Building the Undertow foundation
+# Building Undertow
 
-This is a pass-through development shell, not a delay release. Its knobs are
-visual placeholders. Nothing is installed into your DAW or system automatically.
+The build includes both the unchanged pass-through **Foundation** and the audible
+**Undertow Preview**. See [preview.md](preview.md) before listening to the latter.
+Neither is a public release. Nothing is installed into your DAW automatically.
 
 ## Decisions
 
@@ -44,6 +45,8 @@ Outputs:
 ```text
 build/linux-debug/bin/UndertowFoundation.vst3/
 build/linux-debug/bin/UndertowFoundation
+build/linux-debug/bin/UndertowPreview.vst3/
+build/linux-debug/bin/UndertowPreview
 build/linux-debug/bin/notices/
 ```
 
@@ -75,7 +78,8 @@ compilation in CI does not establish playback or device-driver compatibility.
 
 ## Try the plugin in Bitwig
 
-Bitwig **6.0.11** is the maintainer's target, not yet a verified host result.
+The maintainer checked Foundation in Bitwig Studio Producer **6.1.3** on Omarchy.
+The new audible preview needs its own real-host acceptance checks in [preview.md](preview.md).
 Add `build/linux-debug/bin` to Bitwig's VST plugin locations and rescan, or
 manually copy only the `UndertowFoundation.vst3` bundle into a user plugin folder.
 Do not overwrite an existing installation without checking it first.
@@ -110,18 +114,19 @@ JACK shell is a foundation, not completion of the standalone workflow.
 
 ## Automated checks
 
-The independent stereo delay core is tested separately from the Foundation plugin,
-which remains pass-through. No audio device is opened by these checks:
+The independent stereo core and actual Preview processor are tested separately from
+Foundation, which remains pass-through. No audio device is opened by these checks:
 
 ```sh
 cmake --preset linux-debug
-cmake --build --preset linux-debug --target dark_delay_tests foundation_tests
+cmake --build --preset linux-debug --target dark_delay_tests foundation_tests preview_tests
 ctest --preset linux-debug
 # Focus only on the delay core:
 ctest --preset linux-debug -R '^dark_delay_core$'
+ctest --preset linux-debug -R '^preview_'
 # Match the sanitizer CI job:
 cmake --preset linux-sanitized
-cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests
+cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests
 ctest --preset linux-sanitized
 ```
 
@@ -130,6 +135,12 @@ mix/gain, separate and in-place buffers, zero frames, block partitioning, sample
 automation, bypass tails, invalid values, reset/reconfiguration and selected C++
 allocation paths. These are not listening tests or host integration tests. See
 [approved core behaviour and remaining proposals](design.md).
+
+`preview_plugin` and `preview_monitor_gate` compare the actual Preview processor
+against the core through DPF's exporter. They test parameter IDs/ranges, reconstructed
+instance settings, bypass/automation, muted tails, reactivation/instance isolation,
+supported rates, in-place buffers, zero frames and selected allocation paths. The
+reconstructed-instance check is not a real VST3 state-stream or Bitwig reopening test.
 
 `ctest` exercises the actual DPF processor through a headless exporter harness
 at five rates and eight block sizes, including zero frames, separate/in-place
@@ -143,6 +154,9 @@ On Linux, DPF's additional GUI/processor smoke test needs a display but never op
 build/linux-debug/bin/UndertowFoundation selftest
 # Headless Linux CI:
 xvfb-run -a build/linux-debug/bin/UndertowFoundation selftest
+xvfb-run -a build/linux-debug/bin/UndertowPreview selftest
+xvfb-run -a build/linux-debug/preview_gui
+xvfb-run -a build/linux-debug/preview_gui --standalone
 ```
 
 The bundled DPF `selftest` option is not enabled for MSVC because its thread-test
@@ -159,11 +173,16 @@ To leave the mockup open for inspection without connecting any audio device:
 
 ```sh
 build/linux-debug/foundation_gui --view
+build/linux-debug/preview_gui --view
 ```
 
 Close the window to exit. On Windows, the debug GUI helper is
 `build/windows-debug/Debug/foundation_gui.exe`. This preview does not process or
 monitor audio; it displays the same editor used by the plugin.
+The Preview helper also exercises real drag/scroll/bypass events and balanced host
+edit gestures when run without `--view`. `--standalone` tests the standalone UI's
+Space-monitor action, still without opening an audio device. The preview helper's
+Windows path is `build/windows-debug/Debug/preview_gui.exe`.
 
 Optional independent VST3 validation uses the separately downloaded pluginval tool:
 

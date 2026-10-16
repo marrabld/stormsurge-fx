@@ -25,16 +25,22 @@ jobs:
         run: |
           xvfb-run -a build/linux-debug/foundation_gui
           xvfb-run -a build/linux-debug/bin/UndertowFoundation selftest
+          xvfb-run -a build/linux-debug/preview_gui
+          xvfb-run -a build/linux-debug/preview_gui --standalone
+          xvfb-run -a build/linux-debug/bin/UndertowPreview selftest
       - uses: actions/upload-artifact@v4
         with:
           name: undertow-foundation-linux-debug
           path: |
             build/linux-debug/bin/UndertowFoundation
             build/linux-debug/bin/UndertowFoundation.vst3/
+            build/linux-debug/bin/UndertowPreview
+            build/linux-debug/bin/UndertowPreview.vst3/
             build/linux-debug/bin/notices/
             LICENSE
             THIRD_PARTY_NOTICES.md
             docs/building.md
+            docs/preview.md
           if-no-files-found: error
   windows:
     runs-on: windows-2022
@@ -51,10 +57,13 @@ jobs:
           path: |
             build/windows-debug/bin/UndertowFoundation.exe
             build/windows-debug/bin/UndertowFoundation.vst3/
+            build/windows-debug/bin/UndertowPreview.exe
+            build/windows-debug/bin/UndertowPreview.vst3/
             build/windows-debug/bin/notices/
             LICENSE
             THIRD_PARTY_NOTICES.md
             docs/building.md
+            docs/preview.md
           if-no-files-found: error
   sanitizers:
     runs-on: ubuntu-24.04
@@ -65,5 +74,5 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
       - run: cmake --preset linux-sanitized
-      - run: cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests
+      - run: cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests
       - run: ctest --preset linux-sanitized

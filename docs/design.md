@@ -52,8 +52,10 @@ The decisions and host-test observations are also recorded in issues #1 and #3.
 - Bypass restores clean guitar, stops new notes entering the delay and lets existing
   repeats fade naturally. Standalone monitor mute is separate and silences everything.
 
-`src/DarkDelay.cpp` implements the host-independent core for issue #3, not yet wired
-into the plugin. Engineering starting points for review:
+`src/DarkDelay.cpp` implements the host-independent core for issue #3. The separate
+Undertow Preview plugin/standalone connect it in the first slice of issue #4. See
+[preview.md](preview.md) for controls, reset policy and listening checks. Engineering
+starting points for review:
 
 - Independent stereo lines, preserving per-channel dry routing. Mono-to-stereo,
   ping-pong and host channel layouts remain integration work under issue #4.
@@ -123,7 +125,8 @@ loop would keep every repeat equally bright: cleaner to articulate, less atmosph
 Not settled. Cross-feedback alone cannot make identical signals in identical left
 and right lines alternate. An alternating design needs an explicit input-injection
 and first-repeat policy. Simply summing L+R also boosts correlated stereo input.
-Keep this outside the independent-stereo basic core and agree routing before #4.
+Keep this outside the independent-stereo basic core and agree routing before the
+ping-pong integration follow-up under #4.
 
 **Bypass and tail**
 Approved: stop feeding new notes, preserve existing echoes and restore clean guitar.
@@ -165,7 +168,7 @@ successful build nor a plugin validator proves hardware monitoring works.
 
 ## Next discussion
 
-Review the core and settle the remaining integration proposals before #4. Use
+Review the remaining proposals before their respective integration follow-ups. Use
 [issue #1](https://github.com/marrabld/stormsurge-fx/issues/1) for design decisions.
 Bitwig Studio Producer **6.1.3** on the Omarchy laptop has passed manual foundation
 scan/load, clean recorded-guitar playback and saved-project reopening. These were
@@ -173,3 +176,26 @@ listening/workflow checks, not a numerical null test. The audio interface model 
 live-input workflow remain unknown; no private recording needs to be published.
 The maintainer need not write technical specifications; explain each musical
 tradeoff before asking for a decision.
+
+## First integration slice
+
+The maintainer requested a playable basic delay after merging PR #9. This slice
+keeps Foundation unchanged and uses a separate Preview identity and parameter schema.
+Host parameters are Time, Feedback, Mix, Tone, Output gain and Bypass. Effect bypass
+is deliberately separate from host hard bypass and standalone monitoring.
+
+Implementation policies for this early preview, subject to real-host testing:
+
+- Fixed stereo, two independent lines. No mono-to-stereo mapping, sync or ping-pong.
+- Audio activation/reactivation and rate changes clear tails but retain settings;
+  buffer-size changes can induce reactivation. Transport moves alone do not clear
+  tails while processing remains active. Parameter automation is smoothed, without
+  a promise of sample-accurate host scheduling.
+- DPF handles input-parameter state; delay-buffer contents and monitor consent are
+  never saved. Monitor mute clears tails and silences all output.
+- The dry path introduces no added processing latency. DPF's pinned VST3 adapter
+  reports zero tail samples, which is not accurate for this delay. Automatic host
+  tails remain unresolved. Test exports with explicit trailing silence meanwhile.
+
+These policies enable an incomplete developer build, not completion of issue #4's
+acceptance criteria or approval to publish a release.
