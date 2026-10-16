@@ -72,6 +72,15 @@ class PreviewUI final : public UI
         foot.pos.setPos(dx + 260 * scale, dy + 540 * scale);
         if (!onMouse(foot) || values[Bypass] != 1)
             return false;
+        MouseEvent mode = foot;
+        mode.pos.setPos(dx + 260 * scale, dy + 467 * scale);
+        if (!onMouse(mode) || values[PingPong] != 1)
+            return false;
+        parameterChanged(previewHostIndex(PingPong, standalone), 0);
+        if (values[PingPong] != 0)
+            return false;
+        if (!onMouse(mode) || values[PingPong] != 1)
+            return false;
         KeyboardEvent key;
         key.key = ' ';
         key.press = true;
@@ -84,8 +93,9 @@ class PreviewUI final : public UI
   protected:
     void parameterChanged(uint32_t index, float value) override
     {
-        if (index < EffectParameterCount)
-            values[index] = sanitizePreview(index, value);
+        const int effect = previewEffectIndex(index, standalone);
+        if (effect >= 0)
+            values[effect] = sanitizePreview(effect, value);
         else if (standalone && index == MonitorActive)
             monitor = std::isfinite(value) && value >= 0.5f;
         repaint();
@@ -122,8 +132,16 @@ class PreviewUI final : public UI
         for (const auto &knob : previewKnobs)
             drawKnob(knob);
         caption(260, 443, "DRAG KNOBS / SHIFT FOR FINE CONTROL", 11);
+        beginPath();
+        roundedRect(105, 454, 310, 26, 6);
+        fillColor(values[PingPong] >= 0.5f ? Color(30, 90, 95) : Color(30, 52, 65));
+        fill();
+        caption(260, 467,
+                values[PingPong] >= 0.5f ? "MODE: PING-PONG / CLICK FOR NORMAL"
+                                         : "MODE: NORMAL / CLICK FOR PING-PONG",
+                10);
         const bool enabled = values[Bypass] < 0.5f;
-        circleFill(260, 485, 7, enabled ? Color(106, 225, 180) : Color(100, 116, 120));
+        circleFill(260, 493, 7, enabled ? Color(106, 225, 180) : Color(100, 116, 120));
         circleFill(260, 542, 36, Color(13, 24, 30));
         beginPath();
         circle(260, 540, 31);
@@ -142,9 +160,9 @@ class PreviewUI final : public UI
                             : "MONITOR MUTED / CLICK OR SPACE TO ENABLE",
                     11);
         } else {
-            caption(260, 621, "STEREO / NO PING-PONG OR TEMPO SYNC YET", 11);
+            caption(260, 621, "STEREO / FREE MILLISECONDS / NO TEMPO SYNC YET", 10);
         }
-        caption(260, 649, "0.1.0 DEVELOPMENT / START QUIETLY / GPLv3", 10);
+        caption(260, 649, "0.2.0 DEVELOPMENT / START QUIETLY / GPLv3", 10);
     }
 
     bool onMouse(const MouseEvent &event) override
@@ -154,13 +172,13 @@ class PreviewUI final : public UI
         if (!event.press) {
             if (dragging < 0)
                 return false;
-            editParameter(static_cast<uint32_t>(dragging), false);
+            editParameter(previewHostIndex(static_cast<uint32_t>(dragging), standalone), false);
             dragging = -1;
             return true;
         }
         const auto point = pedalPoint(event.pos.getX(), event.pos.getY(), getWidth(), getHeight());
         if (dragging >= 0) {
-            editParameter(static_cast<uint32_t>(dragging), false);
+            editParameter(previewHostIndex(static_cast<uint32_t>(dragging), standalone), false);
             dragging = -1;
         }
         const int knob = knobAt(point);
@@ -168,11 +186,15 @@ class PreviewUI final : public UI
             dragging = knob;
             lastY = point.y;
             position = normalizedPreview(knob, values[knob]);
-            editParameter(knob, true);
+            editParameter(previewHostIndex(knob, standalone), true);
             return true;
         }
         if (std::hypot(point.x - 260, point.y - 540) <= 40) {
             change(Bypass, values[Bypass] >= 0.5f ? 0.0f : 1.0f);
+            return true;
+        }
+        if (pingPongButtonAt(point)) {
+            change(PingPong, values[PingPong] >= 0.5f ? 0.0f : 1.0f);
             return true;
         }
         if (standalone && point.x >= 50 && point.x <= 470 && point.y >= 605 && point.y <= 637) {
@@ -222,15 +244,15 @@ class PreviewUI final : public UI
     void send(uint32_t index, float value)
     {
         values[index] = sanitizePreview(index, value);
-        setParameterValue(index, values[index]);
+        setParameterValue(previewHostIndex(index, standalone), values[index]);
         repaint();
     }
 
     void change(uint32_t index, float value)
     {
-        editParameter(index, true);
+        editParameter(previewHostIndex(index, standalone), true);
         send(index, value);
-        editParameter(index, false);
+        editParameter(previewHostIndex(index, standalone), false);
     }
 
     void requestMonitor()

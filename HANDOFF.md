@@ -57,10 +57,10 @@ engineering starting points separately from remaining integration proposals.
 ## Where things stand
 
 PR #8 brought the foundation and guides into `main`; that merge is complete.
-PR #9 added the independent-stereo basic delay core and tests. Issue #4's first
-integration slice connects it to separate **Undertow Preview** VST3/JACK targets and
-working controls. Foundation remains pass-through. Preview is not yet complete:
-ping-pong, tempo sync, native device usability and accurate host tails remain work.
+PR #9 added the basic delay core; merged PR #10 connected separate **Undertow Preview**
+VST3/JACK targets and working controls. Issue #11 now adds a Normal/Ping-pong switch,
+with left-first alternating new repeats and unchanged dry routing. Foundation remains
+pass-through. Tempo sync, native device usability and accurate host tails remain work.
 
 | PR | Branch | State | Contents |
 | --- | --- | --- | --- |
@@ -68,19 +68,23 @@ ping-pong, tempo sync, native device usability and accurate host tails remain wo
 | #7 | `feat/undertow-foundation` | Merged into `docs/undertow-work-plan` | Pass-through VST3 + JACK standalone, procedural pedal GUI |
 | #8 | `docs/consolidate-project-state` | Merged into `main` | Foundation stack and agent/handoff guides |
 | #9 | `feat/3-dark-delay-core` | Merged into `main` | Tested reusable basic dark delay |
+| #10 | `feat/4-playable-delay` | Merged into `main` | Audible Preview controls, automation/state and monitor safety |
 
 The foundation builds and passes automated tests on Linux and Windows, including
 sanitizers. The VST3 passed pluginval at strictness 5, with DPF teardown warnings
 documented but unresolved. The maintainer confirmed Foundation scan/load, clean
 recorded-guitar playback and saved-project reopening in Bitwig Studio Producer
-6.1.3 on Omarchy. This is not full host validation or a test of delay integration.
+6.1.3 on Omarchy, then audible basic Preview repeats, knob changes, bypass spillover
+and non-default saved-setting reopening for PR #10. Linux, Windows and sanitizer CI
+passed for that PR. Ping-pong still needs its own listening/reopening check; none of
+these results proves Windows playback or standalone hardware behaviour.
 
 ## Suggested order
 
-1. Review the playable integration PR and CI. Do not merge without approval.
-2. Follow [preview.md](docs/preview.md) to hear the basic delay in Bitwig. Verify
-   parameters, bypass tails, automation, saved settings and exports manually.
-3. Agree and implement remaining channel/ping-pong/tempo policies under issue #4.
+1. Review the issue #11 Ping-pong PR and CI. Do not merge without approval.
+2. Follow [preview.md](docs/preview.md) to hear alternating echoes in stereo and
+   verify mode/bypass/saved settings. Test automation and exports manually too.
+3. Agree and implement tempo sync and remaining channel policies under issue #4.
 4. Resolve DPF's hardcoded zero VST3 tail report before claiming correct automatic
    tail export. Test standalone input routing and playtest under issue #5.
 

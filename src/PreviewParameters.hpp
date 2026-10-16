@@ -9,7 +9,8 @@
 namespace stormsurge
 {
 
-// Published order is part of the preview's session format. Append, never reorder.
+// Logical effect IDs. Host indices differ for new controls in standalone because
+// its original monitor request/status already occupy slots 6/7. Use the helpers.
 enum PreviewParameter : std::uint32_t {
     Time = 0,
     Feedback,
@@ -17,11 +18,27 @@ enum PreviewParameter : std::uint32_t {
     Tone,
     Level,
     Bypass,
-    EffectParameterCount,
-    MonitorRequest = EffectParameterCount,
-    MonitorActive,
-    StandaloneParameterCount
+    PingPong,
+    EffectParameterCount
 };
+
+// Raw standalone host slots, not logical effect IDs or previewSpecs indices.
+inline constexpr std::uint32_t MonitorRequest = 6;
+inline constexpr std::uint32_t MonitorActive = 7;
+inline constexpr std::uint32_t StandaloneParameterCount = EffectParameterCount + 2;
+
+inline constexpr std::uint32_t previewHostIndex(std::uint32_t effect, bool standalone) noexcept
+{
+    return standalone && effect >= PingPong ? effect + 2 : effect;
+}
+
+inline constexpr int previewEffectIndex(std::uint32_t host, bool standalone) noexcept
+{
+    if (standalone && (host == MonitorRequest || host == MonitorActive))
+        return -1;
+    const auto effect = standalone && host > MonitorActive ? host - 2 : host;
+    return effect < EffectParameterCount ? static_cast<int>(effect) : -1;
+}
 
 struct ParameterSpec {
     const char *name;
@@ -38,6 +55,7 @@ inline constexpr std::array<ParameterSpec, EffectParameterCount> previewSpecs{{
     {"Tone", "tone_hz", "Hz", 2500, 400, 16000, true},
     {"Output gain", "output_gain", "", 1, 0, 1.995262315f, false},
     {"Bypass", "bypass", "", 0, 0, 1, false},
+    {"Ping-pong", "ping_pong", "", 0, 0, 1, false},
 }};
 
 inline float sanitizePreview(std::uint32_t index, float value) noexcept
@@ -46,7 +64,7 @@ inline float sanitizePreview(std::uint32_t index, float value) noexcept
     if (!std::isfinite(value))
         return spec.initial;
     value = std::clamp(value, spec.minimum, spec.maximum);
-    return index == Bypass ? (value >= 0.5f ? 1.0f : 0.0f) : value;
+    return index == Bypass || index == PingPong ? (value >= 0.5f ? 1.0f : 0.0f) : value;
 }
 
 inline float normalizedPreview(std::uint32_t index, float value) noexcept
@@ -96,6 +114,11 @@ inline int knobAt(PedalPoint point) noexcept
         if (std::hypot(point.x - knob.x, point.y - knob.y) <= 40)
             return static_cast<int>(knob.parameter);
     return -1;
+}
+
+inline bool pingPongButtonAt(PedalPoint point) noexcept
+{
+    return point.x >= 105 && point.x <= 415 && point.y >= 454 && point.y <= 480;
 }
 
 } // namespace stormsurge

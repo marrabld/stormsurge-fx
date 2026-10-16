@@ -37,7 +37,8 @@ PR #9 added the tested independent-stereo core. `PreviewPlugin.cpp` and
 and build target. Keep `UndertowFoundation`/`UtF0` pass-through for old test projects.
 
 Preview's parameter order/symbols are in `PreviewParameters.hpp`; append, do not
-reorder. Ping-pong, sync and final host/device policies remain issue #4 work.
+reorder. Issue #11 adds switchable Ping-pong. Sync and final host/device policies
+remain issue #4 work.
 
 ## Issue-per-task
 
@@ -61,7 +62,7 @@ acceptance boxes still need the maintainer's sign-off rather than silent closure
 ## Musical spec
 
 [docs/design.md](docs/design.md) distinguishes the approved basic-core choices from
-remaining proposals. Do not treat the remaining ping-pong, tempo or host-policy
+remaining proposals. Do not treat the remaining tempo or host-policy
 proposals as approved. Keep the approved behaviour and the code consistent.
 
 ## Setup and build
@@ -118,6 +119,9 @@ Non-obvious test facts:
   already pulls it in.
 - `STORMSURGE_PREVIEW` selects Preview metadata for all its adapter, DSP, UI and
   harness targets. Do not let it leak into Foundation targets.
+- Use `previewHostIndex`/`previewEffectIndex` for effect/UI parameters. Ping-pong's
+  logical ID 6 maps to DPF index 6 in VST3, but 8 in standalone; the latter's legacy
+  monitor slots 6/7 must not move. Monitor constants are raw standalone slots only.
 - `preview_gui` exercises real control events/host edit gestures; `--standalone`
   tests the standalone UI without audio. Like `foundation_gui`, it needs a display.
 
@@ -156,6 +160,9 @@ Follow the constraints already in the spec, and expect tests for them:
   no adapter fix; document trailing-silence export tests rather than promise tails.
 - Preview monitor requests read back as zero so consent cannot be saved. Poll the
   separate status output. Its footswitch is effect bypass, not monitor consent.
+- Ping-pong averages only wet input into the left line; dry routing stays unchanged.
+  Read/filter both returns before writing cross-feedback. Mode changes preserve tails
+  and smooth a non-boosting routing matrix; old tails need not immediately alternate.
 
 ## Platform-specific CMake workarounds
 
@@ -204,8 +211,9 @@ The docs draw hard lines between "compiles" and "works". Preserve that.
 - A successful build is **not** evidence of playback, host compatibility or device
   behaviour. No CI job opens an audio device.
 - The maintainer tested Foundation scan/load, clean recorded playback and project
-  reopening in Bitwig Studio Producer 6.1.3 on Omarchy. That is not full host validation
-  or evidence that the unconnected delay core has been heard in Bitwig.
+  reopening in Bitwig Studio Producer 6.1.3 on Omarchy, then basic Preview knobs,
+  audible echoes, effect-bypass spillover and saved-setting reopening for PR #10.
+  New Ping-pong behaviour still needs its own listening/reopen checks.
 - Don't claim zero monitoring latency, and don't claim a platform is "verified"
   without pointing at actual CI output.
 - pluginval 1.0.4 passed at strictness 5, but DPF emits teardown reference-count

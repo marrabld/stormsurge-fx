@@ -19,9 +19,9 @@ static void editParameter(void *, uint32_t, bool started)
 }
 static void setParameter(void *, uint32_t index, float value)
 {
-    if (index < stormsurge::EffectParameterCount && std::isfinite(value))
+    if (stormsurge::previewEffectIndex(index, standalonePreview) >= 0 && std::isfinite(value))
         ++edits;
-    if (index == stormsurge::MonitorRequest)
+    if (standalonePreview && index == stormsurge::MonitorRequest)
         ++monitorRequests;
 }
 #endif
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     editor.setWindowVisible(true);
     editor.focus();
 #ifdef STORMSURGE_PREVIEW
-    if (!view && (!previewExerciseControls() || edits != 11 || gesturesStarted != gesturesEnded ||
+    if (!view && (!previewExerciseControls() || edits != 13 || gesturesStarted != gesturesEnded ||
                   monitorRequests != (standalonePreview ? 1u : 0u))) {
         std::fprintf(stderr, "FAIL: preview control events or host edit gestures\n");
         return 1;

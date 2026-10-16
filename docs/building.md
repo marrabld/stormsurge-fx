@@ -142,6 +142,11 @@ instance settings, bypass/automation, muted tails, reactivation/instance isolati
 supported rates, in-place buffers, zero frames and selected allocation paths. The
 reconstructed-instance check is not a real VST3 state-stream or Bitwig reopening test.
 
+The core checks also cover left-first alternating ping-pong timing/decay/darkening,
+wet input averaging, dry independence and rapid mode/time changes. Preview tests
+exercise both modes through the exporter and preserve the original six effect IDs
+and standalone monitor IDs. The GUI smoke exercises mode toggles and host feedback.
+
 `ctest` exercises the actual DPF processor through a headless exporter harness
 at five rates and eight block sizes, including zero frames, separate/in-place
 buffers, stereo independence, unclipped over-range samples and the standalone
