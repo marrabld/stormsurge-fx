@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "PreviewParameters.hpp"
+#include "TempoSync.hpp"
 #include "DistrhoUI.hpp"
 #include "DistrhoPluginUtils.hpp"
 
@@ -30,7 +31,7 @@ class PreviewUI final : public UI
         setGeometryConstraints(390, 510, true);
         if (standalone)
             getWindow().setIgnoringKeyRepeat(true);
-        for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
+        for (std::uint32_t i = 0; i < PreviewParameterCount; ++i)
             values[i] = previewSpecs[i].initial;
 #ifdef STORMSURGE_GUI_HARNESS
         if (const char *path = std::getenv("STORMSURGE_CAPTURE"))
@@ -76,6 +77,33 @@ class PreviewUI final : public UI
         mode.pos.setPos(dx + 260 * scale, dy + 467 * scale);
         if (!onMouse(mode) || values[PingPong] != 1)
             return false;
+        MouseEvent timing = foot;
+        timing.pos.setPos(dx + 110 * scale, dy + 142 * scale);
+        if (!onMouse(timing) || values[Sync] != 1)
+            return false;
+        parameterChanged(previewHostIndex(Sync, standalone), 0);
+        if (values[Sync] != 0 || !onMouse(timing) || values[Sync] != 1)
+            return false;
+        timing.pos.setPos(dx + 260 * scale, dy + 142 * scale);
+        if (!onMouse(timing) || values[Division] != 1)
+            return false;
+        ScrollEvent bpm;
+        bpm.pos.setPos(dx + 410 * scale, dy + 142 * scale);
+        bpm.delta.setPos(0, 1);
+        const float beforeTempo = values[InternalTempo];
+        if (!onScroll(bpm) || values[InternalTempo] <= beforeTempo)
+            return false;
+        // Mock polled DSP readouts as well as exercising input gestures.
+        parameterChanged(previewHostIndex(EffectiveTempo, standalone), values[InternalTempo]);
+        parameterChanged(
+            previewHostIndex(TempoSource, standalone),
+            static_cast<float>(standalone ? TempoOrigin::Internal : TempoOrigin::Fallback));
+        parameterChanged(previewHostIndex(EffectiveTime, standalone),
+                         60000.0f / values[InternalTempo] * 1.5f);
+        parameterChanged(previewHostIndex(SyncLimited, standalone), 1);
+        if (values[EffectiveTempo] != values[InternalTempo] || values[SyncLimited] != 1)
+            return false;
+        parameterChanged(previewHostIndex(SyncLimited, standalone), 0);
         parameterChanged(previewHostIndex(PingPong, standalone), 0);
         if (values[PingPong] != 0)
             return false;
@@ -93,7 +121,7 @@ class PreviewUI final : public UI
   protected:
     void parameterChanged(uint32_t index, float value) override
     {
-        const int effect = previewEffectIndex(index, standalone);
+        const int effect = previewLogicalIndex(index, standalone);
         if (effect >= 0)
             values[effect] = sanitizePreview(effect, value);
         else if (standalone && index == MonitorActive)
@@ -128,7 +156,27 @@ class PreviewUI final : public UI
         restore();
         caption(260, 48, "STORMSURGE FX", 17);
         caption(260, 90, "UNDERTOW", 39);
-        caption(260, 117, "DARK DELAY / EARLY PREVIEW", 11);
+        char status[112];
+        std::snprintf(status, sizeof(status), "%s / %s %.1f BPM / %.0f ms",
+                      values[Sync] >= 0.5f ? (values[SyncLimited] >= 0.5f ? "SYNC LIMIT" : "SYNC")
+                                           : "FREE MS",
+                      tempoOriginName(static_cast<int>(values[TempoSource])),
+                      values[EffectiveTempo], values[EffectiveTime]);
+        caption(260, 117, status, 10);
+        for (float x : {40.0f, 190.0f, 340.0f}) {
+            beginPath();
+            roundedRect(x, 130, 140, 23, 5);
+            fillColor(Color(30, 65, 80));
+            fill();
+        }
+        caption(110, 142, values[Sync] >= 0.5f ? "TIME: SYNC" : "TIME: MS", 10);
+        char note[32], tempoText[32];
+        const auto division = static_cast<std::size_t>(values[Division]);
+        std::snprintf(note, sizeof(note), "NOTE: %s", noteDivisions[division].label);
+        std::snprintf(tempoText, sizeof(tempoText), "%s %.1f BPM", standalone ? "INT" : "FB",
+                      values[InternalTempo]);
+        caption(260, 142, note, 10);
+        caption(410, 142, tempoText, 10);
         for (const auto &knob : previewKnobs)
             drawKnob(knob);
         caption(260, 443, "DRAG KNOBS / SHIFT FOR FINE CONTROL", 11);
@@ -160,9 +208,9 @@ class PreviewUI final : public UI
                             : "MONITOR MUTED / CLICK OR SPACE TO ENABLE",
                     11);
         } else {
-            caption(260, 621, "STEREO / FREE MILLISECONDS / NO TEMPO SYNC YET", 10);
+            caption(260, 621, "MS OR SYNC / D = DOTTED / T = TRIPLET", 10);
         }
-        caption(260, 649, "0.2.0 DEVELOPMENT / START QUIETLY / GPLv3", 10);
+        caption(260, 649, "0.3.0 DEVELOPMENT / START QUIETLY / GPLv3", 10);
     }
 
     bool onMouse(const MouseEvent &event) override
@@ -187,6 +235,23 @@ class PreviewUI final : public UI
             lastY = point.y;
             position = normalizedPreview(knob, values[knob]);
             editParameter(previewHostIndex(knob, standalone), true);
+            return true;
+        }
+        const int timing = timingControlAt(point);
+        if (timing == Sync) {
+            change(Sync, values[Sync] >= 0.5f ? 0.0f : 1.0f);
+            return true;
+        }
+        if (timing == Division) {
+            const int step = (event.mod & kModifierShift) ? 8 : 1;
+            change(Division, static_cast<float>((static_cast<int>(values[Division]) + step) % 9));
+            return true;
+        }
+        if (timing == InternalTempo) {
+            dragging = InternalTempo;
+            lastY = point.y;
+            position = normalizedPreview(InternalTempo, values[InternalTempo]);
+            editParameter(previewHostIndex(InternalTempo, standalone), true);
             return true;
         }
         if (std::hypot(point.x - 260, point.y - 540) <= 40) {
@@ -222,6 +287,12 @@ class PreviewUI final : public UI
         if (dragging >= 0)
             return false;
         const auto point = pedalPoint(event.pos.getX(), event.pos.getY(), getWidth(), getHeight());
+        if (timingControlAt(point) == InternalTempo) {
+            const float step = (event.mod & kModifierShift) ? 0.1f : 1.0f;
+            change(InternalTempo,
+                   values[InternalTempo] + static_cast<float>(event.delta.getY()) * step);
+            return true;
+        }
         const int knob = knobAt(point);
         if (knob < 0)
             return false;
@@ -292,7 +363,8 @@ class PreviewUI final : public UI
                                                 : "MIX";
         char display[32];
         if (index == Time)
-            std::snprintf(display, sizeof(display), "%.0f ms", value);
+            std::snprintf(display, sizeof(display),
+                          values[Sync] >= 0.5f ? "%.0f ms free" : "%.0f ms", value);
         else if (index == Tone)
             std::snprintf(display, sizeof(display), "%.0f Hz", value);
         else if (index == Level) {
@@ -320,7 +392,7 @@ class PreviewUI final : public UI
     }
 
     const bool standalone;
-    std::array<float, EffectParameterCount> values{};
+    std::array<float, PreviewParameterCount> values{};
     bool monitor = false;
     int dragging = -1;
     double lastY = 0;

@@ -40,6 +40,7 @@ dpf_add_plugin(UndertowPreview
     FILES_UI src/PreviewEditor.cpp)
 target_include_directories(UndertowPreview PUBLIC src)
 target_compile_definitions(UndertowPreview PUBLIC STORMSURGE_PREVIEW)
+include(cmake/PreviewVst3Tempo.cmake)
 # DPF's bundled self-test includes its POSIX thread helper, unavailable to MSVC.
 # Our headless processor tests still run on both platforms.
 if(NOT WIN32)
@@ -83,6 +84,9 @@ if(BUILD_TESTING)
     add_executable(dark_delay_tests tests/DarkDelayTests.cpp src/DarkDelay.cpp)
     target_include_directories(dark_delay_tests PRIVATE src)
     add_test(NAME dark_delay_core COMMAND dark_delay_tests)
+    add_executable(tempo_sync_tests tests/TempoSyncTests.cpp src/DarkDelay.cpp)
+    target_include_directories(tempo_sync_tests PRIVATE src)
+    add_test(NAME tempo_sync COMMAND tempo_sync_tests)
     add_executable(preview_tests tests/PreviewTests.cpp src/PreviewPlugin.cpp src/DarkDelay.cpp
         external/dpf/distrho/src/DistrhoPlugin.cpp)
     target_include_directories(preview_tests PRIVATE src external/dpf/distrho)

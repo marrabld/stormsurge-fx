@@ -49,10 +49,10 @@ double DarkDelay::Smoother::tick() noexcept
     return value;
 }
 
-DelayParameters DarkDelay::sanitize(const DelayParameters &p) noexcept
+DelayParameters DarkDelay::sanitize(const DelayParameters &p) const noexcept
 {
     DelayParameters result = p;
-    result.timeMs = bounded(p.timeMs, 20.0, 2000.0, 400.0);
+    result.timeMs = bounded(p.timeMs, 20.0, maximumMs, 400.0);
     result.feedback = bounded(p.feedback, 0.0, 0.90, 0.35);
     result.mix = bounded(p.mix, 0.0, 1.0, 0.20);
     result.toneHz = bounded(p.toneHz, 400.0, 16000.0, 2500.0);
@@ -60,13 +60,16 @@ DelayParameters DarkDelay::sanitize(const DelayParameters &p) noexcept
     return result;
 }
 
-void DarkDelay::prepare(double sampleRate, const DelayParameters &p)
+void DarkDelay::prepare(double sampleRate, const DelayParameters &p, double maximumDelayMs)
 {
     // Limit memory requests and make the supported range explicit.
     if (!std::isfinite(sampleRate) || sampleRate < 8000.0 || sampleRate > 192000.0)
         throw std::invalid_argument("DarkDelay sample rate must be 8000..192000 Hz");
+    if (!std::isfinite(maximumDelayMs) || maximumDelayMs < 2000 || maximumDelayMs > 8000)
+        throw std::invalid_argument("DarkDelay capacity must be 2000..8000 ms");
     rate = sampleRate;
-    const auto size = static_cast<std::size_t>(std::ceil(rate * 2.0)) + 2;
+    maximumMs = maximumDelayMs;
+    const auto size = static_cast<std::size_t>(std::ceil(rate * maximumMs / 1000.0)) + 2;
     for (auto &buffer : buffers)
         buffer.assign(size, 0.0);
     smoothFrames = std::max(1u, static_cast<std::uint32_t>(std::lround(rate * 0.020)));

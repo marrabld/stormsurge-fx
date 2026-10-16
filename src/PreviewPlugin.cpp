@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "DarkDelay.hpp"
 #include "PreviewParameters.hpp"
+#include "TempoSync.hpp"
+#include "PreviewTempoBridge.hpp"
 #include "DistrhoPlugin.hpp"
 #include "DistrhoPluginUtils.hpp"
 
@@ -15,24 +17,32 @@ class PreviewPlugin final : public Plugin
 {
   public:
     PreviewPlugin()
-        : Plugin(isStandalone() ? StandaloneParameterCount : EffectParameterCount, 0, 1),
+        : Plugin(isStandalone() ? StandaloneParameterCount : PreviewParameterCount, 0, 1),
           standalone(isStandalone())
     {
-        for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
+        for (std::uint32_t i = 0; i < PreviewParameterCount; ++i)
             values[i].store(previewSpecs[i].initial, std::memory_order_relaxed);
         prepare(getSampleRate());
+    }
+
+    void hostTempo(bool valid, double bpm) noexcept
+    {
+        // Raw adapter context arrives even for zero-frame/stopped processing calls.
+        rawTempoValid = valid;
+        rawBpm = bpm;
+        updateTiming();
     }
 
   protected:
     const char *getLabel() const override { return "undertow_preview"; }
     const char *getDescription() const override
     {
-        return "Early dark delay with switchable stereo ping-pong. No tempo sync yet.";
+        return "Early dark delay with stereo ping-pong, free milliseconds and tempo sync.";
     }
     const char *getMaker() const override { return "StormSurge FX contributors"; }
     const char *getHomePage() const override { return "https://github.com/marrabld/stormsurge-fx"; }
     const char *getLicense() const override { return "GPL-3.0-only"; }
-    uint32_t getVersion() const override { return d_version(0, 2, 0); }
+    uint32_t getVersion() const override { return d_version(0, 3, 0); }
 
     void initState(uint32_t, State &state) override
     {
@@ -51,18 +61,29 @@ class PreviewPlugin final : public Plugin
 
     void initParameter(uint32_t index, Parameter &p) override
     {
-        const int effect = previewEffectIndex(index, standalone);
+        const int effect = previewLogicalIndex(index, standalone);
         if (effect >= 0) {
             const auto &spec = previewSpecs[effect];
             p.name = spec.name;
             p.symbol = spec.symbol;
             p.unit = spec.unit;
             p.ranges = ParameterRanges(spec.initial, spec.minimum, spec.maximum);
-            p.hints = kParameterIsAutomatable;
+            p.hints = spec.readOnly ? kParameterIsOutput : kParameterIsAutomatable;
             if (spec.logarithmic)
                 p.hints |= kParameterIsLogarithmic;
-            if (effect == Bypass || effect == PingPong)
+            if (effect == Bypass || effect == PingPong || effect == Sync || effect == SyncLimited)
                 p.hints |= kParameterIsBoolean | kParameterIsInteger;
+            if (effect == Division || effect == TempoSource)
+                p.hints |= kParameterIsInteger;
+            if (effect == Division) {
+                p.enumValues.count = static_cast<uint8_t>(noteDivisions.size());
+                p.enumValues.restrictedMode = true;
+                p.enumValues.values = new ParameterEnumerationValue[noteDivisions.size()];
+                for (std::size_t i = 0; i < noteDivisions.size(); ++i) {
+                    p.enumValues.values[i].value = static_cast<float>(i);
+                    p.enumValues.values[i].label = noteDivisions[i].label;
+                }
+            }
             // This is effect bypass with spillover, not the host's hard bypass.
             return;
         }
@@ -76,7 +97,7 @@ class PreviewPlugin final : public Plugin
 
     float getParameterValue(uint32_t index) const override
     {
-        const int effect = previewEffectIndex(index, standalone);
+        const int effect = previewLogicalIndex(index, standalone);
         if (effect >= 0)
             return values[effect].load(std::memory_order_relaxed);
         // Never serialize an enabled request. Actual status has its own output.
@@ -136,10 +157,25 @@ class PreviewPlugin final : public Plugin
         return std::strcmp(getPluginFormatName(), "JACK/Standalone") == 0;
     }
 
-    DelayParameters parameters() const noexcept
+    TempoTiming updateTiming() noexcept
+    {
+        const auto timing =
+            tempo.resolve(standalone, rawTempoValid, rawBpm,
+                          values[InternalTempo].load(std::memory_order_relaxed),
+                          values[Sync].load(std::memory_order_relaxed) >= 0.5f,
+                          values[Time].load(std::memory_order_relaxed),
+                          static_cast<int>(values[Division].load(std::memory_order_relaxed)));
+        values[EffectiveTempo].store(static_cast<float>(timing.bpm), std::memory_order_relaxed);
+        values[TempoSource].store(static_cast<float>(timing.origin), std::memory_order_relaxed);
+        values[EffectiveTime].store(static_cast<float>(timing.timeMs), std::memory_order_relaxed);
+        values[SyncLimited].store(timing.limited ? 1.0f : 0.0f, std::memory_order_relaxed);
+        return timing;
+    }
+
+    DelayParameters parameters() noexcept
     {
         DelayParameters p;
-        p.timeMs = getParameterValue(Time);
+        p.timeMs = updateTiming().timeMs;
         p.feedback = getParameterValue(Feedback) / 100.0;
         p.mix = getParameterValue(Mix) / 100.0;
         p.toneHz = getParameterValue(Tone);
@@ -153,16 +189,19 @@ class PreviewPlugin final : public Plugin
     {
         supportedRate = std::isfinite(rate) && rate >= 8000 && rate <= 192000;
         if (supportedRate)
-            delay.prepare(rate, parameters());
+            delay.prepare(rate, parameters(), 8000);
     }
 
     static_assert(std::atomic<float>::is_always_lock_free);
     static_assert(std::atomic<bool>::is_always_lock_free);
     const bool standalone;
-    std::array<std::atomic<float>, EffectParameterCount> values;
+    std::array<std::atomic<float>, PreviewParameterCount> values;
     std::atomic<bool> monitoring{false};
     std::atomic<bool> clearRequested{false};
     bool supportedRate = false;
+    bool rawTempoValid = false;
+    double rawBpm = 0;
+    TempoSync tempo;
     DarkDelay delay;
 };
 
@@ -172,3 +211,8 @@ Plugin *createPlugin()
 }
 
 END_NAMESPACE_DISTRHO
+
+void stormsurge::setPreviewHostTempo(void *instance, bool valid, double bpm) noexcept
+{
+    static_cast<DISTRHO_NAMESPACE::PreviewPlugin *>(instance)->hostTempo(valid, bpm);
+}

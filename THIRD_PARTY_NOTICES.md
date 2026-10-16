@@ -15,9 +15,19 @@ JACK client library. Native RtAudio fallback and ASIO are not built here.
 
 See upstream [LICENSE](external/dpf/LICENSE) and
 [format licensing notes](external/dpf/LICENSING.md). Individual files include
-additional contributor notices. Upstream sources are unmodified; the root CMake
+additional contributor notices. The submodule checkout is unmodified; the root CMake
 file disables optional browser definitions affected by an upstream CMake boolean
 handling issue at this revision.
+
+Preview VST3 compiles a generated copy of the adapter with a per-instance raw-tempo
+bridge inserted before processing. DPF's original BBT conversion substitutes 120 BPM
+when host tempo is missing, which cannot implement the approved hold/fallback policy.
+The reproducible modification and wrapper are in
+[`cmake/PreviewVst3Tempo.cmake`](cmake/PreviewVst3Tempo.cmake) and
+[`cmake/PreviewVst3Main.cpp.in`](cmake/PreviewVst3Main.cpp.in). The module verifies the
+LF-normalized upstream adapter and wrapper SHA256 hashes before generating anything. Original ISC notices are
+retained in the copied source. Foundation and the dependency checkout are not patched.
+Keep these build sources with the corresponding source distribution.
 
 ## Graphics dependencies
 

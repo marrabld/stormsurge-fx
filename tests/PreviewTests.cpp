@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "DarkDelay.hpp"
 #include "PreviewParameters.hpp"
+#include "PreviewTempoBridge.hpp"
+#include "TempoSync.hpp"
 #include "DistrhoPluginUtils.hpp"
 #include "src/DistrhoPluginInternal.hpp"
 
@@ -121,6 +123,9 @@ static void mappings()
     require(previewHostIndex(PingPong, false) == 6 && previewHostIndex(PingPong, true) == 8 &&
                 MonitorRequest == 6 && MonitorActive == 7,
             "Published host indices moved");
+    require(Sync == 7 && Division == 8 && InternalTempo == 9 && EffectiveTempo == 10 &&
+                TempoSource == 11 && EffectiveTime == 12 && SyncLimited == 13,
+            "Published sync/status indices moved");
     for (bool app : {false, true}) {
         for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
             require(previewEffectIndex(previewHostIndex(i, app), app) == static_cast<int>(i),
@@ -183,7 +188,7 @@ static void integration(PluginExporter &plugin, bool pingPong)
 
 static void parametersAndRecall(PluginExporter &plugin)
 {
-    const std::array<float, EffectParameterCount> settings{800, 52, 37, 1800, 0.6f, 1, 1};
+    const std::array<float, EffectParameterCount> settings{800, 52, 37, 1800, 0.6f, 1, 1, 1, 4, 90};
     const std::array<const char *, 6> legacySymbols{"time_ms", "feedback",    "mix",
                                                     "tone_hz", "output_gain", "bypass"};
     for (std::uint32_t i = 0; i < legacySymbols.size(); ++i)
@@ -224,6 +229,12 @@ static void parametersAndRecall(PluginExporter &plugin)
     legacy.activate();
     require(legacy.getParameterValue(previewHostIndex(PingPong, standalone)) == 0,
             "Old project settings did not retain Normal mode");
+    require(legacy.getParameterValue(previewHostIndex(Sync, standalone)) == 0,
+            "Old project settings enabled sync");
+    legacy.setParameterValue(previewHostIndex(PingPong, standalone), 1);
+    require(legacy.getParameterValue(previewHostIndex(PingPong, standalone)) == 1 &&
+                legacy.getParameterValue(previewHostIndex(Sync, standalone)) == 0,
+            "Old Ping-pong settings did not retain free timing");
     legacy.deactivate();
     for (std::uint32_t i = 0; i < EffectParameterCount; ++i) {
         const auto host = previewHostIndex(i, standalone);
@@ -269,12 +280,13 @@ static void bypassAndAutomation(PluginExporter &plugin)
         require(std::isfinite(sample), "Automation produced nonfinite audio");
 }
 
-static void monitorSafety(PluginExporter &plugin, bool pingPong)
+static void monitorSafety(PluginExporter &plugin, bool pingPong, bool sync)
 {
     auto input = audio(48000, 0.1f);
     auto output = audio(48000, 99);
     plugin.deactivate();
     plugin.activate();
+    plugin.setParameterValue(previewHostIndex(Sync, standalone), sync ? 1.0f : 0.0f);
     plugin.setParameterValue(previewHostIndex(PingPong, standalone), pingPong ? 1.0f : 0.0f);
     require(plugin.getParameterValue(MonitorActive) == 0, "Changing mode enabled monitoring");
     run(plugin, input, output, 0, 48000);
@@ -316,6 +328,160 @@ static void monitorSafety(PluginExporter &plugin, bool pingPong)
     other.deactivate();
 }
 
+static void syncIntegration(PluginExporter &plugin)
+{
+    // Same field/flag extraction template as the generated VST3 adapter uses.
+    struct Context {
+        std::uint32_t state;
+        double bpm;
+    };
+    constexpr std::uint32_t validTempo = 1, playing = 2;
+    auto set = [&](std::uint32_t id, float value) {
+        plugin.setParameterValue(previewHostIndex(id, standalone), value);
+    };
+    auto get = [&](std::uint32_t id) {
+        return plugin.getParameterValue(previewHostIndex(id, standalone));
+    };
+    for (std::uint32_t id = EffectiveTempo; id < PreviewParameterCount; ++id) {
+        const auto host = previewHostIndex(id, standalone);
+        require(plugin.getParameterHints(host) & kParameterIsOutput, "Timing status not read-only");
+        const float before = get(id);
+        plugin.setParameterValue(host, 42);
+        require(get(id) == before, "Host wrote a timing readout");
+    }
+    set(Time, 777);
+    set(Sync, 1);
+    set(InternalTempo, 100);
+    set(Feedback, 0);
+    set(Tone, 2500);
+    set(Mix, 100);
+    set(Level, 1);
+    set(Bypass, 0);
+    plugin.setSampleRate(8000, true);
+    // No host tempo has been supplied yet. An unrelated context flag is not valid tempo.
+    Context context{playing, 999};
+    supplyPreviewTempo(plugin.getInstancePointer(), &context, validTempo);
+    require(get(EffectiveTempo) == 100 &&
+                get(TempoSource) ==
+                    static_cast<float>(standalone ? TempoOrigin::Internal : TempoOrigin::Fallback),
+            "Initial internal/fallback source wrong");
+    for (bool ping : {false, true}) {
+        set(PingPong, ping ? 1 : 0);
+        for (double bpm : {40.0, 90.0, 120.0, 180.0}) {
+            set(InternalTempo, static_cast<float>(bpm));
+            context = {validTempo | playing, bpm};
+            for (std::size_t division = 0; division < noteDivisions.size(); ++division) {
+                set(Division, static_cast<float>(division));
+                supplyPreviewTempo(plugin.getInstancePointer(), &context, validTempo);
+                prepare(plugin);
+                const double ms = 60000.0 / bpm * noteDivisions[division].beats;
+                const auto count = static_cast<std::uint32_t>(std::ceil(ms * 8.0)) * 3 + 128;
+                auto input = audio(count), output = audio(count), expected = audio(count);
+                input[0][0] = input[1][0] = 1;
+                run(plugin, input, output, 0, count);
+                DarkDelay reference;
+                DelayParameters p;
+                p.timeMs = ms;
+                p.feedback = 0;
+                p.mix = 1;
+                p.pingPong = ping;
+                reference.prepare(8000, p, 8000);
+                const float *inputs[] = {input[0].data(), input[1].data()};
+                float *outputs[] = {expected[0].data(), expected[1].data()};
+                reference.process(inputs, outputs, count);
+                require(output == expected, "Synced processor differs from reference delay");
+                require(std::abs(get(EffectiveTime) - ms) < 0.001, "Wrong synced target time");
+                require(get(SyncLimited) == 0, "Ordinary note unexpectedly limited");
+                const auto echo = static_cast<std::size_t>(std::floor(ms * 8.0));
+                require(output[0][echo] > 0, "No synced echo at expected onset");
+                // The same valid tempo must remain valid when transport stops.
+                context.state = validTempo;
+                trackAllocations = true;
+                supplyPreviewTempo(plugin.getInstancePointer(), &context, validTempo);
+                trackAllocations = false;
+                require(std::abs(get(EffectiveTime) - ms) < 0.001,
+                        "Stopping transport changed synced delay");
+            }
+        }
+    }
+    // Changing tempo while stopped must work, not switch to milliseconds.
+    set(Division, 0);
+    set(InternalTempo, 90);
+    context = {validTempo, 90};
+    supplyPreviewTempo(plugin.getInstancePointer(), &context, validTempo);
+    require(std::abs(get(EffectiveTime) - 60000.0 / 90) < 0.001, "Stopped tempo change ignored");
+    context.state = playing; // lose tempo validity; do not invent 120
+    context.bpm = 120;
+    supplyPreviewTempo(plugin.getInstancePointer(), &context, validTempo);
+    require(get(EffectiveTempo) == 90 &&
+                get(TempoSource) ==
+                    static_cast<float>(standalone ? TempoOrigin::Internal : TempoOrigin::Held),
+            "Missing tempo did not hold last valid BPM");
+    supplyPreviewTempo<Context>(plugin.getInstancePointer(), nullptr, validTempo);
+    require(get(EffectiveTempo) == 90, "Missing context changed tempo");
+    {
+        PluginExporter other(nullptr, nullptr, nullptr, nullptr);
+        require(other.getParameterValue(previewHostIndex(EffectiveTempo, standalone)) == 120,
+                "Another instance inherited tempo history");
+        Context otherContext{validTempo, 144};
+        supplyPreviewTempo(other.getInstancePointer(), &otherContext, validTempo);
+        require(get(EffectiveTempo) == 90, "Tempo bridge updated the wrong instance");
+    }
+    context = {validTempo, std::numeric_limits<double>::quiet_NaN()};
+    supplyPreviewTempo(plugin.getInstancePointer(), &context, validTempo);
+    require(get(EffectiveTempo) == 90, "Invalid tempo contaminated state");
+    set(Sync, 0);
+    supplyPreviewTempo(plugin.getInstancePointer(), &context, validTempo);
+    require(get(EffectiveTime) == 777 && get(Time) == 777, "Free time was not preserved");
+    set(Sync, 1);
+    set(Division, 1); // dotted quarter
+    context = {validTempo, 1};
+    supplyPreviewTempo(plugin.getInstancePointer(), &context, validTempo);
+    if (!standalone)
+        require(get(EffectiveTime) == 8000 && get(SyncLimited) == 1,
+                "Long sync target was not visibly limited");
+    context = {validTempo, 1000};
+    set(Division, 8); // sixteenth triplet: 10 ms, below the 20 ms floor
+    supplyPreviewTempo(plugin.getInstancePointer(), &context, validTempo);
+    if (!standalone)
+        require(get(EffectiveTime) == 20 && get(SyncLimited) == 1,
+                "Short sync target was not visibly limited");
+    if (!standalone) {
+        context = {validTempo, 7.5}; // a quarter note exactly fills eight seconds
+        set(Division, 0);
+        set(Feedback, 50);
+        supplyPreviewTempo(plugin.getInstancePointer(), &context, validTempo);
+        prepare(plugin);
+        auto impulse = audio(129000), longOutput = audio(129000);
+        impulse[0][0] = impulse[1][0] = 1;
+        run(plugin, impulse, longOutput, 0, 129000);
+        require(get(EffectiveTime) == 8000 && get(SyncLimited) == 0 && longOutput[0][64000] > 0 &&
+                    longOutput[1][128000] > 0,
+                "Actual processor failed the eight-second ping-pong boundary");
+    }
+
+    // Exercise rapid host tempo + division changes through real processing without allocations.
+    auto input = audio(16000, 0.1f), output = audio(16000);
+    set(InternalTempo, 120);
+    set(Feedback, 90);
+    prepare(plugin);
+    for (std::size_t offset = 0; offset < 16000; offset += 80) {
+        context = {validTempo | (offset % 160 == 0 ? playing : 0),
+                   offset % 160 == 0 ? 90.0 : 180.0};
+        trackAllocations = true;
+        set(Division, static_cast<float>((offset / 80) % 9));
+        supplyPreviewTempo(plugin.getInstancePointer(), &context, validTempo);
+        trackAllocations = false;
+        run(plugin, input, output, offset, 80);
+    }
+    for (float sample : output[0])
+        require(std::isfinite(sample) && std::abs(sample) <= 1.001f,
+                "Tempo automation exceeded bound");
+    set(Sync, 0);
+    set(Mix, 20);
+    set(Bypass, 1);
+}
+
 int main(int argc, char **argv)
 {
     try {
@@ -327,7 +493,7 @@ int main(int argc, char **argv)
         d_nextSampleRate = 48000;
         PluginExporter plugin(nullptr, nullptr, nullptr, nullptr);
         require(plugin.getParameterCount() ==
-                    (standalone ? StandaloneParameterCount : EffectParameterCount),
+                    (standalone ? StandaloneParameterCount : PreviewParameterCount),
                 "Parameter count wrong");
         require(plugin.getStateKey(0) == "undertow_preview_schema", "Schema marker missing");
         for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
@@ -340,9 +506,12 @@ int main(int argc, char **argv)
         integration(plugin, true);
         parametersAndRecall(plugin);
         bypassAndAutomation(plugin);
+        syncIntegration(plugin);
         if (standalone) {
-            monitorSafety(plugin, false);
-            monitorSafety(plugin, true);
+            for (bool sync : {false, true}) {
+                monitorSafety(plugin, false, sync);
+                monitorSafety(plugin, true, sync);
+            }
         }
         plugin.setSampleRate(384000, true);
         enable(plugin);

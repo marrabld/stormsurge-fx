@@ -6,6 +6,7 @@
 #define DISTRHO_PLUGIN_NAME "Undertow Preview"
 #define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/undertow-preview"
 #define DISTRHO_PLUGIN_UNIQUE_ID UtP0
+#define DISTRHO_PLUGIN_WANT_TIMEPOS 1
 #else
 #define DISTRHO_PLUGIN_NAME "Undertow Foundation"
 #define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/foundation"

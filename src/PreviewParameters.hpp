@@ -11,6 +11,7 @@ namespace stormsurge
 
 // Logical effect IDs. Host indices differ for new controls in standalone because
 // its original monitor request/status already occupy slots 6/7. Use the helpers.
+// Future parameters append after SyncLimited, not before the published readouts.
 enum PreviewParameter : std::uint32_t {
     Time = 0,
     Feedback,
@@ -19,25 +20,33 @@ enum PreviewParameter : std::uint32_t {
     Level,
     Bypass,
     PingPong,
-    EffectParameterCount
+    Sync,
+    Division,
+    InternalTempo,
+    EffectParameterCount,
+    EffectiveTempo = EffectParameterCount,
+    TempoSource,
+    EffectiveTime,
+    SyncLimited,
+    PreviewParameterCount
 };
 
 // Raw standalone host slots, not logical effect IDs or previewSpecs indices.
 inline constexpr std::uint32_t MonitorRequest = 6;
 inline constexpr std::uint32_t MonitorActive = 7;
-inline constexpr std::uint32_t StandaloneParameterCount = EffectParameterCount + 2;
+inline constexpr std::uint32_t StandaloneParameterCount = PreviewParameterCount + 2;
 
 inline constexpr std::uint32_t previewHostIndex(std::uint32_t effect, bool standalone) noexcept
 {
     return standalone && effect >= PingPong ? effect + 2 : effect;
 }
 
-inline constexpr int previewEffectIndex(std::uint32_t host, bool standalone) noexcept
+inline constexpr int previewLogicalIndex(std::uint32_t host, bool standalone) noexcept
 {
     if (standalone && (host == MonitorRequest || host == MonitorActive))
         return -1;
     const auto effect = standalone && host > MonitorActive ? host - 2 : host;
-    return effect < EffectParameterCount ? static_cast<int>(effect) : -1;
+    return effect < PreviewParameterCount ? static_cast<int>(effect) : -1;
 }
 
 struct ParameterSpec {
@@ -46,9 +55,10 @@ struct ParameterSpec {
     const char *unit;
     float initial, minimum, maximum;
     bool logarithmic;
+    bool readOnly = false;
 };
 
-inline constexpr std::array<ParameterSpec, EffectParameterCount> previewSpecs{{
+inline constexpr std::array<ParameterSpec, PreviewParameterCount> previewSpecs{{
     {"Time", "time_ms", "ms", 400, 20, 2000, true},
     {"Feedback", "feedback", "%", 35, 0, 90, false},
     {"Mix", "mix", "%", 20, 0, 100, false},
@@ -56,7 +66,20 @@ inline constexpr std::array<ParameterSpec, EffectParameterCount> previewSpecs{{
     {"Output gain", "output_gain", "", 1, 0, 1.995262315f, false},
     {"Bypass", "bypass", "", 0, 0, 1, false},
     {"Ping-pong", "ping_pong", "", 0, 0, 1, false},
+    {"Tempo sync", "tempo_sync", "", 0, 0, 1, false},
+    {"Note division", "note_division", "", 0, 0, 8, false},
+    {"Internal/fallback tempo", "internal_tempo", "BPM", 120, 20, 300, false},
+    {"Effective tempo", "effective_tempo", "BPM", 120, 1, 1000, false, true},
+    {"Tempo source", "tempo_source", "", 0, 0, 3, false, true},
+    {"Delay target", "delay_target_ms", "ms", 400, 20, 8000, false, true},
+    {"Sync time limited", "sync_limited", "", 0, 0, 1, false, true},
 }};
+
+inline int previewEffectIndex(std::uint32_t host, bool standalone) noexcept
+{
+    const int logical = previewLogicalIndex(host, standalone);
+    return logical >= 0 && !previewSpecs[logical].readOnly ? logical : -1;
+}
 
 inline float sanitizePreview(std::uint32_t index, float value) noexcept
 {
@@ -64,7 +87,9 @@ inline float sanitizePreview(std::uint32_t index, float value) noexcept
     if (!std::isfinite(value))
         return spec.initial;
     value = std::clamp(value, spec.minimum, spec.maximum);
-    return index == Bypass || index == PingPong ? (value >= 0.5f ? 1.0f : 0.0f) : value;
+    if (index == Bypass || index == PingPong || index == Sync || index == SyncLimited)
+        return value >= 0.5f ? 1.0f : 0.0f;
+    return index == Division || index == TempoSource ? std::round(value) : value;
 }
 
 inline float normalizedPreview(std::uint32_t index, float value) noexcept
@@ -119,6 +144,20 @@ inline int knobAt(PedalPoint point) noexcept
 inline bool pingPongButtonAt(PedalPoint point) noexcept
 {
     return point.x >= 105 && point.x <= 415 && point.y >= 454 && point.y <= 480;
+}
+
+// Header controls: free/sync, note division, internal/fallback BPM.
+inline int timingControlAt(PedalPoint point) noexcept
+{
+    if (point.y < 130 || point.y > 153)
+        return -1;
+    if (point.x >= 40 && point.x <= 180)
+        return Sync;
+    if (point.x >= 190 && point.x <= 330)
+        return Division;
+    if (point.x >= 340 && point.x <= 480)
+        return InternalTempo;
+    return -1;
 }
 
 } // namespace stormsurge
