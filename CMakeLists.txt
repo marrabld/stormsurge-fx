@@ -41,6 +41,11 @@ foreach(property COMPILE_DEFINITIONS INTERFACE_COMPILE_DEFINITIONS)
     set_target_properties(dgl-opengl PROPERTIES ${property} "${dgl_definitions}")
 endforeach()
 
+if(WIN32)
+    include(cmake/KhronosHeaders.cmake)
+    target_include_directories(dgl-opengl BEFORE PUBLIC "${STORMSURGE_KHRONOS_DIR}")
+endif()
+
 # Carry the upstream notices with development binaries, including the embedded
 # font and rendering helpers. Some licence notices live inside source headers;
 # retain those files intact rather than extracting incomplete paragraphs.
@@ -54,6 +59,9 @@ foreach(header fontstash.h stb_truetype.h stb_image.h)
     configure_file("external/dpf/dgl/src/nanovg/${header}"
         "${CMAKE_BINARY_DIR}/bin/notices/${header}" COPYONLY)
 endforeach()
+if(WIN32)
+    file(COPY "${STORMSURGE_KHRONOS_DIR}/" DESTINATION "${CMAKE_BINARY_DIR}/bin/notices/khronos")
+endif()
 
 include(CTest)
 if(BUILD_TESTING)

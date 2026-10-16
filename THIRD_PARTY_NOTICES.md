@@ -40,6 +40,39 @@ they are not bundled by the current build.
 
 ## Source availability
 
+### Windows OpenGL header dependency
+
+Windows builds additionally use the official `GL/glext.h` from Khronos
+OpenGL-Registry commit `6af574a14089ccfee87efe230ebcdd8742859813` and
+`KHR/khrplatform.h` from EGL-Registry commit
+`db3425b8246136faccb5e2782b5694960bd6edf1`. CMake downloads them with pinned SHA256
+verification into the build tree and copies them into the binary notices directory.
+They supply declarations; the system provides the actual OpenGL implementation.
+
+The extension header declares SPDX licence MIT, Copyright 2013-2026 The Khronos
+Group Inc. The platform header retains its full Khronos MIT-style notice.
+The MIT permission and disclaimer applicable to the extension header are:
+
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+> of this software and associated documentation files (the "Software"), to deal
+> in the Software without restriction, including without limitation the rights
+> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+> of the Software, and to permit persons to whom the Software is furnished to do
+> so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in all
+> copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+> SOFTWARE.
+
+### Obtaining the source
+
 For an exact source checkout, select the source commit recorded for the build and
 run `git submodule update --init --recursive`. The Git submodule commits pin both
 DPF and Pugl. A plain GitHub source zip does not include submodule contents.

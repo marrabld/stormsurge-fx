@@ -58,6 +58,11 @@ The current Linux GUI uses X11, including XWayland on Wayland desktops.
 Install Visual Studio 2022 with Desktop development with C++, its Windows SDK,
 CMake 3.24+ and Git. In a developer terminal after recursive checkout:
 
+The first Windows configure downloads two official Khronos OpenGL headers to the
+build directory. Their exact commits and SHA256 hashes are pinned in
+`cmake/KhronosHeaders.cmake`; matching cached files need no download. No executable
+is downloaded or installed. Keep the headers and notices with corresponding source.
+
 ```sh
 cmake --preset windows-debug
 cmake --build --preset windows-debug
