@@ -1,14 +1,19 @@
 # StormSurge FX
 
-Linux-first, open-source guitar effects for Bitwig and standalone use.
-Starting with **Undertow**, a delay, and growing toward a small pedalboard.
+Linux-first, GPLv3 guitar effects for Bitwig and standalone use. Starting with
+Undertow, a delay, and growing toward a small pedalboard. Windows support planned.
 
 Named after the maintainer's planned song, **StormSurge**. The first musical
 milestone is to use Undertow on that track.
 
+![Undertow Foundation procedural pedal face, with clearly labelled placeholder knobs](docs/images/undertow-foundation.png)
+
 ## Status
 
-**Planning only.** There is no audio implementation, plugin or download yet.
+**Under construction.** A stereo pass-through VST3 and JACK-only standalone shell
+build and pass automated tests on Linux and Windows, with a procedural pedal-face
+mockup. Undertow's delay DSP is the current work; there is no public release yet and
+the pictured knobs are still placeholders, not working effects.
 This is a separate project from [Omazone](https://github.com/marrabld/omazone),
 not a port of its offline mastering chain.
 
@@ -29,9 +34,8 @@ reproduce his exact rig or recording. The initial scope is deliberately small:
 
 Tempo sync and ping-pong follow the tested basic delay, but are early requirements,
 not distant extras. Long reverb and a combined ambience chain are later work.
-The standalone application will
-need device selection and input/output metering. The plugin uses its host's
-audio devices and transport.
+The standalone application will need device selection and input/output metering.
+The plugin uses its host's audio devices and transport.
 
 ## Platforms and formats
 
@@ -39,9 +43,9 @@ audio devices and transport.
 - **Windows planned**, using shared DSP and interface code rather than a rewrite.
   Windows builds, device backends and host behaviour still need their own tests.
 - **Plugin and standalone** are intended to share the same effect implementation.
-- C++ with JUCE, CMake, VST3 and standalone targets is a candidate, not a settled
-  dependency choice. Confirm current licences and platform support before adoption.
-  CLAP and LV2 are possible later formats, not first-release promises.
+- C++20, CMake and the ISC-licensed DPF framework are the selected foundation.
+  JUCE's current AGPL/commercial terms were reviewed and not adopted. VST3 and
+  JACK-only standalone build targets come first. CLAP and LV2 remain later options.
 - macOS is not part of the initial commitment.
 
 ## What this is not
@@ -55,14 +59,40 @@ monitoring volume. Avoid accidentally monitoring both the interface's direct
 signal and a delayed software copy. Recording latency depends on the complete
 audio path; an effect's delay-time knob is a separate thing.
 
+## Build and try the foundation
+
+See [build instructions](docs/building.md) and the [technology decision](docs/technology.md).
+The plugin deliberately leaves audio unchanged. Standalone requires JACK-compatible
+routing and starts muted until monitoring is explicitly enabled. Device selection,
+delay processing and finished standalone usability are not implemented yet.
+
+To view the pedal face without opening any audio device:
+
+```sh
+cmake --preset linux-debug && cmake --build --preset linux-debug
+./build/linux-debug/foundation_gui --view
+```
+
+No automatic installation, live-input monitoring or release publication is part of
+the build. Bitwig 6.0.11 is the maintainer's initial host target, awaiting real-host
+testing. Supplied Gemini artwork remains local; the mockup is drawn in code.
+
 ## Next steps
 
 See the [roadmap](ROADMAP.md) and [design questions](docs/design.md).
 The roadmap links five ordered GitHub issues for design, build foundations,
-delay DSP, playable integration and preview validation.
-Agree on the first release's behaviour before implementing DSP or choosing a
-framework. Contributions and listening reports will be welcome once there is
-something to build and test.
+delay DSP, playable integration and preview validation. The proposed delay
+defaults in `docs/design.md` await maintainer approval before they become spec.
+
+Implementation of the delay engine is authorised and under way; publishing a
+release is not. Contributions and listening reports will be welcome as the effect
+develops.
+
+## Working on this
+
+[AGENTS.md](AGENTS.md) holds the rules for AI assistants: build commands, test
+facts, safety invariants and licensing requirements. [HANDOFF.md](HANDOFF.md) is a
+short brief for picking up the project in a new session.
 
 ## Licence
 
