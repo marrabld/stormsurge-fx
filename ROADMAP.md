@@ -1,12 +1,15 @@
 # Roadmap
 
-This is a direction, not a release schedule. Nothing below is implemented yet.
+This is a direction, not a release schedule. The pass-through build foundation is
+in development; the delay and later effects are not implemented yet.
 The first useful release is one delay, not an entire pedalboard.
 
 ## First work plan
 
 Work through one issue at a time. Creating issues does not authorise implementation
-or publication. Discuss the design first; implement only after the maintainer's
+or publication. The maintainer has now authorised the pass-through build foundation
+and pedal-face mockup, not the delay engine. Discuss the design first; implement
+further processing only after the maintainer's
 go-ahead, then test and review a PR. Do not merge automatically.
 
 | Order | Issue | Outcome |
@@ -42,13 +45,19 @@ music needs to be uploaded publicly.
 
 ## 2. Choose the build foundation
 
-- Evaluate current framework, SDK and dependency licences before adopting them.
-  C++/JUCE, CMake, VST3 and standalone remain candidates, not settled choices.
+- Selected foundation: C++20, CMake and DPF, after reviewing JUCE's current
+  AGPL/commercial terms and obtaining maintainer approval for the GPL-compatible
+  alternative. See [technology decision](docs/technology.md).
 - Document a GPL-3.0-only-compatible choice, pinned dependencies and required notices.
 - Once authorised, prove a minimal plugin/standalone shell builds on both Linux
   and Windows. Keep DSP separate from hosts, interfaces and devices.
 - Windows builds begin early to avoid Linux-only assumptions. Host playback,
   real-device testing and distributable Windows releases remain distinct later work.
+
+The first standalone uses JACK-compatible routing and an initially muted monitor
+gate, not a finished in-app device selector. Generated artwork is not embedded.
+Read [build instructions](docs/building.md) and actual CI results before claiming
+the foundation is verified on a platform. Issue #2 remains open for evidence/review.
 
 ## 3. Understand and test the basic delay
 
