@@ -57,8 +57,9 @@ Undertow Preview plugin/standalone connect it in the first slice of issue #4. Se
 [preview.md](preview.md) for controls, reset policy and listening checks. Engineering
 starting points for review:
 
-- Independent stereo lines, preserving per-channel dry routing. Mono-to-stereo,
-  ping-pong and host channel layouts remain integration work under issue #4.
+- Normal mode uses independent stereo lines, preserving per-channel dry routing.
+  Ping-pong is specified below under issue #11. Mono-to-stereo channel layouts
+  remain integration work under issue #4.
 - One-pole lowpass on the wet read and in the feedback path. Every return is filtered,
   including the first. Cutoff 400–16000 Hz, initially 2500 Hz; capped at 45% of sample
   rate. These cutoff choices are starting points, not approved listening results.
@@ -122,11 +123,26 @@ cumulative darkening the direction calls for and helps contain feedback. Outside
 loop would keep every repeat equally bright: cleaner to articulate, less atmospheric.
 
 **Ping-pong topology and stereo input**
-Not settled. Cross-feedback alone cannot make identical signals in identical left
-and right lines alternate. An alternating design needs an explicit input-injection
-and first-repeat policy. Simply summing L+R also boosts correlated stereo input.
-Keep this outside the independent-stereo basic core and agree routing before the
-ping-pong integration follow-up under #4.
+The maintainer requested switchable stereo ping-pong as the next feature after
+confirming the basic delay works in Bitwig. Issue #11 records this implementation:
+
+- Normal is the unchanged default. Ping-pong starts new repeats left, then alternates
+  right/left through full cross-feedback. Time is the interval between channel hops.
+- Wet input is `(L+R)/2`, injected left only. Both inputs duplicated mono retain
+  their level; single-sided input is halved; opposite-phase stereo can cancel in wet.
+  Dry remains per-channel, with the existing Mix and output gain unchanged.
+- Smooth injection and self/cross-feedback weights over 20 ms. The feedback matrix
+  is a convex blend of identity and channel swap, keeping its row gain at unity
+  before the bounded feedback gain. Compute both filtered returns before either write.
+- Do not clear tails on a mode change. Existing symmetric tails can stay centred;
+  new input after settling alternates. This avoids promising immediate hard-panned
+  alternation or artifact-free switching of arbitrary waveforms.
+- Append the mode parameter without moving existing effect or monitoring IDs.
+  Preserve plugin identity/schema, with Normal default for old projects lacking mode.
+
+These explicit routing choices avoid the earlier incorrect proposal to write
+identical mono input into both lines, which would not create alternation. They do
+not implement mono-input negotiation, a width control or tempo sync.
 
 **Bypass and tail**
 Approved: stop feeding new notes, preserve existing echoes and restore clean guitar.
@@ -181,12 +197,14 @@ tradeoff before asking for a decision.
 
 The maintainer requested a playable basic delay after merging PR #9. This slice
 keeps Foundation unchanged and uses a separate Preview identity and parameter schema.
-Host parameters are Time, Feedback, Mix, Tone, Output gain and Bypass. Effect bypass
+The initial host parameters were Time, Feedback, Mix, Tone, Output gain and Bypass;
+issue #11 appends Ping-pong. Effect bypass
 is deliberately separate from host hard bypass and standalone monitoring.
 
 Implementation policies for this early preview, subject to real-host testing:
 
-- Fixed stereo, two independent lines. No mono-to-stereo mapping, sync or ping-pong.
+- Fixed stereo with independent lines in Normal or cross-feedback in Ping-pong.
+  No mono-to-stereo mapping or sync yet.
 - Audio activation/reactivation and rate changes clear tails but retain settings;
   buffer-size changes can induce reactivation. Transport moves alone do not clear
   tails while processing remains active. Parameter automation is smoothed, without

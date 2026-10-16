@@ -87,6 +87,7 @@ void DarkDelay::reset() noexcept
     mix.snap(parameters.mix);
     gain.snap(parameters.outputGain);
     injection.snap(parameters.bypass ? 0.0 : 1.0);
+    routing.snap(parameters.pingPong ? 1.0 : 0.0);
     pole.snap(std::exp(-2.0 * std::numbers::pi * std::min(parameters.toneHz, rate * 0.45) / rate));
 }
 
@@ -97,6 +98,7 @@ void DarkDelay::setParameters(const DelayParameters &p) noexcept
     mix.set(parameters.mix, smoothFrames);
     gain.set(parameters.outputGain, smoothFrames);
     injection.set(parameters.bypass ? 0.0 : 1.0, smoothFrames);
+    routing.set(parameters.pingPong ? 1.0 : 0.0, smoothFrames);
     pole.set(std::exp(-2.0 * std::numbers::pi * std::min(parameters.toneHz, rate * 0.45) / rate),
              smoothFrames);
     requestedDelay = rate * parameters.timeMs / 1000.0;
@@ -133,21 +135,34 @@ void DarkDelay::process(const float *const *inputs, float *const *outputs,
         const double a = pole.tick();
         const double g = gain.tick();
         const double inputGain = injection.tick();
+        const double mode = routing.tick();
         const double blend = fadeRemaining == 0
                                  ? 0.0
                                  : static_cast<double>(fadeFrames - fadeRemaining + 1) / fadeFrames;
+        // Read both inputs and filter both returns before cross-feeding either side.
+        // This also preserves corresponding in-place buffers and channel symmetry.
+        const std::array<double, 2> dry{std::isfinite(inputs[0][frame]) ? inputs[0][frame] : 0.0,
+                                        std::isfinite(inputs[1][frame]) ? inputs[1][frame] : 0.0};
         for (std::size_t channel = 0; channel < 2; ++channel) {
-            const double dry = std::isfinite(inputs[channel][frame]) ? inputs[channel][frame] : 0.0;
             const double delayed = fadeRemaining == 0 ? read(channel, oldDelay)
                                                       : read(channel, oldDelay) * (1.0 - blend) +
                                                             read(channel, newDelay) * blend;
             // Filter every wet repeat, including the first, and recirculate it.
             // Convex interpolation, filtering and crossfades cannot boost loop gain.
             filtered[channel] = flushTiny((1.0 - a) * delayed + a * filtered[channel]);
-            buffers[channel][write] = flushTiny(dry * inputGain + f * filtered[channel]);
+        }
+        const double mono = (dry[0] + dry[1]) * 0.5;
+        const std::array<double, 2> incoming{dry[0] * (1.0 - mode) + mono * mode,
+                                             dry[1] * (1.0 - mode)};
+        for (std::size_t channel = 0; channel < 2; ++channel) {
+            // A convex self/cross-feedback matrix stays non-boosting during switches.
+            // Ping-pong injects only left; writing identical inputs to both lines
+            // would produce centred repeats instead of alternating echoes.
+            const double returned = filtered[channel] * (1.0 - mode) + filtered[1 - channel] * mode;
+            buffers[channel][write] = flushTiny(incoming[channel] * inputGain + f * returned);
             // Bypass restores unity dry while preserving the existing wet tail.
-            outputs[channel][frame] =
-                static_cast<float>((dry * (1.0 - m * inputGain) + filtered[channel] * m) * g);
+            outputs[channel][frame] = static_cast<float>(
+                (dry[channel] * (1.0 - m * inputGain) + filtered[channel] * m) * g);
         }
         write = (write + 1) % buffers[0].size();
         if (fadeRemaining != 0 && --fadeRemaining == 0) {

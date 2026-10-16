@@ -185,9 +185,10 @@ static void buffersAndMix()
     require(sentinel[0][1] == 99 && sentinel[1][1] == 99, "Wrote beyond block boundary");
 }
 
-static void bypassTail()
+static void bypassTail(bool pingPong)
 {
     DelayParameters p;
+    p.pingPong = pingPong;
     p.timeMs = 100;
     p.mix = 0.2;
     p.feedback = 0.5;
@@ -352,20 +353,175 @@ static void timeChangeSettles()
     require(output[0][3600] > 0, "Latest time request never settled");
 }
 
+static void pingPongTimingAndTone()
+{
+    for (double rate : {8000.0, 44100.0, 48000.0, 96000.0, 192000.0}) {
+        for (double time : {20.0, 400.0, 2000.0}) {
+            DelayParameters p;
+            p.pingPong = true;
+            p.timeMs = time;
+            p.mix = 1;
+            p.feedback = 0.5;
+            p.toneHz = 400;
+            const auto interval = static_cast<std::size_t>(std::lround(rate * time / 1000.0));
+            auto input = signal(interval * 5);
+            input[0][0] = input[1][0] = 1;
+            const auto output = render(rate, p, input, 127);
+            require(output[0][interval] > 0 && output[1][interval] == 0,
+                    "Ping-pong first repeat was not left-only");
+            double amplitude = 1, brightness = 1;
+            for (std::size_t repeat = 1; repeat <= 4; ++repeat) {
+                const std::size_t side = (repeat - 1) % 2;
+                double sum = 0, wrongSide = 0, alternating = 0;
+                for (std::size_t i = 0; i < interval; ++i) {
+                    const auto frame = repeat * interval + i;
+                    sum += output[side][frame];
+                    wrongSide += std::abs(output[1 - side][frame]);
+                    alternating += (i % 2 == 0 ? 1 : -1) * output[side][frame];
+                }
+                near(sum, amplitude, 1e-5, "Ping-pong repeat timing or feedback gain wrong");
+                near(wrongSide, 0, 1e-5, "Ping-pong repeat did not alternate channels");
+                require(std::abs(alternating / sum) < brightness,
+                        "Alternating repeats did not get progressively darker");
+                brightness = std::abs(alternating / sum);
+                amplitude *= p.feedback;
+            }
+        }
+    }
+
+    DelayParameters p;
+    p.pingPong = true;
+    p.timeMs = 20;
+    p.mix = 1;
+    auto both = signal(4000);
+    both[0][0] = both[1][0] = 1;
+    const auto full = render(8000, p, both, 63);
+    auto left = both;
+    left[1][0] = 0;
+    auto right = both;
+    right[0][0] = 0;
+    const auto half = render(8000, p, left, 63);
+    require(half == render(8000, p, right, 63), "Wet averaging depends on input side");
+    for (std::size_t channel = 0; channel < 2; ++channel)
+        for (std::size_t i = 0; i < both[0].size(); ++i)
+            near(half[channel][i], full[channel][i] * 0.5, 1e-8, "Stereo wet averaging wrong");
+    auto opposite = both;
+    opposite[1][0] = -1;
+    require(render(8000, p, opposite, 63) == signal(4000),
+            "Opposite-phase wet input did not cancel as documented");
+    p.mix = 0;
+    require(render(8000, p, opposite, 63) == opposite, "Ping-pong changed dry stereo routing");
+    // Cross-feedback remains silent after the first left repeat when feedback is zero.
+    p.mix = 1;
+    p.feedback = 0;
+    const auto single = render(8000, p, both, 63);
+    require(std::all_of(single[1].begin(), single[1].end(), [](float x) { return x == 0; }),
+            "Zero feedback unexpectedly produced a right repeat");
+    p.timeMs = 20.0625; // 160.5 samples per hop, not 160.5 per round trip
+    p.feedback = 0.5;
+    p.toneHz = 2500;
+    const auto fractional = render(8000, p, both, 63);
+    const double a = std::exp(-2.0 * 3.141592653589793 * p.toneHz / 8000.0);
+    near(fractional[0][159], 0, 0, "Fractional ping-pong left arrived early");
+    near(fractional[0][160], 0.5 * (1 - a), 1e-6, "Fractional first hop wrong");
+    near(fractional[1][319], 0, 0, "Fractional ping-pong right arrived early");
+    near(fractional[1][320], 0.25 * p.feedback * (1 - a) * (1 - a), 1e-6,
+         "Fractional cross-feedback hop wrong");
+}
+
+static Audio routingAutomation(std::uint32_t blockSize, bool inPlace)
+{
+    DelayParameters p;
+    p.timeMs = 20;
+    p.mix = 1;
+    p.feedback = 0.9;
+    DarkDelay delay;
+    delay.prepare(8000, p);
+    auto input = signal(48000), output = signal(48000);
+    std::fill(input[0].begin(), input[0].end(), 1.0f);
+    std::fill(input[1].begin(), input[1].end(), 1.0f);
+    for (std::size_t event = 0; event < 48000; event += 128) {
+        if (event >= 8192) {
+            p.pingPong = event % 256 == 0;
+            p.timeMs = event % 512 == 0 ? 400 : 20;
+            p.toneHz = event % 256 == 0 ? 400 : 16000;
+        }
+        trackAllocations = true;
+        delay.setParameters(p);
+        trackAllocations = false;
+        for (std::size_t offset = event; offset < event + 128;) {
+            auto frames =
+                static_cast<std::uint32_t>(std::min<std::size_t>(blockSize, event + 128 - offset));
+            block(delay, input, output, offset, frames, inPlace);
+            offset += frames;
+        }
+    }
+    for (const auto &channel : output)
+        for (std::size_t i = 0; i < channel.size(); ++i) {
+            require(std::isfinite(channel[i]) && std::abs(channel[i]) <= 10.0001f,
+                    "Mode/time automation exceeded the maximum-feedback DC bound");
+            if (i > 8192)
+                require(std::abs(channel[i] - channel[i - 1]) < 0.1f,
+                        "Routing changes caused a discontinuity on steady test input");
+        }
+    // Reset must clear both lines and routing state after sustained cross-feedback.
+    auto silence = signal(48000);
+    p.pingPong = true;
+    delay.setParameters(p);
+    trackAllocations = true;
+    delay.reset();
+    trackAllocations = false;
+    auto cleared = signal(48000);
+    block(delay, silence, cleared, 0, 48000);
+    require(cleared == silence, "Ping-pong reset retained buffered/cross-feedback state");
+    return output;
+}
+
+static void modeSwitchPreservesTail()
+{
+    DelayParameters p;
+    p.timeMs = 100;
+    p.mix = 1;
+    DarkDelay delay;
+    delay.prepare(48000, p);
+    auto input = signal(20000), output = signal(20000);
+    input[0][0] = input[1][0] = 1;
+    block(delay, input, output, 0, 2400);
+    p.pingPong = true;
+    delay.setParameters(p);
+    block(delay, input, output, 2400, 17600);
+    require(output[0][4800] > 0 && output[1][4800] > 0,
+            "Switching mode discarded an existing tail");
+    p.pingPong = false;
+    delay.setParameters(p);
+    auto silence = signal(20000);
+    block(delay, silence, output, 0, 20000);
+    require(std::any_of(output[0].begin(), output[0].end(), [](float x) { return x != 0; }) ||
+                std::any_of(output[1].begin(), output[1].end(), [](float x) { return x != 0; }),
+            "Returning to Normal discarded an existing tail");
+}
+
 int main()
 {
     try {
         timingAndDecay();
         buffersAndMix();
-        bypassTail();
+        bypassTail(false);
+        bypassTail(true);
         auto reference = automated(1);
         require(automated(63) == reference && automated(512) == reference,
                 "Sample-timed automation depends on block partition");
         stabilityAndReset();
         timeChangeSettles();
+        pingPongTimingAndTone();
+        auto routing = routingAutomation(1, false);
+        require(routingAutomation(63, false) == routing && routingAutomation(512, true) == routing,
+                "Mode/time automation depends on blocks or in-place processing");
+        modeSwitchPreservesTail();
         require(allocations == 0, "Allocated during processing/parameter update/reset");
-        std::puts("PASS: dark delay timing, decay, darkening, routing, mix, bypass tails, buffers, "
-                  "automation, reset, headroom, invalid values and callback allocations");
+        std::puts(
+            "PASS: dark delay timing, decay, darkening, routing, mix, bypass tails, buffers, "
+            "automation, ping-pong, reset, headroom, invalid values and callback allocations");
         return 0;
     } catch (const std::exception &error) {
         trackAllocations = false;

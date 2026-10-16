@@ -17,9 +17,10 @@ struct DelayParameters {
     // Linear amplitude: zero is silence, one is 0 dB, maximum is +6 dB.
     double outputGain = 1.0;
     bool bypass = false;
+    bool pingPong = false;
 };
 
-// Independent stereo core shared by the Preview plugin and standalone.
+// Normal independent-stereo and ping-pong core shared by plugin and standalone.
 // One audio-thread owner. prepare() may allocate and must run off the callback;
 // setParameters(), reset() and process() must not run concurrently.
 class DarkDelay
@@ -57,7 +58,7 @@ class DarkDelay
     std::uint32_t fadeFrames = 2400;
     std::uint32_t fadeRemaining = 0;
     std::uint32_t smoothFrames = 960;
-    Smoother feedback, mix, pole, gain, injection;
+    Smoother feedback, mix, pole, gain, injection, routing;
 };
 
 } // namespace stormsurge

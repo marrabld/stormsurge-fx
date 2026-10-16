@@ -116,11 +116,24 @@ static void mappings()
         }
     }
     require(knobAt({260, 540}) == -1, "Footswitch overlaps a knob");
+    require(pingPongButtonAt({260, 467}) && !pingPongButtonAt({260, 540}),
+            "Mode switch hit test wrong");
+    require(previewHostIndex(PingPong, false) == 6 && previewHostIndex(PingPong, true) == 8 &&
+                MonitorRequest == 6 && MonitorActive == 7,
+            "Published host indices moved");
+    for (bool app : {false, true}) {
+        for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
+            require(previewEffectIndex(previewHostIndex(i, app), app) == static_cast<int>(i),
+                    "Host/effect mapping not invertible");
+    }
+    require(previewEffectIndex(6, true) == -1 && previewEffectIndex(7, true) == -1,
+            "Monitor slots overlap effect parameters");
 }
 
-static void integration(PluginExporter &plugin)
+static void integration(PluginExporter &plugin, bool pingPong)
 {
     plugin.setParameterValue(Time, 20);
+    plugin.setParameterValue(previewHostIndex(PingPong, standalone), pingPong ? 1.0f : 0.0f);
     const std::size_t count = 8192;
     auto input = audio(count + 1);
     input[0][0] = 1.0f;
@@ -142,6 +155,7 @@ static void integration(PluginExporter &plugin)
                 DarkDelay reference;
                 DelayParameters p;
                 p.timeMs = 20;
+                p.pingPong = pingPong;
                 reference.prepare(rate, p);
                 auto expected = audio(count + 1, 99);
                 const float *inputs[] = {input[0].data(), input[1].data()};
@@ -150,6 +164,12 @@ static void integration(PluginExporter &plugin)
                 require(output == expected, "Plugin differs from delay core");
                 const auto firstEcho = static_cast<std::size_t>(rate * 0.020);
                 require(output[0][firstEcho] > 0, "Plugin produced no echo");
+                if (pingPong) {
+                    require(output[1][firstEcho + 5] == 0,
+                            "First ping-pong echo was not left-only");
+                    require(output[1][firstEcho * 2] > 0,
+                            "Second ping-pong echo did not reach right");
+                }
             }
         }
     }
@@ -163,37 +183,58 @@ static void integration(PluginExporter &plugin)
 
 static void parametersAndRecall(PluginExporter &plugin)
 {
-    const std::array<float, EffectParameterCount> settings{800, 52, 37, 1800, 0.6f, 1};
+    const std::array<float, EffectParameterCount> settings{800, 52, 37, 1800, 0.6f, 1, 1};
+    const std::array<const char *, 6> legacySymbols{"time_ms", "feedback",    "mix",
+                                                    "tone_hz", "output_gain", "bypass"};
+    for (std::uint32_t i = 0; i < legacySymbols.size(); ++i)
+        require(plugin.getParameterSymbol(i) == legacySymbols[i], "Legacy parameter moved");
+    if (standalone)
+        require(plugin.getParameterSymbol(6) == "monitor_request" &&
+                    plugin.getParameterSymbol(7) == "monitor_active",
+                "Legacy monitor indices moved");
     for (std::uint32_t i = 0; i < EffectParameterCount; ++i) {
-        require(plugin.getParameterSymbol(i) == previewSpecs[i].symbol, "Parameter ID drift");
-        require(plugin.getParameterHints(i) & kParameterIsAutomatable, "Parameter not automatable");
+        const auto host = previewHostIndex(i, standalone);
+        require(plugin.getParameterSymbol(host) == previewSpecs[i].symbol, "Parameter ID drift");
+        require(plugin.getParameterHints(host) & kParameterIsAutomatable,
+                "Parameter not automatable");
         trackAllocations = true;
-        plugin.setParameterValue(i, settings[i]);
+        plugin.setParameterValue(host, settings[i]);
         trackAllocations = false;
-        require(plugin.getParameterValue(i) == settings[i], "Parameter value did not persist");
+        require(plugin.getParameterValue(host) == settings[i], "Parameter value did not persist");
     }
     std::array<float, EffectParameterCount> saved{};
     for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
-        saved[i] = plugin.getParameterValue(i);
+        saved[i] = plugin.getParameterValue(previewHostIndex(i, standalone));
     PluginExporter reopened(nullptr, nullptr, nullptr, nullptr);
     reopened.setState("undertow_preview_schema", "1");
     for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
-        reopened.setParameterValue(i, saved[i]);
+        reopened.setParameterValue(previewHostIndex(i, standalone), saved[i]);
     reopened.activate();
     for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
-        require(reopened.getParameterValue(i) == settings[i], "Reconstructed settings differ");
+        require(reopened.getParameterValue(previewHostIndex(i, standalone)) == settings[i],
+                "Reconstructed settings differ");
     if (standalone)
         require(reopened.getParameterValue(MonitorActive) == 0, "Recall enabled monitoring");
     reopened.deactivate();
+    // Old projects contain only the original six effect parameters and schema 1.
+    PluginExporter legacy(nullptr, nullptr, nullptr, nullptr);
+    legacy.setState("undertow_preview_schema", "1");
+    for (std::uint32_t i = 0; i < legacySymbols.size(); ++i)
+        legacy.setParameterValue(i, settings[i]);
+    legacy.activate();
+    require(legacy.getParameterValue(previewHostIndex(PingPong, standalone)) == 0,
+            "Old project settings did not retain Normal mode");
+    legacy.deactivate();
     for (std::uint32_t i = 0; i < EffectParameterCount; ++i) {
-        plugin.setParameterValue(i, std::numeric_limits<float>::quiet_NaN());
-        require(plugin.getParameterValue(i) == previewSpecs[i].initial,
+        const auto host = previewHostIndex(i, standalone);
+        plugin.setParameterValue(host, std::numeric_limits<float>::quiet_NaN());
+        require(plugin.getParameterValue(host) == previewSpecs[i].initial,
                 "Invalid value not sanitized");
-        plugin.setParameterValue(i, -10000);
-        require(plugin.getParameterValue(i) == previewSpecs[i].minimum, "Minimum not enforced");
-        plugin.setParameterValue(i, 100000);
-        require(plugin.getParameterValue(i) == previewSpecs[i].maximum, "Maximum not enforced");
-        plugin.setParameterValue(i, previewSpecs[i].initial);
+        plugin.setParameterValue(host, -10000);
+        require(plugin.getParameterValue(host) == previewSpecs[i].minimum, "Minimum not enforced");
+        plugin.setParameterValue(host, 100000);
+        require(plugin.getParameterValue(host) == previewSpecs[i].maximum, "Maximum not enforced");
+        plugin.setParameterValue(host, previewSpecs[i].initial);
     }
 }
 
@@ -217,8 +258,9 @@ static void bypassAndAutomation(PluginExporter &plugin)
     for (std::size_t offset = 0; offset < input[0].size(); offset += 80) {
         for (std::uint32_t i = 0; i < EffectParameterCount; ++i) {
             trackAllocations = true;
-            plugin.setParameterValue(i, offset % 160 == 0 ? previewSpecs[i].minimum
-                                                          : previewSpecs[i].maximum);
+            plugin.setParameterValue(previewHostIndex(i, standalone),
+                                     offset % 160 == 0 ? previewSpecs[i].minimum
+                                                       : previewSpecs[i].maximum);
             trackAllocations = false;
         }
         run(plugin, input, output, offset, 80);
@@ -227,14 +269,21 @@ static void bypassAndAutomation(PluginExporter &plugin)
         require(std::isfinite(sample), "Automation produced nonfinite audio");
 }
 
-static void monitorSafety(PluginExporter &plugin)
+static void monitorSafety(PluginExporter &plugin, bool pingPong)
 {
     auto input = audio(48000, 0.1f);
     auto output = audio(48000, 99);
+    plugin.deactivate();
+    plugin.activate();
+    plugin.setParameterValue(previewHostIndex(PingPong, standalone), pingPong ? 1.0f : 0.0f);
+    require(plugin.getParameterValue(MonitorActive) == 0, "Changing mode enabled monitoring");
+    run(plugin, input, output, 0, 48000);
+    require(output == audio(48000), "Changing mode leaked muted audio");
     plugin.setParameterValue(Level, 1);
     plugin.setParameterValue(Mix, 20);
     plugin.setParameterValue(Bypass, 0);
     plugin.setParameterValue(Time, 20);
+    plugin.setParameterValue(previewHostIndex(PingPong, standalone), pingPong ? 1.0f : 0.0f);
     prepare(plugin);
     run(plugin, input, output, 0, 48000); // load the delay with a sustained signal
     plugin.setParameterValue(MonitorRequest, 0);
@@ -282,14 +331,19 @@ int main(int argc, char **argv)
                 "Parameter count wrong");
         require(plugin.getStateKey(0) == "undertow_preview_schema", "Schema marker missing");
         for (std::uint32_t i = 0; i < EffectParameterCount; ++i)
-            require(plugin.getParameterValue(i) == previewSpecs[i].initial, "Default wrong");
+            require(plugin.getParameterValue(previewHostIndex(i, standalone)) ==
+                        previewSpecs[i].initial,
+                    "Default wrong");
         plugin.activate();
         mappings();
-        integration(plugin);
+        integration(plugin, false);
+        integration(plugin, true);
         parametersAndRecall(plugin);
         bypassAndAutomation(plugin);
-        if (standalone)
-            monitorSafety(plugin);
+        if (standalone) {
+            monitorSafety(plugin, false);
+            monitorSafety(plugin, true);
+        }
         plugin.setSampleRate(384000, true);
         enable(plugin);
         auto input = audio(16, 1), output = audio(16, 99);

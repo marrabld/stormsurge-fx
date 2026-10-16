@@ -27,12 +27,12 @@ class PreviewPlugin final : public Plugin
     const char *getLabel() const override { return "undertow_preview"; }
     const char *getDescription() const override
     {
-        return "Early independent-stereo dark delay. No ping-pong or tempo sync yet.";
+        return "Early dark delay with switchable stereo ping-pong. No tempo sync yet.";
     }
     const char *getMaker() const override { return "StormSurge FX contributors"; }
     const char *getHomePage() const override { return "https://github.com/marrabld/stormsurge-fx"; }
     const char *getLicense() const override { return "GPL-3.0-only"; }
-    uint32_t getVersion() const override { return d_version(0, 1, 0); }
+    uint32_t getVersion() const override { return d_version(0, 2, 0); }
 
     void initState(uint32_t, State &state) override
     {
@@ -51,8 +51,9 @@ class PreviewPlugin final : public Plugin
 
     void initParameter(uint32_t index, Parameter &p) override
     {
-        if (index < EffectParameterCount) {
-            const auto &spec = previewSpecs[index];
+        const int effect = previewEffectIndex(index, standalone);
+        if (effect >= 0) {
+            const auto &spec = previewSpecs[effect];
             p.name = spec.name;
             p.symbol = spec.symbol;
             p.unit = spec.unit;
@@ -60,7 +61,7 @@ class PreviewPlugin final : public Plugin
             p.hints = kParameterIsAutomatable;
             if (spec.logarithmic)
                 p.hints |= kParameterIsLogarithmic;
-            if (index == Bypass)
+            if (effect == Bypass || effect == PingPong)
                 p.hints |= kParameterIsBoolean | kParameterIsInteger;
             // This is effect bypass with spillover, not the host's hard bypass.
             return;
@@ -75,16 +76,18 @@ class PreviewPlugin final : public Plugin
 
     float getParameterValue(uint32_t index) const override
     {
-        if (index < EffectParameterCount)
-            return values[index].load(std::memory_order_relaxed);
+        const int effect = previewEffectIndex(index, standalone);
+        if (effect >= 0)
+            return values[effect].load(std::memory_order_relaxed);
         // Never serialize an enabled request. Actual status has its own output.
         return index == MonitorActive && monitoring.load(std::memory_order_relaxed) ? 1.0f : 0.0f;
     }
 
     void setParameterValue(uint32_t index, float value) override
     {
-        if (index < EffectParameterCount) {
-            values[index].store(sanitizePreview(index, value), std::memory_order_relaxed);
+        const int effect = previewEffectIndex(index, standalone);
+        if (effect >= 0) {
+            values[effect].store(sanitizePreview(effect, value), std::memory_order_relaxed);
         } else if (standalone && index == MonitorRequest) {
             const bool enabled = std::isfinite(value) && value >= 0.5f;
             if (!enabled)
@@ -142,6 +145,7 @@ class PreviewPlugin final : public Plugin
         p.toneHz = getParameterValue(Tone);
         p.outputGain = getParameterValue(Level);
         p.bypass = getParameterValue(Bypass) >= 0.5f;
+        p.pingPong = getParameterValue(previewHostIndex(PingPong, standalone)) >= 0.5f;
         return p;
     }
 
