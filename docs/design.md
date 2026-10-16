@@ -6,8 +6,9 @@
 - Learn by making an effect worth playing through, rather than replicating a suite.
 - Bitwig on Linux is the primary initial DAW. Standalone use is also wanted.
 - Windows is a planned destination, so platform-dependent code stays outside DSP.
-- GPL-3.0-only project; no framework or SDK has been adopted yet.
-- Planning and repository setup do not authorise implementing the audio engine.
+- GPL-3.0-only project; DPF is the approved framework for the build foundation.
+- The pass-through build foundation and GUI mockup are now authorised. This does
+  not authorise implementing the delay engine or publishing a release.
 - Dark rhythmic repeats and stereo ping-pong are the initial musical direction;
   tempo sync belongs in the first playable preview, alongside millisecond timing.
 
@@ -53,11 +54,11 @@ tests. Don't introduce clipping or limiting silently to hide an unstable design.
 
 ## Technology decision
 
-Evaluate C++/JUCE with CMake for a VST3 and standalone starting point. Verify the
-current framework licence, VST3 SDK terms, Linux dependencies and Windows audio
-backend/distribution requirements before pinning versions. Compare alternatives
-if CLAP/LV2 or licensing needs change the choice. Don't embed Python in the
-production real-time callback merely because it helped with a prototype.
+C++20/CMake with DPF is now selected, with the maintainer's approval after the
+licence check. Current JUCE's open-source terms are AGPLv3 rather than plain GPLv3.
+See [the decision](technology.md) and [build instructions](building.md) for pinned
+dependencies and the initial JACK-only standalone limitations. No embedded Python
+is needed in the production real-time callback.
 
 Bitwig support means testing the actual supported host/version. Neither a
 successful build nor a plugin validator proves hardware monitoring works.
@@ -66,6 +67,7 @@ successful build nor a plugin validator proves hardware monitoring works.
 
 Use [issue #1](https://github.com/marrabld/stormsurge-fx/issues/1) to settle the
 first time range, feedback/mix controls, time-transition sound and bypass/tail
-behaviour. Ask for Bitwig/interface details and a permitted dry riff to test with.
+behaviour. Bitwig **6.0.11** is confirmed; interface details, preferred live versus
+recorded workflow and a permitted dry riff are still to be supplied.
 The maintainer need not write technical specifications; explain each musical
 tradeoff before asking for a decision.

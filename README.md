@@ -8,9 +8,13 @@ milestone is to use Undertow on that track.
 
 ## Status
 
-**Planning only.** There is no audio implementation, plugin or download yet.
+**Build foundation in development.** A stereo pass-through VST3 and JACK-only
+standalone shell have a procedural pedal-face mockup. There is no delay processing
+or public release yet; the pictured knobs are placeholders, not working effects.
 This is a separate project from [Omazone](https://github.com/marrabld/omazone),
 not a port of its offline mastering chain.
+
+![Undertow Foundation procedural pedal face, with clearly labelled placeholder knobs](docs/images/undertow-foundation.png)
 
 ## First effect: Undertow
 
@@ -39,9 +43,9 @@ audio devices and transport.
 - **Windows planned**, using shared DSP and interface code rather than a rewrite.
   Windows builds, device backends and host behaviour still need their own tests.
 - **Plugin and standalone** are intended to share the same effect implementation.
-- C++ with JUCE, CMake, VST3 and standalone targets is a candidate, not a settled
-  dependency choice. Confirm current licences and platform support before adoption.
-  CLAP and LV2 are possible later formats, not first-release promises.
+- C++20, CMake and the ISC-licensed DPF framework are the selected foundation.
+  JUCE's current AGPL/commercial terms were reviewed and not adopted. VST3 and
+  JACK-only standalone build targets come first. CLAP and LV2 remain later options.
 - macOS is not part of the initial commitment.
 
 ## What this is not
@@ -55,14 +59,25 @@ monitoring volume. Avoid accidentally monitoring both the interface's direct
 signal and a delayed software copy. Recording latency depends on the complete
 audio path; an effect's delay-time knob is a separate thing.
 
+## Build and try the foundation
+
+See [build instructions](docs/building.md) and the [technology decision](docs/technology.md).
+The plugin deliberately leaves audio unchanged. Standalone requires JACK-compatible
+routing and starts muted until monitoring is explicitly enabled. Device selection,
+delay processing and finished standalone usability are not implemented yet.
+
+No automatic installation, live-input monitoring or release publication is part of
+the build. Bitwig 6.0.11 is the maintainer's initial host target, awaiting real-host
+testing. Supplied Gemini artwork remains local; the mockup is drawn in code.
+
 ## Next steps
 
 See the [roadmap](ROADMAP.md) and [design questions](docs/design.md).
 The roadmap links five ordered GitHub issues for design, build foundations,
 delay DSP, playable integration and preview validation.
-Agree on the first release's behaviour before implementing DSP or choosing a
-framework. Contributions and listening reports will be welcome once there is
-something to build and test.
+Agree on the delay's behaviour before implementing its DSP. The authorised work
+currently covers the build foundation and mockup only. Contributions and listening
+reports will be welcome as the actual effect becomes available.
 
 ## Licence
 
