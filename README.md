@@ -64,7 +64,7 @@ audio path; an effect's delay-time knob is a separate thing.
 See [build instructions](docs/building.md) and the [technology decision](docs/technology.md).
 The plugin deliberately leaves audio unchanged. Standalone requires JACK-compatible
 routing and starts muted until monitoring is explicitly enabled. Device selection,
-delay processing and finished standalone usability are not implemented yet.
+delay integration and finished standalone usability are not implemented yet.
 
 To view the pedal face without opening any audio device:
 
@@ -74,18 +74,21 @@ cmake --preset linux-debug && cmake --build --preset linux-debug
 ```
 
 No automatic installation, live-input monitoring or release publication is part of
-the build. Bitwig 6.0.11 is the maintainer's initial host target, awaiting real-host
-testing. Supplied Gemini artwork remains local; the mockup is drawn in code.
+the build. The maintainer has checked Foundation loading, clean recorded playback
+and project reopening in Bitwig Studio Producer 6.1.3 on Omarchy. Delay processing
+has not been tested in that host. Supplied Gemini artwork remains local; the mockup
+is drawn in code.
 
 ## Next steps
 
 See the [roadmap](ROADMAP.md) and [design questions](docs/design.md).
 The roadmap links five ordered GitHub issues for design, build foundations,
-delay DSP, playable integration and preview validation. The proposed delay
-defaults in `docs/design.md` await maintainer approval before they become spec.
+delay DSP, playable integration and preview validation. `docs/design.md` separates
+approved basic-delay behaviour from remaining integration proposals.
 
-Implementation of the delay engine is authorised and under way; publishing a
-release is not. Contributions and listening reports will be welcome as the effect
+The host-independent basic delay core is under test in issue #3; it is not connected
+to the plugin or its pictured controls yet. Publishing a release is not authorised.
+Contributions and listening reports will be welcome as the effect
 develops.
 
 ## Working on this

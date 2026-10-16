@@ -110,6 +110,27 @@ JACK shell is a foundation, not completion of the standalone workflow.
 
 ## Automated checks
 
+The independent stereo delay core is tested separately from the Foundation plugin,
+which remains pass-through. No audio device is opened by these checks:
+
+```sh
+cmake --preset linux-debug
+cmake --build --preset linux-debug --target dark_delay_tests foundation_tests
+ctest --preset linux-debug
+# Focus only on the delay core:
+ctest --preset linux-debug -R '^dark_delay_core$'
+# Match the sanitizer CI job:
+cmake --preset linux-sanitized
+cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests
+ctest --preset linux-sanitized
+```
+
+`dark_delay_core` checks timing/decay/darkening, fractional reads, channel separation,
+mix/gain, separate and in-place buffers, zero frames, block partitioning, sample-timed
+automation, bypass tails, invalid values, reset/reconfiguration and selected C++
+allocation paths. These are not listening tests or host integration tests. See
+[approved core behaviour and remaining proposals](design.md).
+
 `ctest` exercises the actual DPF processor through a headless exporter harness
 at five rates and eight block sizes, including zero frames, separate/in-place
 buffers, stereo independence, unclipped over-range samples and the standalone

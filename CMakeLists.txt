@@ -69,6 +69,9 @@ endif()
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(dark_delay_tests tests/DarkDelayTests.cpp src/DarkDelay.cpp)
+    target_include_directories(dark_delay_tests PRIVATE src)
+    add_test(NAME dark_delay_core COMMAND dark_delay_tests)
     add_executable(foundation_tests
         tests/FoundationTests.cpp
         src/Plugin.cpp
