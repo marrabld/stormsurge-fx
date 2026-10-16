@@ -119,14 +119,15 @@ Foundation, which remains pass-through. No audio device is opened by these check
 
 ```sh
 cmake --preset linux-debug
-cmake --build --preset linux-debug --target dark_delay_tests foundation_tests preview_tests
+cmake --build --preset linux-debug --target dark_delay_tests foundation_tests preview_tests tempo_sync_tests
 ctest --preset linux-debug
 # Focus only on the delay core:
 ctest --preset linux-debug -R '^dark_delay_core$'
 ctest --preset linux-debug -R '^preview_'
+ctest --preset linux-debug -R '^tempo_sync$'
 # Match the sanitizer CI job:
 cmake --preset linux-sanitized
-cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests
+cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests
 ctest --preset linux-sanitized
 ```
 
@@ -146,6 +147,18 @@ The core checks also cover left-first alternating ping-pong timing/decay/darkeni
 wet input averaging, dry independence and rapid mode/time changes. Preview tests
 exercise both modes through the exporter and preserve the original six effect IDs
 and standalone monitor IDs. The GUI smoke exercises mode toggles and host feedback.
+
+`tempo_sync` tests the nine note values, independent tempo histories, limits and
+eight-second buffers at five rates. Preview tests exercise the raw context extraction
+template through the actual exporter, including missing/invalid tempo, stopped
+transport, source/limit readouts, note timing in both modes, rapid changes and monitor
+isolation. This is not a loaded-VST3 adapter or real Bitwig test.
+
+Preview VST3 uses a generated wrapper under `build/<preset>/preview-adapter/` to
+preserve raw host tempo validity instead of DPF's synthetic 120 BPM. The checksum-
+guarded transformation in `cmake/PreviewVst3Tempo.cmake` must be reviewed on DPF
+updates. It edits neither the dependency checkout nor Foundation. Keep the module
+and `.cpp.in` wrapper in source distributions; see `THIRD_PARTY_NOTICES.md`.
 
 `ctest` exercises the actual DPF processor through a headless exporter harness
 at five rates and eight block sizes, including zero frames, separate/in-place

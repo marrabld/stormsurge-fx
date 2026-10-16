@@ -26,6 +26,9 @@ sound. This is not a public release or the completed preview scope of issue #4.
 | Level | Silence to +6 dB | Output gain, also applied during effect bypass |
 | Footswitch | Delay / bypass | Stops new notes entering the delay and preserves existing echoes |
 | Mode button above LED | Normal / Ping-pong | Independent stereo or left-first alternating repeats |
+| TIME header button | MS / Sync | Free milliseconds or tempo-synced note intervals |
+| NOTE header button | Nine divisions | Click forward, Shift-click backward; D = dotted, T = triplet |
+| INT / FB header field | 20–300 BPM | Drag or scroll; Shift gives finer control |
 
 Use the pedal footswitch or its **Bypass** parameter to test fading tails. Bitwig's
 own device enable/hard-bypass button can stop processing and does not promise the
@@ -56,9 +59,46 @@ To listen, use stereo headphones or separated speakers at low volume. Try 400 ms
 left/right alternation, switch back to Normal, and save/reopen once in Ping-pong.
 Do not assume a mono laptop/output route will reveal the stereo movement.
 
+## Tempo sync
+
+The top **TIME** button switches MS/Sync. Choose quarter, eighth or sixteenth notes,
+each straight, dotted or triplet, with **NOTE**. Sync sets the interval relative to
+each input note; it does not quantize attacks or force echoes to bar lines. In
+Ping-pong the interval is between channel hops, not a full left/right round trip.
+
+The header shows tempo source, BPM and the delay target. Targets transition using
+the existing read-head crossfade, so the displayed new target is not a promise that
+an ongoing fade has already finished. Source labels mean:
+
+- **HOST:** valid VST3 tempo, accepted from 1–1000 BPM, even while stopped.
+- **HELD:** host tempo/context went missing or invalid; keep the last valid BPM.
+- **FALLBACK:** no valid host BPM has arrived yet; use FB, initially 120 BPM.
+- **INTERNAL:** standalone always uses its editable INT tempo, initially 120 BPM.
+
+The FB field does not override HOST or HELD. Tempo history is per instance and not
+saved. FB is saved with the VST3 project; standalone still has no in-app preset or
+preferences storage. A fresh instance consults the current host
+instead of restoring a stale runtime clock. A host must supply processing callbacks
+to deliver tempo changes; status may lag while it suspends processing entirely.
+
+Free Time remains 20–2000 ms and is preserved while sync is on. The time knob's
+`ms free` value edits only that saved free setting. Sync supports 20–8000 ms. Longer
+or shorter combinations clamp at the boundary and show **SYNC LIMIT** explicitly;
+choose another division or tempo rather than assume the selected note is exact.
+A dotted quarter at 40 BPM, for example, is supported at 2250 ms without clamping.
+
+Buffers for eight seconds are allocated before processing, not on a Sync or tempo
+change. At 48 kHz the stereo double-precision delay buffers use about 6 MB per
+Preview instance; Foundation and default core clients retain their old capacity.
+
+Try 120 BPM, Sync, `1/4`: the target is 500 ms. `1/8 D` is 375 ms and `1/8 T` is
+about 166.7 ms. Change Bitwig to 90 BPM: `1/4` becomes about 666.7 ms. Stop/start
+transport and verify Sync does not turn into MS mode. Check both Normal/Ping-pong,
+then save/reopen with a non-default division. Start at low monitoring volume.
+
 ## Save, restore and automate
 
-Time, Feedback, Mix, Tone, Output gain, Bypass and Ping-pong are host-automatable input
+Time, Feedback, Mix, Tone, Output gain, Bypass, Ping-pong, Sync, Division and INT/FB are host-automatable input
 parameters, saved by DPF's VST3 adapter. The schema marker is
 `undertow_preview_schema=1`. Host state never contains the audio delay buffers.
 Their published IDs/order must not change. This experimental identity is `UtP0`,
@@ -68,8 +108,11 @@ The original six effect parameters keep DPF indices 0–5. Ping-pong is appended
 index 6 in the VST3 target. Standalone preserves monitor request/status at 6/7 and
 appends Ping-pong at 8. UI/DSP use explicit logical-effect/DPF-index mapping helpers.
 Old projects without a mode value start Normal; the optional appended parameter does
-not require changing the existing schema marker or plugin identity. The developer
-version is now 0.2.0. Real-host compatibility still needs the manual reopen checks.
+not require changing the existing schema marker or plugin identity. Old projects
+without sync settings remain in MS mode. In version **0.3.0**, Sync/Division/INT-FB
+append at VST3 DPF indices 7/8/9 or standalone 9/10/11. Four read-only tempo-source,
+BPM, target-time and limit readouts append after those, and are not saved. Future
+parameters must append after those readouts, never move existing slots.
 
 New instances, audio activation/reactivation and sample-rate changes start with an
 empty tail. A buffer-size callback may cause host/DPF reactivation and clear the tail.
@@ -77,12 +120,13 @@ While processing remains active, transport moves alone do not clear it. This pre
 does not claim sample-identical tail restoration or sample-accurate host automation.
 
 The maintainer verified basic Preview controls, audible repeats, bypass spillover
-and saved-setting reopening in Bitwig Studio Producer 6.1.3 on Omarchy for PR #10.
-That is not a numerical null test or proof of the new mode. Remaining manual checks:
+and saved-setting reopening in Bitwig Studio Producer 6.1.3 on Omarchy for PR #10,
+then Ping-pong alternation/Normal/bypass and mode reopening for PR #12. That is not a
+numerical null test or proof of the new Sync feature. Remaining manual checks:
 
-- Hear alternating new repeats in Ping-pong on the actual recorded-guitar track.
-- Use a short phrase followed by silence to check bypass spillover in both modes.
-- Reopen an older Normal project, then save/reopen with Ping-pong enabled.
+- Verify Sync follows Bitwig tempo and selected note values in both modes.
+- Stop/start and change tempo while stopped; check source/target when processing resumes.
+- Reopen an older MS project, then save/reopen with Sync and a non-default division.
 - Automate Time, Feedback and Mix gently, then test faster changes at low volume.
 - Try multiple instances and a short offline export with explicit trailing silence.
 
@@ -105,7 +149,7 @@ consent. The monitor request reads back as zero so enabled consent is not serial
 the separate status output reports the real state. Neither is present in the VST3.
 
 Both targets are fixed stereo with Normal and Ping-pong modes. There is no built-in
-mono-to-stereo mapping, tempo sync, device selector or metering yet. Route
+mono-to-stereo mapping, device selector or metering yet. Route
 mono guitar explicitly before testing live. Supported sample rates are 8–192 kHz;
 unsupported rates fail muted. Do not replace a known-good recording setup with this
 development build.

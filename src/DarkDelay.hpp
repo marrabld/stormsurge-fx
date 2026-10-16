@@ -26,7 +26,8 @@ struct DelayParameters {
 class DarkDelay
 {
   public:
-    void prepare(double sampleRate, const DelayParameters &parameters = {});
+    void prepare(double sampleRate, const DelayParameters &parameters = {},
+                 double maximumDelayMs = 2000.0);
     void reset() noexcept;
     void setParameters(const DelayParameters &parameters) noexcept;
     // Planar stereo, separate or corresponding in-place buffers, including zero frames.
@@ -43,7 +44,7 @@ class DarkDelay
         void set(double next, std::uint32_t frames) noexcept;
         double tick() noexcept;
     };
-    static DelayParameters sanitize(const DelayParameters &parameters) noexcept;
+    DelayParameters sanitize(const DelayParameters &parameters) const noexcept;
     void startTimeChange() noexcept;
     double read(std::size_t channel, double delay) const noexcept;
 
@@ -52,6 +53,7 @@ class DarkDelay
     std::array<double, 2> filtered{};
     std::size_t write = 0;
     double rate = 48000.0;
+    double maximumMs = 2000.0;
     double oldDelay = 19200.0;
     double newDelay = 19200.0;
     double requestedDelay = 19200.0;

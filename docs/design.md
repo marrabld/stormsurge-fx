@@ -162,10 +162,23 @@ level from sustained input, even before dry/wet summing or output boost. Numeric
 headroom tests and listening at low levels remain separate requirements.
 
 **Tempo sync**
-Divisions: 1/2, dotted 1/4, 1/4, dotted 1/8, 1/8, dotted 1/16, 1/16. The long
-divisions give the ambience character; the short ones give rhythmic repeats. When
-tempo is missing or the transport is stopped, fall back to free milliseconds and show
-that state in the UI rather than silently holding a stale tempo.
+Approved under issue #13: retain free milliseconds; add quarter, eighth and sixteenth
+notes, each straight, dotted and triplet. Valid host tempo applies while stopped as
+well as playing. Missing/invalid tempo holds the last valid BPM; before the first
+valid tempo use an editable, labelled 120 BPM default fallback. Standalone uses an
+editable internal tempo. These choices supersede the earlier proposal to switch to
+milliseconds when transport stops.
+
+Free time stays 20–2000 ms; sync extends to 8000 ms. A target outside 20–8000 ms is
+explicitly flagged `SYNC LIMIT`, not advertised as an exact selected note. Engineering
+bounds are 20–300 BPM for INT/FB, and 1–1000 BPM for valid host tempo. Follow tempo
+changes through the existing 50 ms queued read-head crossfade. The displayed target
+can update before a transition has finished. Sync does not quantize the dry input.
+
+The Preview-only VST3 build wrapper preserves the host's raw tempo-valid flag via
+`PreviewTempoBridge.hpp`. Do not use DPF's synthetic 120 BPM or BBT-valid flag to
+infer clock availability. Bridge, resolver, readouts and core tests cover policy;
+actual loaded-plugin behaviour still needs the manual checks in `preview.md`.
 
 Bounding feedback below unity alone does not guarantee safe levels for arbitrary
 input. Filters, interpolation and parameter transitions also need analysis and
@@ -204,7 +217,7 @@ is deliberately separate from host hard bypass and standalone monitoring.
 Implementation policies for this early preview, subject to real-host testing:
 
 - Fixed stereo with independent lines in Normal or cross-feedback in Ping-pong.
-  No mono-to-stereo mapping or sync yet.
+  No mono-to-stereo mapping yet. Issue #13 appends sync timing as specified above.
 - Audio activation/reactivation and rate changes clear tails but retain settings;
   buffer-size changes can induce reactivation. Transport moves alone do not clear
   tails while processing remains active. Parameter automation is smoothed, without

@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     editor.setWindowVisible(true);
     editor.focus();
 #ifdef STORMSURGE_PREVIEW
-    if (!view && (!previewExerciseControls() || edits != 13 || gesturesStarted != gesturesEnded ||
+    if (!view && (!previewExerciseControls() || edits != 17 || gesturesStarted != gesturesEnded ||
                   monitorRequests != (standalonePreview ? 1u : 0u))) {
         std::fprintf(stderr, "FAIL: preview control events or host edit gestures\n");
         return 1;
