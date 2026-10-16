@@ -15,7 +15,9 @@ not a port of its offline mastering chain.
 ## First effect: Undertow
 
 A delay for recorded guitar in Bitwig and live playing through an audio interface.
-The initial scope is deliberately small:
+The listening direction is dark, rhythmic repeats and stereo ping-pong, inspired
+by the ambience the maintainer enjoys in Devin Townsend's Deadhead. No claim to
+reproduce his exact rig or recording. The initial scope is deliberately small:
 
 - Delay time in milliseconds.
 - Feedback with bounded settings.
@@ -23,8 +25,11 @@ The initial scope is deliberately small:
 - Tone control for darker repeats.
 - Output level and bypass with a defined tail policy.
 - Mono/stereo operation with supported channel layouts explicitly documented.
+- Alternating stereo ping-pong and tempo sync for the first playable preview.
 
-Tempo sync comes after the basic delay works. The standalone application will
+Tempo sync and ping-pong follow the tested basic delay, but are early requirements,
+not distant extras. Long reverb and a combined ambience chain are later work.
+The standalone application will
 need device selection and input/output metering. The plugin uses its host's
 audio devices and transport.
 
@@ -53,6 +58,8 @@ audio path; an effect's delay-time knob is a separate thing.
 ## Next steps
 
 See the [roadmap](ROADMAP.md) and [design questions](docs/design.md).
+The roadmap links five ordered GitHub issues for design, build foundations,
+delay DSP, playable integration and preview validation.
 Agree on the first release's behaviour before implementing DSP or choosing a
 framework. Contributions and listening reports will be welcome once there is
 something to build and test.
