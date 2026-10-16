@@ -30,7 +30,11 @@ dpf_add_plugin(UndertowFoundation
     FILES_DSP src/Plugin.cpp
     FILES_UI src/Editor.cpp)
 target_include_directories(UndertowFoundation PUBLIC src)
-target_compile_definitions(UndertowFoundation PUBLIC DPF_RUNTIME_TESTING)
+# DPF's bundled self-test includes its POSIX thread helper, unavailable to MSVC.
+# Our headless processor tests still run on both platforms.
+if(NOT WIN32)
+    target_compile_definitions(UndertowFoundation PUBLIC DPF_RUNTIME_TESTING)
+endif()
 
 # At this pinned DPF revision the OpenGL helper treats generator-expression
 # booleans as true while configuring optional browser code. This foundation has

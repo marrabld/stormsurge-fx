@@ -116,13 +116,17 @@ buffers, stereo independence, unclipped over-range samples and the standalone
 monitor gate/restart. It checks C++ allocations during selected processing calls.
 This is not proof of every real-time property or an actual VST3-host validation.
 
-DPF's additional GUI/processor smoke test needs a display but never opens audio:
+On Linux, DPF's additional GUI/processor smoke test needs a display but never opens audio:
 
 ```sh
 build/linux-debug/bin/UndertowFoundation selftest
 # Headless Linux CI:
 xvfb-run -a build/linux-debug/bin/UndertowFoundation selftest
 ```
+
+The bundled DPF `selftest` option is not enabled for MSVC because its thread-test
+helper requires POSIX APIs. The project's own headless `ctest` checks still run
+on Windows. GUI/device behaviour there remains a separate runtime check.
 
 `build/linux-debug/foundation_gui` opens the actual pedal editor briefly without
 any audio device or JACK server. Set `STORMSURGE_CAPTURE=/absolute/path/face.ppm`
