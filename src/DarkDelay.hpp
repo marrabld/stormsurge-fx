@@ -19,7 +19,7 @@ struct DelayParameters {
     bool bypass = false;
 };
 
-// Independent stereo core, not yet connected to the Foundation plugin.
+// Independent stereo core shared by the Preview plugin and standalone.
 // One audio-thread owner. prepare() may allocate and must run off the callback;
 // setParameters(), reset() and process() must not run concurrently.
 class DarkDelay

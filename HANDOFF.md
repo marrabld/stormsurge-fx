@@ -57,14 +57,17 @@ engineering starting points separately from remaining integration proposals.
 ## Where things stand
 
 PR #8 brought the foundation and guides into `main`; that merge is complete.
-Issue #3 now has a host-independent basic delay core and automated tests. It is
-not yet connected to the Foundation plugin, standalone or editor.
+PR #9 added the independent-stereo basic delay core and tests. Issue #4's first
+integration slice connects it to separate **Undertow Preview** VST3/JACK targets and
+working controls. Foundation remains pass-through. Preview is not yet complete:
+ping-pong, tempo sync, native device usability and accurate host tails remain work.
 
 | PR | Branch | State | Contents |
 | --- | --- | --- | --- |
 | #6 | `docs/undertow-work-plan` | Merged into `main` | Planning docs, issues #1–#5 |
 | #7 | `feat/undertow-foundation` | Merged into `docs/undertow-work-plan` | Pass-through VST3 + JACK standalone, procedural pedal GUI |
 | #8 | `docs/consolidate-project-state` | Merged into `main` | Foundation stack and agent/handoff guides |
+| #9 | `feat/3-dark-delay-core` | Merged into `main` | Tested reusable basic dark delay |
 
 The foundation builds and passes automated tests on Linux and Windows, including
 sanitizers. The VST3 passed pluginval at strictness 5, with DPF teardown warnings
@@ -74,11 +77,12 @@ recorded-guitar playback and saved-project reopening in Bitwig Studio Producer
 
 ## Suggested order
 
-1. Review the tested basic core PR for issue #3. Do not merge without approval.
-2. Agree remaining host/channel/tempo policies before the relevant integration.
-3. Connect working delay parameters and UI, verify state/automation and hear the
-   basic delay in Bitwig, then add ping-pong and sync under issue #4.
-4. Test standalone input routing on known hardware and playtest under issue #5.
+1. Review the playable integration PR and CI. Do not merge without approval.
+2. Follow [preview.md](docs/preview.md) to hear the basic delay in Bitwig. Verify
+   parameters, bypass tails, automation, saved settings and exports manually.
+3. Agree and implement remaining channel/ping-pong/tempo policies under issue #4.
+4. Resolve DPF's hardcoded zero VST3 tail report before claiming correct automatic
+   tail export. Test standalone input routing and playtest under issue #5.
 
 Still unknown from the maintainer: the audio interface model, whether they will play
 live, process recorded tracks, or both, and a permitted short dry guitar recording

@@ -32,11 +32,12 @@ The repository is already **public**. It was created with the maintainer's appro
 ### Current state
 
 PR #8 brought the foundation and handoff into `main`. Do not repeat that merge.
-`src/DarkDelay.cpp` is the independent-stereo delay core under issue #3; it is not
-yet connected to the plugin or UI. `UndertowFoundation` still passes audio through.
+PR #9 added the tested independent-stereo core. `PreviewPlugin.cpp` and
+`PreviewEditor.cpp` connect it as **Undertow Preview**, with a separate `UtP0` identity
+and build target. Keep `UndertowFoundation`/`UtF0` pass-through for old test projects.
 
-The foundation builds and passes automated tests on Linux and Windows. The plugin
-does not yet use the delay core. The knobs are explicitly labelled placeholders.
+Preview's parameter order/symbols are in `PreviewParameters.hpp`; append, do not
+reorder. Ping-pong, sync and final host/device policies remain issue #4 work.
 
 ## Issue-per-task
 
@@ -93,6 +94,7 @@ The separate `dark_delay_core` test has no DPF, UI or device dependency:
 ctest --preset linux-debug -R plugin_passthrough        # VST3 mode
 ctest --preset linux-debug -R standalone_monitor_gate   # JACK/Standalone mode
 ctest --preset linux-debug -R '^dark_delay_core$'        # independent delay core
+ctest --preset linux-debug -R '^preview_'                # Preview integration and monitor
 ```
 
 Non-obvious test facts:
@@ -114,6 +116,10 @@ Non-obvious test facts:
   before construction.
 - Don't `include "DistrhoPluginInfo.h"` anywhere. DPF's `DistrhoPluginChecks.h`
   already pulls it in.
+- `STORMSURGE_PREVIEW` selects Preview metadata for all its adapter, DSP, UI and
+  harness targets. Do not let it leak into Foundation targets.
+- `preview_gui` exercises real control events/host edit gestures; `--standalone`
+  tests the standalone UI without audio. Like `foundation_gui`, it needs a display.
 
 ## Live-monitoring safety invariants
 
@@ -146,7 +152,10 @@ Follow the constraints already in the spec, and expect tests for them:
   isolated changes; crossfades can still produce audible interference.
 - Smooth parameter changes. Test extremes and transitions, not only steady settings.
 - Host tail reporting must account for feedback/filter decay, not a single delay
-  interval. The basic core does not yet implement host tail reporting.
+  interval. Pinned DPF's VST3 adapter hardcodes zero tail samples. This preview has
+  no adapter fix; document trailing-silence export tests rather than promise tails.
+- Preview monitor requests read back as zero so consent cannot be saved. Poll the
+  separate status output. Its footswitch is effect bypass, not monitor consent.
 
 ## Platform-specific CMake workarounds
 

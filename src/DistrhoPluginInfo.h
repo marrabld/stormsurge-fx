@@ -2,10 +2,16 @@
 #pragma once
 
 #define DISTRHO_PLUGIN_BRAND "StormSurge FX"
+#ifdef STORMSURGE_PREVIEW
+#define DISTRHO_PLUGIN_NAME "Undertow Preview"
+#define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/undertow-preview"
+#define DISTRHO_PLUGIN_UNIQUE_ID UtP0
+#else
 #define DISTRHO_PLUGIN_NAME "Undertow Foundation"
 #define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/foundation"
-#define DISTRHO_PLUGIN_BRAND_ID SgFx
 #define DISTRHO_PLUGIN_UNIQUE_ID UtF0
+#endif
+#define DISTRHO_PLUGIN_BRAND_ID SgFx
 
 #define DISTRHO_PLUGIN_HAS_UI 1
 #define DISTRHO_PLUGIN_IS_RT_SAFE 1

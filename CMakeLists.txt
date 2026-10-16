@@ -30,10 +30,21 @@ dpf_add_plugin(UndertowFoundation
     FILES_DSP src/Plugin.cpp
     FILES_UI src/Editor.cpp)
 target_include_directories(UndertowFoundation PUBLIC src)
+
+# Separate identity: old pass-through sessions must not silently acquire delay.
+dpf_add_plugin(UndertowPreview
+    TARGETS vst3 jack
+    UI_TYPE opengl
+    SKIP_NATIVE_AUDIO_FALLBACK
+    FILES_DSP src/PreviewPlugin.cpp src/DarkDelay.cpp
+    FILES_UI src/PreviewEditor.cpp)
+target_include_directories(UndertowPreview PUBLIC src)
+target_compile_definitions(UndertowPreview PUBLIC STORMSURGE_PREVIEW)
 # DPF's bundled self-test includes its POSIX thread helper, unavailable to MSVC.
 # Our headless processor tests still run on both platforms.
 if(NOT WIN32)
     target_compile_definitions(UndertowFoundation PUBLIC DPF_RUNTIME_TESTING)
+    target_compile_definitions(UndertowPreview PUBLIC DPF_RUNTIME_TESTING)
 endif()
 
 # At this pinned DPF revision the OpenGL helper treats generator-expression
@@ -72,6 +83,15 @@ if(BUILD_TESTING)
     add_executable(dark_delay_tests tests/DarkDelayTests.cpp src/DarkDelay.cpp)
     target_include_directories(dark_delay_tests PRIVATE src)
     add_test(NAME dark_delay_core COMMAND dark_delay_tests)
+    add_executable(preview_tests tests/PreviewTests.cpp src/PreviewPlugin.cpp src/DarkDelay.cpp
+        external/dpf/distrho/src/DistrhoPlugin.cpp)
+    target_include_directories(preview_tests PRIVATE src external/dpf/distrho)
+    target_compile_definitions(preview_tests PRIVATE STORMSURGE_PREVIEW)
+    if(NOT WIN32)
+        target_link_libraries(preview_tests PRIVATE ${CMAKE_DL_LIBS})
+    endif()
+    add_test(NAME preview_plugin COMMAND preview_tests vst3)
+    add_test(NAME preview_monitor_gate COMMAND preview_tests standalone)
     add_executable(foundation_tests
         tests/FoundationTests.cpp
         src/Plugin.cpp
@@ -88,8 +108,14 @@ if(BUILD_TESTING)
     target_include_directories(foundation_gui PRIVATE src external/dpf/distrho)
     target_compile_definitions(foundation_gui PRIVATE STORMSURGE_GUI_HARNESS)
     target_link_libraries(foundation_gui PRIVATE dgl-opengl)
+    add_executable(preview_gui tests/GuiSmoke.cpp src/PreviewEditor.cpp
+        external/dpf/distrho/src/DistrhoUI.cpp)
+    target_include_directories(preview_gui PRIVATE src external/dpf/distrho)
+    target_compile_definitions(preview_gui PRIVATE STORMSURGE_PREVIEW STORMSURGE_GUI_HARNESS)
+    target_link_libraries(preview_gui PRIVATE dgl-opengl)
     if(NOT WIN32)
         target_link_libraries(foundation_gui PRIVATE ${CMAKE_DL_LIBS})
+        target_link_libraries(preview_gui PRIVATE ${CMAKE_DL_LIBS})
     endif()
     # GUI smoke is intentionally explicit, since it needs a display/OpenGL context.
     # `UndertowFoundation selftest` uses generated data and never opens audio devices.
