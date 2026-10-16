@@ -37,9 +37,8 @@ feedback is not a loudness safety limit. The 800 ms figure is only an experiment
 starting point. The long reverb, octave-up shimmer and compressor are outside the
 first delay.
 
-Concrete proposed defaults now sit in [docs/design.md](docs/design.md) — time range,
-crossfade policy, mix law, feedback ceiling, tone placement, ping-pong topology,
-bypass/tail behaviour and tempo divisions. **They await the maintainer's approval.**
+[docs/design.md](docs/design.md) records the approved first-core choices and
+engineering starting points separately from remaining integration proposals.
 
 ## Decisions already made
 
@@ -57,33 +56,29 @@ bypass/tail behaviour and tempo divisions. **They await the maintainer's approva
 
 ## Where things stand
 
-Planning PR #6 is merged into `main`. Foundation PR #7 merged into its base branch
-`docs/undertow-work-plan`, which is **not yet merged into `main`**. That branch is
-currently ahead of `main` by the full foundation commit series, so a follow-up PR
-into `main` is still needed.
+PR #8 brought the foundation and guides into `main`; that merge is complete.
+Issue #3 now has a host-independent basic delay core and automated tests. It is
+not yet connected to the Foundation plugin, standalone or editor.
 
 | PR | Branch | State | Contents |
 | --- | --- | --- | --- |
 | #6 | `docs/undertow-work-plan` | Merged into `main` | Planning docs, issues #1–#5 |
 | #7 | `feat/undertow-foundation` | Merged into `docs/undertow-work-plan` | Pass-through VST3 + JACK standalone, procedural pedal GUI |
+| #8 | `docs/consolidate-project-state` | Merged into `main` | Foundation stack and agent/handoff guides |
 
 The foundation builds and passes automated tests on Linux and Windows, including
 sanitizers. The VST3 passed pluginval at strictness 5, with DPF teardown warnings
-documented but unresolved. **There is no delay processing yet**, and Bitwig 6.0.11
-has not been tested in the real DAW.
+documented but unresolved. The maintainer confirmed Foundation scan/load, clean
+recorded-guitar playback and saved-project reopening in Bitwig Studio Producer
+6.1.3 on Omarchy. This is not full host validation or a test of delay integration.
 
 ## Suggested order
 
-1. Open and merge a PR from `docs/undertow-work-plan` into `main` so the foundation
-   is on the default branch.
-2. Load the pass-through VST3 in Bitwig 6.0.11 on Linux. Confirm it scans, plays,
-   and does not change audio. Close and reopen a project.
-3. Walk the maintainer through the proposed defaults in `docs/design.md` and get
-   approval, amendment or rejection for each. Record the outcome.
-4. Implement the delay DSP (issue #3) to the approved spec, with tests for timing,
-   feedback stability, time-change transitions and bypass/tail behaviour.
-5. Add ping-pong and tempo sync (issue #4).
-6. Playtest on a real guitar (issue #5).
+1. Review the tested basic core PR for issue #3. Do not merge without approval.
+2. Agree remaining host/channel/tempo policies before the relevant integration.
+3. Connect working delay parameters and UI, verify state/automation and hear the
+   basic delay in Bitwig, then add ping-pong and sync under issue #4.
+4. Test standalone input routing on known hardware and playtest under issue #5.
 
 Still unknown from the maintainer: the audio interface model, whether they will play
 live, process recorded tracks, or both, and a permitted short dry guitar recording

@@ -38,11 +38,50 @@ for repeats between phrases, not every part of the reference sound at once.
 These are logical responsibilities, not instructions to create a large framework.
 Extract only what the first effect actually needs.
 
-## Proposed defaults — awaiting maintainer approval
+## Approved first core, 2026-10-16
 
-These are proposed answers to the open design questions, not settled decisions.
-Approve, amend or reject each one. The maintainer need not write technical
-specifications; each entry states the tradeoff so it can be judged by ear later.
+The maintainer approved these choices during guided testing and design discussion.
+The decisions and host-test observations are also recorded in issues #1 and #3.
+
+- Progressively darker repeats with an adjustable Tone control and a brighter setting.
+- Crossfaded delay-time changes instead of intentional pitch glides.
+- Time 20–2000 ms, starting at 400 ms.
+- Feedback 0–90%, starting at 35%.
+- Linear wet/dry blend, starting at 20% wet, with dry-only and wet-only endpoints.
+- Output from silence to +6 dB, starting at unity gain.
+- Bypass restores clean guitar, stops new notes entering the delay and lets existing
+  repeats fade naturally. Standalone monitor mute is separate and silences everything.
+
+`src/DarkDelay.cpp` implements the host-independent core for issue #3, not yet wired
+into the plugin. Engineering starting points for review:
+
+- Independent stereo lines, preserving per-channel dry routing. Mono-to-stereo,
+  ping-pong and host channel layouts remain integration work under issue #4.
+- One-pole lowpass on the wet read and in the feedback path. Every return is filtered,
+  including the first. Cutoff 400–16000 Hz, initially 2500 Hz; capped at 45% of sample
+  rate. These cutoff choices are starting points, not approved listening results.
+- Fractional delay uses linear interpolation. A time change crossfades two stationary
+  read heads over 50 ms; rapid requests are coalesced to the latest value after the
+  current fade, rather than restarting fades and introducing discontinuities.
+- Feedback, mix, filter pole, output gain and delay-input gate ramp over 20 ms.
+  Bypass stops new input after that ramp and restores unity dry before output gain;
+  the wet tail remains mixed at the selected mix. Output gain applies in both modes.
+- `prepare()` allocates off the processing callback and clears the tail. It accepts
+  sample rates from 8 to 192 kHz. `reset()` clears preallocated buffers without
+  allocating. Neither may run concurrently with processing. No transport policy is
+  imposed by this host-independent core.
+- Nonfinite parameters fall back to defaults; finite out-of-range parameters clamp
+  to the control range. Nonfinite input samples become silence. Tiny feedback/filter
+  state below 1e-30 is flushed to zero. No limiter or clipping is added.
+- Tests use ordinary over-range float signals as well as impulses and DC. This is
+  not a promise of representable float output for arbitrarily large finite inputs.
+  At maximum feedback, sustained DC can approach ten times the input before mix and
+  output gain. Stable feedback does not guarantee quiet output.
+
+The remaining proposals below are not blanket-approved. Some earlier explanations
+are corrected here so they do not become implementation requirements by accident.
+
+## Sound rationale and remaining proposals
 
 **Clean or coloured repeats**
 Intentionally coloured, via a one-pole darkening lowpass. No tape or analogue
@@ -51,24 +90,21 @@ less as feedback rises; clean repeats are more forgiving to start with and easie
 hear as a distinct effect.
 
 **Time-change sound**
-Read/write pointer crossfade, roughly 50 ms, restarted on each change. No pitch
-glide in the first version. A crossfade never shifts pitch, so synced repeats stay
-in tune and automation stays predictable; the cost is a brief level dip during a fast
-sweep. Glide sounds more analogue but smears pitch on every automation move, which
-matters more once tempo sync is also in play.
+Crossfade stationary read heads rather than moving the write pointer or bending
+pitch. Overlapping echoes can still cause interference and audible timing changes;
+crossfading is not a guarantee of artifact-free automation. The queued-change policy
+above avoids restarting a partially completed fade.
 
 **Time range and taper**
-20–2000 ms, default 400 ms, with a non-linear taper. The low end covers flam and
-slapback at slow tempi; the top end covers the long ambience tail the roadmap wants
-later without extra buffers. A taper matters more than the range: in a linear law the
-300–600 ms region Undertow actually lives in gets most of the knob's travel, so spend
-resolution there.
+20–2000 ms, default 400 ms, approved. Knob taper is still a UI decision. A linear
+mapping would give 300–600 ms only about 15% of the knob travel; a nonlinear mapping
+could give that region more resolution. Maximum delay time is not tail duration.
 
 **Mix law**
-Equal-gain linear blend, `out = dry·(1−mix) + wet·mix`, with no −3 dB centre dip.
-Linear keeps dry attack at full level until it is turned down. Equal-power would hold
-perceived level steady but pulls the dry down at centre, thinning the riff exactly
-where Undertow should be adding space.
+Approved linear blend: `out = dry·(1−mix) + wet·mix`. At 20% wet, dry gain is 0.8;
+at the midpoint both gains are 0.5. This does reduce dry level as Mix increases.
+Equal-power blending has different gains and depends on signal correlation; it
+does not universally preserve perceived loudness. Neither law guarantees headroom.
 
 **Feedback topology and ceiling**
 Single loop: delay output → feedback gain → tone filter → back to the delay input.
@@ -84,30 +120,27 @@ cumulative darkening the direction calls for and helps contain feedback. Outside
 loop would keep every repeat equally bright: cleaner to articulate, less atmospheric.
 
 **Ping-pong topology and stereo input**
-Full cross-coupling — 100% into the opposite channel, 0% self-feedback. True ping-pong
-needs each side to feed only the other or it collapses to mono. The delay input is the
-mono sum (L+R) written to both lines, so the first repeat is centred and the
-alternation does the spatial work; dry is passed per channel, untouched. Watch for
-level drift between sides at high feedback — the ceiling and tone filter should hold
-it, but that is the first thing to check in playtesting.
+Not settled. Cross-feedback alone cannot make identical signals in identical left
+and right lines alternate. An alternating design needs an explicit input-injection
+and first-repeat policy. Simply summing L+R also boosts correlated stereo input.
+Keep this outside the independent-stereo basic core and agree routing before #4.
 
 **Bypass and tail**
-Bypass ramps the wet path out over roughly 20 ms and lets the line keep running, so
-the tail decays under its own feedback. Re-engaging resumes the existing tail instead
-of restarting from silence. Reset only on sample-rate or transport change, or an
-explicit clear. Report tail length as the maximum delay time so hosts keep processing
-after the note stops. A hard cut would avoid clicks but throws away a musical tail.
+Approved: stop feeding new notes, preserve existing echoes and restore clean guitar.
+Do not ramp away the audible wet tail. Reset and transport-jump policies still need
+host-integration decisions. Tail reporting must account for feedback and filter decay,
+not just one delay interval, and specify a decay threshold or supported host policy.
+A hard cut can click and would discard the tail the maintainer wants to preserve.
 
 Note the safety interaction: a ringing tail is the *opposite* of the standalone
 monitor gate's fail-safe mute. Keep the two mechanisms clearly separate — bypassing
 the effect must never unmute the monitor.
 
 **Output headroom**
-No internal limiter, no clipping, no automatic gain. Output level −∞…+6 dB, default
-0 dB, with a documented recommendation to start monitoring low. A limiter would feel
-safer but would hide instability and alter the sound. With feedback capped and a
-non-boosting filter the loop is provably stable, so the remaining peak risk is just
-dry and wet summing.
+No internal limiter, clipping or automatic gain. Output from silence to +6 dB, default
+0 dB, approved. Start monitoring low. Stable feedback can still accumulate substantial
+level from sustained input, even before dry/wet summing or output boost. Numeric
+headroom tests and listening at low levels remain separate requirements.
 
 **Tempo sync**
 Divisions: 1/2, dotted 1/4, 1/4, dotted 1/8, 1/8, dotted 1/16, 1/16. The long
@@ -132,9 +165,11 @@ successful build nor a plugin validator proves hardware monitoring works.
 
 ## Next discussion
 
-Approve or amend the proposed defaults above; they become the spec implementation
-follows. Use [issue #1](https://github.com/marrabld/stormsurge-fx/issues/1) for that
-discussion. Bitwig **6.0.11** is confirmed; interface details, preferred live versus
-recorded workflow and a permitted dry riff are still to be supplied.
+Review the core and settle the remaining integration proposals before #4. Use
+[issue #1](https://github.com/marrabld/stormsurge-fx/issues/1) for design decisions.
+Bitwig Studio Producer **6.1.3** on the Omarchy laptop has passed manual foundation
+scan/load, clean recorded-guitar playback and saved-project reopening. These were
+listening/workflow checks, not a numerical null test. The audio interface model and
+live-input workflow remain unknown; no private recording needs to be published.
 The maintainer need not write technical specifications; explain each musical
 tradeoff before asking for a decision.

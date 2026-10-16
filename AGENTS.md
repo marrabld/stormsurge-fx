@@ -31,17 +31,27 @@ The repository is already **public**. It was created with the maintainer's appro
 
 ### Current state
 
-Planning PR #6 is merged into `main`. Foundation PR #7 was merged into its base
-branch `docs/undertow-work-plan`, so **the foundation is not yet in `main`** — that
-branch is currently ahead of `main` by the whole foundation commit series.
+PR #8 brought the foundation and handoff into `main`. Do not repeat that merge.
+`src/DarkDelay.cpp` is the independent-stereo delay core under issue #3; it is not
+yet connected to the plugin or UI. `UndertowFoundation` still passes audio through.
 
-Open a follow-up PR from `docs/undertow-work-plan` into `main` before starting DSP
-work, so delay work doesn't branch off an unmerged stack.
-
-The foundation builds and passes automated tests on Linux and Windows. **There is no
-delay processing yet.** The knobs on the mockup are explicitly labelled placeholders.
+The foundation builds and passes automated tests on Linux and Windows. The plugin
+does not yet use the delay core. The knobs are explicitly labelled placeholders.
 
 ## Issue-per-task
+
+- Record every feature in a GitHub issue before implementing it. Check for an
+  existing issue first; create one if none covers the feature. Record agreed
+  behaviour and acceptance checks in the issue.
+- Give each feature its own `feat/<issue-number>-<short-name>` branch, based on
+  up-to-date `main`. Do not implement features directly on `main` or combine
+  unrelated features in one branch.
+- Open a PR into `main` for each feature, referencing its issue and documenting
+  verification results. Use `Refs #<number>` rather than automatic issue-closing
+  keywords unless the maintainer approves closing the issue.
+- Wait for the maintainer's review and explicit approval before merging. Do not
+  enable auto-merge. Start the next feature from updated `main` after the previous
+  feature merges, rather than stacking feature branches.
 
 Issues #1–#5 in this repo are the ordered work plan. Implement one at a time. Note
 that #1 (sound and controls) and #2 (framework/build) are effectively complete; their
@@ -49,10 +59,9 @@ acceptance boxes still need the maintainer's sign-off rather than silent closure
 
 ## Musical spec
 
-The defaults in [docs/design.md](docs/design.md) were researched by an assistant and
-**await the maintainer's approval**. Approve, amend or reject each one before
-treating it as spec. Don't implement a decision they rejected, and don't let approved
-defaults drift from the code without updating that file.
+[docs/design.md](docs/design.md) distinguishes the approved basic-core choices from
+remaining proposals. Do not treat the remaining ping-pong, tempo or host-policy
+proposals as approved. Keep the approved behaviour and the code consistent.
 
 ## Setup and build
 
@@ -77,12 +86,13 @@ ctest --preset linux-debug
 
 ## Tests
 
-Two registered tests, both driving the real `src/Plugin.cpp` through DPF's headless
-`PluginExporter`:
+The two foundation tests drive `src/Plugin.cpp` through DPF's headless exporter.
+The separate `dark_delay_core` test has no DPF, UI or device dependency:
 
 ```sh
 ctest --preset linux-debug -R plugin_passthrough        # VST3 mode
 ctest --preset linux-debug -R standalone_monitor_gate   # JACK/Standalone mode
+ctest --preset linux-debug -R '^dark_delay_core$'        # independent delay core
 ```
 
 Non-obvious test facts:
@@ -94,10 +104,10 @@ Non-obvious test facts:
   writes a PPM — supported **only** in the GUI harness build, not in the plugin binary.
 - `UndertowFoundation selftest` is DPF's own bundled self-test. It exists only on
   non-Windows, because `DPF_RUNTIME_TESTING` is compiled out for MSVC.
-- The harness overrides global `operator new`/`delete` and asserts **zero allocations
-  inside the audio callback**. Any allocation reachable from `run()` fails the test.
-  When you add a delay, this test will fail if you allocate delay buffers in
-  `prepareToPlay`/`activate` rather than in `init`.
+- The harness tracks ordinary C++ `new`/`delete` allocations during selected processing
+  calls, not every allocator or every lifecycle method. Allocate delay buffers in
+  `prepare()` off the audio callback. `dark_delay_core` also checks parameter updates
+  and reset for these allocations; it is not proof of all real-time properties.
 - The harness fakes the format via a `getPluginFormatName()` definition of its own.
   `src/Plugin.cpp` and `src/Editor.cpp` both branch on that string to detect
   standalone. `PluginExporter` needs `d_nextBufferSize` / `d_nextSampleRate` set
@@ -114,9 +124,8 @@ The standalone monitor gate is the one safety-critical behaviour in the codebase
 - A **new instance never inherits** consent from another instance.
 - `setState()` must not restore monitoring; consent is not persisted.
 - Invalid parameter values (e.g. NaN) must **fail safe to muted**.
-- VST3 must never attenuate, clip or limit to hide instability. With feedback capped
-  at 0.90 and a non-boosting filter the loop is stable, so the remaining peak risk is
-  dry+wet summing, which the output level control addresses.
+- Do not silently attenuate, clip or limit to hide instability. Stable feedback can
+  still accumulate substantial level from sustained input before dry/wet summing.
 - Never remove `SKIP_NATIVE_AUDIO_FALLBACK`. Falling back to a native device would
   open the user's microphone without consent.
 
@@ -131,13 +140,13 @@ dependencies, so the plugin and standalone share one implementation.
 Follow the constraints already in the spec, and expect tests for them:
 
 - No allocation, blocking locks, file access or analysis in the audio callback.
-- Prepare delay buffers in `init`/`prepareToPlay`, sized from the agreed maximum
-  delay time.
+- Allocate delay buffers off the audio callback, sized from the agreed maximum time.
 - Sample-rate and buffer-size changes must be handled without unstable state.
-- Time changes use a read/write crossfade, so no pitch shift; automation must not
-  produce clicks.
+- Time changes crossfade stationary read heads. Test rapid retargeting as well as
+  isolated changes; crossfades can still produce audible interference.
 - Smooth parameter changes. Test extremes and transitions, not only steady settings.
-- Report tail length to the host as the maximum delay time.
+- Host tail reporting must account for feedback/filter decay, not a single delay
+  interval. The basic core does not yet implement host tail reporting.
 
 ## Platform-specific CMake workarounds
 
@@ -185,7 +194,9 @@ The docs draw hard lines between "compiles" and "works". Preserve that.
 
 - A successful build is **not** evidence of playback, host compatibility or device
   behaviour. No CI job opens an audio device.
-- Bitwig 6.0.11 is the target host but has **not** been verified in the real DAW.
+- The maintainer tested Foundation scan/load, clean recorded playback and project
+  reopening in Bitwig Studio Producer 6.1.3 on Omarchy. That is not full host validation
+  or evidence that the unconnected delay core has been heard in Bitwig.
 - Don't claim zero monitoring latency, and don't claim a platform is "verified"
   without pointing at actual CI output.
 - pluginval 1.0.4 passed at strictness 5, but DPF emits teardown reference-count
