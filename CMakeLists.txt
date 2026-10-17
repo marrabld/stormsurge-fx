@@ -21,10 +21,20 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/dpf/dgl/src/pugl-upstream/in
 endif()
 add_subdirectory(external/dpf EXCLUDE_FROM_ALL)
 
+# Mac's first preview is plugin-only. Native standalone devices need separate
+# consent/routing work; do not enable an audio fallback to get a Mac executable.
+if(APPLE)
+    set(foundation_formats vst3)
+    set(preview_formats vst3 au)
+else()
+    set(foundation_formats vst3 jack)
+    set(preview_formats vst3 jack)
+endif()
+
 # JACK-only standalone: never silently open a fallback native audio device.
 # Routing is external for this foundation, not a finished device-selection UI.
 dpf_add_plugin(UndertowFoundation
-    TARGETS vst3 jack
+    TARGETS ${foundation_formats}
     UI_TYPE opengl
     SKIP_NATIVE_AUDIO_FALLBACK
     FILES_DSP src/Plugin.cpp
@@ -33,7 +43,7 @@ target_include_directories(UndertowFoundation PUBLIC src)
 
 # Separate identity: old pass-through sessions must not silently acquire delay.
 dpf_add_plugin(UndertowPreview
-    TARGETS vst3 jack
+    TARGETS ${preview_formats}
     UI_TYPE opengl
     SKIP_NATIVE_AUDIO_FALLBACK
     FILES_DSP src/PreviewPlugin.cpp src/DarkDelay.cpp src/DarkReverb.cpp
@@ -43,6 +53,9 @@ target_compile_definitions(UndertowPreview PUBLIC STORMSURGE_PREVIEW)
 include(cmake/PreviewArtwork.cmake)
 target_include_directories(UndertowPreview-ui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 include(cmake/PreviewVst3Tempo.cmake)
+if(APPLE)
+    include(cmake/PreviewAuTempo.cmake)
+endif()
 # DPF's bundled self-test includes its POSIX thread helper, unavailable to MSVC.
 # Our headless processor tests still run on both platforms.
 if(NOT WIN32)
@@ -90,6 +103,21 @@ if(BUILD_TESTING)
     add_executable(tempo_sync_tests tests/TempoSyncTests.cpp src/DarkDelay.cpp)
     target_include_directories(tempo_sync_tests PRIVATE src)
     add_test(NAME tempo_sync COMMAND tempo_sync_tests)
+    add_executable(au_tempo_bridge_tests tests/AuTempoBridgeTests.cpp)
+    target_include_directories(au_tempo_bridge_tests PRIVATE src)
+    add_test(NAME au_tempo_bridge COMMAND au_tempo_bridge_tests)
+    if(APPLE)
+        add_executable(mac_au_tests tests/MacAuTests.cpp)
+        target_include_directories(mac_au_tests PRIVATE src)
+        target_link_libraries(mac_au_tests PRIVATE "-framework AudioToolbox" "-framework AudioUnit" "-framework CoreFoundation")
+        add_dependencies(mac_au_tests UndertowPreview-au)
+        add_test(NAME mac_au_adapter COMMAND mac_au_tests "${CMAKE_BINARY_DIR}/bin/UndertowPreview.component")
+        add_executable(mac_vst3_tests tests/MacVst3Tests.cpp)
+        target_include_directories(mac_vst3_tests PRIVATE external/dpf/distrho/src)
+        target_link_libraries(mac_vst3_tests PRIVATE "-framework CoreFoundation")
+        add_dependencies(mac_vst3_tests UndertowPreview-vst3)
+        add_test(NAME mac_vst3_loader COMMAND mac_vst3_tests "${CMAKE_BINARY_DIR}/bin/UndertowPreview.vst3")
+    endif()
     add_executable(dark_reverb_tests tests/DarkReverbTests.cpp src/DarkReverb.cpp src/DarkDelay.cpp)
     target_include_directories(dark_reverb_tests PRIVATE src)
     add_test(NAME dark_reverb_core COMMAND dark_reverb_tests)
@@ -124,6 +152,12 @@ if(BUILD_TESTING)
     target_include_directories(preview_gui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
     target_compile_definitions(preview_gui PRIVATE STORMSURGE_PREVIEW STORMSURGE_GUI_HARNESS)
     target_link_libraries(preview_gui PRIVATE dgl-opengl)
+    if(APPLE)
+        # DPF adds this Cocoa scale helper to plugin UI libraries, but these
+        # no-audio harnesses compile DistrhoUI.cpp directly instead.
+        target_sources(foundation_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
+        target_sources(preview_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
+    endif()
     if(NOT WIN32)
         target_link_libraries(foundation_gui PRIVATE ${CMAKE_DL_LIBS})
         target_link_libraries(preview_gui PRIVATE ${CMAKE_DL_LIBS})

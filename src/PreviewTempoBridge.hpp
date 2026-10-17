@@ -6,7 +6,7 @@
 namespace stormsurge
 {
 
-// Called by the generated Preview VST3 adapter, on the processing thread only.
+// Called by generated Preview VST3/AU adapters, on the processing thread only.
 // Keep the raw host-valid flag: DPF's BBT conversion otherwise invents 120 BPM.
 void setPreviewHostTempo(void *instance, bool valid, double bpm) noexcept;
 

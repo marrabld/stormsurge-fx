@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Preview-only wrapper; included upstream sources retain their original notices.
+#include "PreviewAuTempo.hpp"
+#include "@STORMSURGE_DISTRHO@/src/DistrhoPlugin.cpp"
+#include "@STORMSURGE_PREVIEW_ADAPTER@/DistrhoPluginAU.cpp"
+#define DISTRHO_IS_STANDALONE 0
+#include "@STORMSURGE_DISTRHO@/src/DistrhoUtils.cpp"

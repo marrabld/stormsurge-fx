@@ -1,7 +1,8 @@
 # StormSurge FX
 
 Linux-first, GPLv3 guitar effects for Bitwig and standalone use. Starting with
-Undertow, a delay, and growing toward a small pedalboard. Windows support planned.
+Undertow, a delay, and growing toward a small pedalboard. Windows builds and
+experimental Mac plugin builds are in progress.
 
 Named after the maintainer's planned song, **StormSurge**. The first musical
 milestone is to use Undertow on that track.
@@ -50,7 +51,10 @@ The plugin uses its host's audio devices and transport.
 - C++20, CMake and the ISC-licensed DPF framework are the selected foundation.
   JUCE's current AGPL/commercial terms were reviewed and not adopted. VST3 and
   JACK-only standalone build targets come first. CLAP and LV2 remain later options.
-- macOS is not part of the initial commitment.
+- **macOS experimental preview**, under issue #19: universal Apple Silicon/Intel
+  VST3 and Audio Unit v2 builds, initially targeting macOS 13+. A colleague will
+  test real-host behaviour. See [Mac tester instructions](docs/macos.md) for format,
+  signing and installation limits. No Mac standalone app is included yet.
 
 ## What this is not
 
@@ -85,7 +89,8 @@ the build. The maintainer has checked Foundation loading, clean recorded playbac
 and project reopening in Bitwig Studio Producer 6.1.3 on Omarchy, followed by audible
 basic Preview controls, bypass spillover and saved-setting reopening. The new
 ping-pong mode also passed listening/reopen checks, and tempo sync had a successful
-first host check. Reverb still needs its own listening checks.
+first host check. The maintainer also approved the reverb sound and checked its
+bypass spillover and saved settings. Other hosts/platforms still need testing.
 Local Gemini originals remain unchanged. Preview now embeds an approved prepared
 enclosure texture; labels and controls are drawn separately. See [artwork provenance](assets/SOURCES.md).
 

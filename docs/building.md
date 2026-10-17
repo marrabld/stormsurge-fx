@@ -9,6 +9,7 @@ Neither is a public release. Nothing is installed into your DAW automatically.
 - C++20, CMake 3.24+, Ninja/Clang on Linux and Visual Studio 2022 x64 on Windows.
 - DPF pinned by Git submodule, with DGL/NanoVG for controls and an embedded enclosure texture.
 - VST3 and a JACK-only standalone. No native audio fallback or ASIO in this step.
+- macOS Preview adds AUv2 alongside VST3, with no standalone target in this first pass.
 - The experimental foundation has its own plugin identity, `UtF0`, distinct from
   the future actual Undertow effect. Do not rely on this shell for real sessions.
 
@@ -76,6 +77,49 @@ The VST3 bundle and standalone `.exe` are under `build/windows-debug/bin/`.
 These are developer/debug artifacts, not portable release packages. Windows
 compilation in CI does not establish playback or device-driver compatibility.
 
+## macOS experimental plugins
+
+Requires Xcode command-line tools with the macOS SDK, CMake 3.24+, Ninja and recursive
+submodules. The presets use Apple Clang and build both arm64 and x86_64 slices with
+a deployment target of 13.0. CI runs native tests on Apple Silicon and Intel macOS
+15 runners; that is not evidence of every older OS or any particular DAW.
+
+```sh
+cmake --preset macos-release
+cmake --build --preset macos-release
+ctest --preset macos-release
+```
+
+Outputs include `build/macos-release/bin/UndertowPreview.vst3/` and
+`UndertowPreview.component/`, plus the old Foundation VST3 for development only.
+Use `macos-debug` for debugging. The Mac targets intentionally omit standalone;
+do not turn on native-device fallback to create an app.
+
+`mac_au_adapter` loads the built AU directly and registers it only in its test
+process. It checks actual render timing, raw host-clock failure/removal, invalid
+BPM, stereo routing and parameter save/restore. It opens no audio device and
+copies nothing into user/system plugin directories. `au_tempo_bridge` checks the
+callback policy on Linux/Windows too. `mac_vst3_loader` loads the actual VST3 bundle,
+calls its Mac entry/exit points and inspects/releases its factory. It is a loader
+smoke test, not VST3 audio rendering or pluginval. These tests do not prove Logic/GarageBand scan,
+UI, playback, export or the behaviour of another DAW. auval remains a separate
+check on a Mac where the tester has chosen to install the component.
+
+To create the same ad-hoc-signed tester archive as CI, without installing anything:
+
+```sh
+cmake -DBINARY_DIR="$PWD/build/macos-release" -DSOURCE_DIR="$PWD" -P cmake/PackageMacPreview.cmake
+```
+
+It verifies both CPU slices, stages Preview plugins only, retains notices, removes
+unneeded broad AU resource declarations, applies/verifies ad-hoc signatures and
+uses `ditto` to preserve bundle structure in a ZIP. A SHA256 file accompanies it.
+These are not Developer ID signatures or Apple notarization. No release is
+published. See [Mac colleague checklist](macos.md) before sharing/trying the build.
+CI also extracts the ZIP into a temporary directory, verifies the recovered
+signatures and repeats the actual AU render/state and VST3 loader tests on those
+packaged copies. No test installs either format.
+
 ## Try the plugin in Bitwig
 
 The maintainer checked Foundation in Bitwig Studio Producer **6.1.3** on Omarchy.
@@ -119,7 +163,7 @@ Foundation, which remains pass-through. No audio device is opened by these check
 
 ```sh
 cmake --preset linux-debug
-cmake --build --preset linux-debug --target dark_delay_tests foundation_tests preview_tests tempo_sync_tests dark_reverb_tests
+cmake --build --preset linux-debug --target dark_delay_tests foundation_tests preview_tests tempo_sync_tests dark_reverb_tests au_tempo_bridge_tests
 ctest --preset linux-debug
 # Focus only on the delay core:
 ctest --preset linux-debug -R '^dark_delay_core$'
@@ -128,7 +172,7 @@ ctest --preset linux-debug -R '^tempo_sync$'
 ctest --preset linux-debug -R '^dark_reverb_core$'
 # Match the sanitizer CI job:
 cmake --preset linux-sanitized
-cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests dark_reverb_tests
+cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests dark_reverb_tests au_tempo_bridge_tests
 ctest --preset linux-sanitized
 ```
 

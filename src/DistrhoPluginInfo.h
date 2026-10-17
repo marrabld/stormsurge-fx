@@ -7,6 +7,10 @@
 #define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/undertow-preview"
 #define DISTRHO_PLUGIN_UNIQUE_ID UtP0
 #define DISTRHO_PLUGIN_WANT_TIMEPOS 1
+#ifdef __APPLE__
+// Pinned DPF's AU metadata exporter reuses this name even without a CLAP target.
+#define DISTRHO_PLUGIN_CLAP_ID "org.stormsurgefx.undertow-preview.au"
+#endif
 #else
 #define DISTRHO_PLUGIN_NAME "Undertow Foundation"
 #define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/foundation"
