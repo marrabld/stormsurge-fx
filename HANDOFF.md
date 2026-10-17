@@ -109,9 +109,13 @@ standalone hardware usability.
 
 ## Suggested order
 
-1. Issue #19 is active on `feat/19-macos-preview`, with draft PR #20. Review actual
-   Apple Silicon/Intel CI evidence before claiming build/adapter/GUI coverage.
-2. Once Mac tester bundles pass checks, have the colleague follow `docs/macos.md`.
+1. PR #20 for Mac support is merged. Native Apple Silicon/Intel CI, AU rendering,
+   VST3 loading, GUI and ad-hoc archive checks passed; no real-Mac DAW claim yet.
+   Dom is the colleague tester; their Mac/OS/DAW and runtime result are pending.
+2. Issue #21 is now active for optimized cross-platform plugin packages and a
+   review-only candidate artifact with matching recursive source/checksums. No
+   automatic tag, publication or merge. Linux final-package listening/export
+   checks and Windows playback remain outstanding. Have Dom follow `docs/macos.md`.
    The bundles are ad-hoc signed, not Developer ID signed or notarized. No plugins
    are installed by CI, and no release publication/tagging is authorised.
 3. Agree and implement remaining channel/device policies under issue #4.

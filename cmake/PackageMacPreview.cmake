@@ -5,6 +5,10 @@ if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" OR NOT IS_ABSOLUTE "${BINARY_DIR
         OR NOT IS_DIRECTORY "${BINARY_DIR}/bin")
     message(FATAL_ERROR "Run on macOS after a preset build, with BINARY_DIR and SOURCE_DIR")
 endif()
+file(STRINGS "${BINARY_DIR}/CMakeCache.txt" configuration REGEX "^CMAKE_BUILD_TYPE:[^=]+=Release$")
+if(configuration STREQUAL "")
+    message(FATAL_ERROR "Mac preview packages require a Release build tree")
+endif()
 file(STRINGS "${BINARY_DIR}/CMakeCache.txt" deployment
     REGEX "^CMAKE_OSX_DEPLOYMENT_TARGET:[^=]+=")
 string(REGEX REPLACE "^[^=]*=" "" deployment "${deployment}")
@@ -37,6 +41,9 @@ endforeach()
 file(COPY "${BINARY_DIR}/bin/notices" DESTINATION "${stage}")
 file(COPY "${SOURCE_DIR}/LICENSE" "${SOURCE_DIR}/THIRD_PARTY_NOTICES.md" DESTINATION "${stage}")
 configure_file("${SOURCE_DIR}/docs/macos.md" "${stage}/READ-ME-FIRST.md" COPYONLY)
+include("${CMAKE_CURRENT_LIST_DIR}/PreviewPackageCommon.cmake")
+preview_package_metadata("${stage}" "macos-universal")
+configure_file("${SOURCE_DIR}/docs/macos.md" "${stage}/MAC-TESTING.md" COPYONLY)
 file(WRITE "${stage}/BUILD.txt"
     "Undertow Preview experimental Mac tester build\nSource commit: ${commit}\n"
     "Architectures: arm64 and x86_64\nDeployment target: macOS ${deployment}\n"

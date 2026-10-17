@@ -3,3 +3,4 @@
 /assets/concepts/
 /assets/ui/
 *.user
+__pycache__/

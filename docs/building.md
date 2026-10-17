@@ -77,6 +77,11 @@ The VST3 bundle and standalone `.exe` are under `build/windows-debug/bin/`.
 These are developer/debug artifacts, not portable release packages. Windows
 compilation in CI does not establish playback or device-driver compatibility.
 
+Use `windows-release` to configure/build/test optimized MSVC binaries in a
+separate build tree. The preset selects the Release configuration, not Debug.
+The preview candidate keeps the normal Release CRT dependency and documents
+Microsoft's x64 v14 redistributable; it does not ship developer/debug CRT DLLs.
+
 ## macOS experimental plugins
 
 Requires Xcode command-line tools with the macOS SDK, CMake 3.24+, Ninja and recursive
@@ -119,6 +124,49 @@ published. See [Mac colleague checklist](macos.md) before sharing/trying the bui
 CI also extracts the ZIP into a temporary directory, verifies the recovered
 signatures and repeats the actual AU render/state and VST3 loader tests on those
 packaged copies. No test installs either format.
+
+## Review-only preview assets
+
+Issue #21 adds optimized Linux/Windows packaging alongside the Mac tester archive.
+The first advertised downloads are plugins only, not Foundation or standalone.
+The proposed version is in `release/preview.json`; `release/NOTES.md` is the draft,
+not publication approval. Dom's Mac host test and Windows real-DAW playback are
+not established by the package checks.
+
+After a Release preset build from a clean committed checkout:
+
+```sh
+# Linux
+cmake -DBINARY_DIR="$PWD/build/linux-release" -DSOURCE_DIR="$PWD" -P cmake/PackagePreview.cmake
+# Windows, in PowerShell
+cmake "-DBINARY_DIR=$pwd/build/windows-release" "-DSOURCE_DIR=$pwd" -DCONFIG=Release -P cmake/PackagePreview.cmake
+```
+
+Python 3.9+ is required only for package inspection/source assembly, not ordinary
+CMake builds. `tools/verify_preview_package.py` inspects ELF/Mach-O/PE headers and
+direct dependencies without executing plugins. It rejects debug Windows CRTs,
+unreviewed runtime libraries, mixed metadata, unsafe ZIP paths and unintended payloads.
+`tests/Vst3ModuleTests.cpp` loads actual Linux/Windows/Mac modules and inspects
+factory/version metadata; it is not a playback test. The sanitizer job stays with
+the headless DSP tests, while normal/Release jobs cover actual module loading.
+
+`tools/package_preview_source.py` includes all tracked files from recursive
+submodules, with normalized archive metadata and `SOURCE-MANIFEST.json`. It omits
+`.git`, build output and ignored local artwork. The source TAR is byte-reproducible
+from the same clean checkout; binary reproducibility is not claimed.
+
+CI's `preview-candidate` job waits for every platform/debug/sanitizer/source job,
+checks that all packages and source refer to the same tested checkout, then collects
+three versioned plugin ZIPs, the matching source TAR, `SHA256SUMS`, `CANDIDATE.json`
+and draft notes in the `undertow-preview-release-candidate` artifact. It has no
+release-write permission and does not publish, install or create a tag. A clean
+workflow run after the preparation PR merges should supply final review assets.
+
+To build from the corresponding-source TAR, extract it and run the platform's
+configure/build/test presets. Recursive DPF/Pugl files are already included; do not
+run `git submodule update` in the TAR extraction. Windows configure still fetches
+the two documented hash-pinned Khronos headers. See `docs/install-preview.md`
+for platform runtime/install limits, and retain all licences/notices.
 
 ## Try the plugin in Bitwig
 

@@ -110,3 +110,115 @@ jobs:
             build/macos-release/UndertowPreview-macos-universal.zip
             build/macos-release/UndertowPreview-macos-universal.zip.sha256
           if-no-files-found: error
+  linux-release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev xvfb
+      - run: cmake --preset linux-release
+      - run: cmake --build --preset linux-release
+      - run: ctest --preset linux-release
+      - name: Release GUI controls without audio devices
+        run: xvfb-run -a build/linux-release/preview_gui
+      - name: Package plugins without installing them
+        run: cmake -DBINARY_DIR="$PWD/build/linux-release" -DSOURCE_DIR="$PWD" -P cmake/PackagePreview.cmake
+      - name: Inspect and load the extracted Release plugin
+        run: |
+          python tools/verify_preview_package.py build/linux-release/UndertowPreview-linux-x86_64.zip --commit "$GITHUB_SHA"
+          python -m zipfile -e build/linux-release/UndertowPreview-linux-x86_64.zip "$RUNNER_TEMP/undertow-linux-roundtrip"
+          build/linux-release/vst3_loader_tests "$RUNNER_TEMP/undertow-linux-roundtrip/UndertowPreview/UndertowPreview.vst3/Contents/x86_64-linux/UndertowPreview.so" 0.4.0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: undertow-preview-linux-x86_64
+          path: |
+            build/linux-release/UndertowPreview-linux-x86_64.zip
+            build/linux-release/UndertowPreview-linux-x86_64.zip.sha256
+          if-no-files-found: error
+  windows-release:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: cmake --preset windows-release
+      - run: cmake --build --preset windows-release
+      - run: ctest --preset windows-release
+      - name: Package plugins without installing them
+        run: cmake "-DBINARY_DIR=$pwd/build/windows-release" "-DSOURCE_DIR=$pwd" -DCONFIG=Release -P cmake/PackagePreview.cmake
+      - name: Inspect imports and load the extracted Release plugin
+        run: |
+          python tools/verify_preview_package.py build/windows-release/UndertowPreview-windows-x86_64.zip --commit "$env:GITHUB_SHA"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m zipfile -e build/windows-release/UndertowPreview-windows-x86_64.zip "$env:RUNNER_TEMP/undertow-windows-roundtrip"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/windows-release/Release/vst3_loader_tests.exe "$env:RUNNER_TEMP/undertow-windows-roundtrip/UndertowPreview/UndertowPreview.vst3/Contents/x86_64-win/UndertowPreview.vst3" 0.4.0
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: undertow-preview-windows-x86_64
+          path: |
+            build/windows-release/UndertowPreview-windows-x86_64.zip
+            build/windows-release/UndertowPreview-windows-x86_64.zip.sha256
+          if-no-files-found: error
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -p 'test_preview_packages.py' -v
+      - run: python tools/package_preview_source.py --output "$RUNNER_TEMP/undertow-source"
+      - name: Check source archive reproducibility
+        run: |
+          python tools/package_preview_source.py --output "$RUNNER_TEMP/undertow-source-repeat"
+          cmp "$RUNNER_TEMP/undertow-source/"*.tar.gz "$RUNNER_TEMP/undertow-source-repeat/"*.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: undertow-preview-source
+          path: ${{ runner.temp }}/undertow-source/
+          if-no-files-found: error
+  preview-candidate:
+    needs: [linux, windows, sanitizers, macos, linux-release, windows-release, source]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: undertow-preview-linux-x86_64
+          path: incoming/
+      - uses: actions/download-artifact@v4
+        with:
+          name: undertow-preview-windows-x86_64
+          path: incoming/
+      - uses: actions/download-artifact@v4
+        with:
+          name: undertow-macos-universal-tested-on-macos-15
+          path: incoming/
+      - uses: actions/download-artifact@v4
+        with:
+          name: undertow-preview-source
+          path: incoming/
+      - name: Verify common source identity and assemble review-only assets
+        run: python tools/assemble_preview_assets.py --input incoming --output candidate --commit "$GITHUB_SHA"
+      - name: Include the draft release notes
+        run: cp release/NOTES.md candidate/RELEASE-NOTES.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: undertow-preview-release-candidate
+          path: candidate/
+          if-no-files-found: error
