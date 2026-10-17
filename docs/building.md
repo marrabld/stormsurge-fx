@@ -99,7 +99,9 @@ do not turn on native-device fallback to create an app.
 process. It checks actual render timing, raw host-clock failure/removal, invalid
 BPM, stereo routing and parameter save/restore. It opens no audio device and
 copies nothing into user/system plugin directories. `au_tempo_bridge` checks the
-callback policy on Linux/Windows too. Neither test proves Logic/GarageBand scan,
+callback policy on Linux/Windows too. `mac_vst3_loader` loads the actual VST3 bundle,
+calls its Mac entry/exit points and inspects/releases its factory. It is a loader
+smoke test, not VST3 audio rendering or pluginval. These tests do not prove Logic/GarageBand scan,
 UI, playback, export or the behaviour of another DAW. auval remains a separate
 check on a Mac where the tester has chosen to install the component.
 
@@ -114,6 +116,9 @@ unneeded broad AU resource declarations, applies/verifies ad-hoc signatures and
 uses `ditto` to preserve bundle structure in a ZIP. A SHA256 file accompanies it.
 These are not Developer ID signatures or Apple notarization. No release is
 published. See [Mac colleague checklist](macos.md) before sharing/trying the build.
+CI also extracts the ZIP into a temporary directory, verifies the recovered
+signatures and repeats the actual AU render/state and VST3 loader tests on those
+packaged copies. No test installs either format.
 
 ## Try the plugin in Bitwig
 

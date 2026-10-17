@@ -113,6 +113,8 @@ Non-obvious test facts:
   factory only within the test process. It renders supplied buffers without an
   audio device and does not install into a plugin directory. It is not a DAW scan,
   listening result or substitute for auval. Do not install plugins to run a validator.
+  `mac_vst3_loader` checks actual VST3 bundle entry/factory/exit only, not audio.
+  CI repeats these tests on archive-extracted, ad-hoc-signed copies before upload.
 - **`foundation_gui` is NOT a ctest test.** It builds with the project but is run by
   hand, because it needs a display/OpenGL context: `xvfb-run -a build/linux-debug/foundation_gui`.
   It renders 30 frames, asserts the 390x510 geometry constraint, opens no audio device.

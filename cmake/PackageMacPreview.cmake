@@ -1,7 +1,15 @@
 # SPDX-License-Identifier: GPL-3.0-only
 cmake_minimum_required(VERSION 3.24)
-if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" OR NOT IS_DIRECTORY "${BINARY_DIR}/bin")
+if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" OR NOT IS_ABSOLUTE "${BINARY_DIR}"
+        OR NOT IS_ABSOLUTE "${SOURCE_DIR}" OR NOT EXISTS "${BINARY_DIR}/CMakeCache.txt"
+        OR NOT IS_DIRECTORY "${BINARY_DIR}/bin")
     message(FATAL_ERROR "Run on macOS after a preset build, with BINARY_DIR and SOURCE_DIR")
+endif()
+file(STRINGS "${BINARY_DIR}/CMakeCache.txt" deployment
+    REGEX "^CMAKE_OSX_DEPLOYMENT_TARGET:[^=]+=")
+string(REGEX REPLACE "^[^=]*=" "" deployment "${deployment}")
+if(deployment STREQUAL "")
+    message(FATAL_ERROR "Missing deployment target in the configured Mac build")
 endif()
 
 function(run_checked)
@@ -31,7 +39,7 @@ file(COPY "${SOURCE_DIR}/LICENSE" "${SOURCE_DIR}/THIRD_PARTY_NOTICES.md" DESTINA
 configure_file("${SOURCE_DIR}/docs/macos.md" "${stage}/READ-ME-FIRST.md" COPYONLY)
 file(WRITE "${stage}/BUILD.txt"
     "Undertow Preview experimental Mac tester build\nSource commit: ${commit}\n"
-    "Architectures: arm64 and x86_64\nDeployment target: macOS 13.0\n"
+    "Architectures: arm64 and x86_64\nDeployment target: macOS ${deployment}\n"
     "Ad-hoc signatures only. Not Developer ID signed or notarized.\n"
     "No standalone app. No installer. No real-DAW playback claim from CI.\n")
 

@@ -40,6 +40,9 @@ rather than trying to force the DAW to accept a rejected plugin.
 ## Listening checklist
 
 Use a disposable project and a recorded guitar track first. Start at low volume.
+This build is stereo-in/stereo-out only. Use a stereo track or stereo bus/aux;
+if the recording is mono, use the DAW's routing to feed that stereo path. A
+native mono or mono-to-stereo plugin layout is not implemented yet.
 
 1. Confirm scan/load and that the editor appears, resizes and has readable controls.
 2. Confirm audible repeats, Normal/Ping-pong switching and clear dry guitar.
