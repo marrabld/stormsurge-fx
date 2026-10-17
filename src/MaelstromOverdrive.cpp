@@ -10,7 +10,7 @@ namespace stormsurge
 {
 namespace
 {
-constexpr double maxPreClipGain = 20.0;
+constexpr double maxPreClipGain = 60.0;
 constexpr double unity = 1.0;
 
 double flush(double value) noexcept
@@ -47,11 +47,14 @@ double onePole(double cutoff, double rate) noexcept
     return std::exp(-2 * std::numbers::pi * cutoff / rate);
 }
 // Drive starts at unity so the default 10% position is close to a clean push,
-// then climbs steeply. A straight exponential to the ceiling would already add
-// a few dB at 10%, which would quietly change level on insertion.
+// then climbs steeply. A straight exponential to the ceiling would already add a
+// few dB at 10%, which would quietly change level on insertion. The cube keeps
+// the bottom of the knob usable while still reaching genuinely aggressive
+// overdrive at the top, which is what tight melodic-death rhythm needs.
 double preClipFor(double drive) noexcept
 {
-    return unity + (maxPreClipGain - unity) * drive * drive;
+    const double shaped = drive * drive * drive;
+    return unity + (maxPreClipGain - unity) * shaped;
 }
 } // namespace
 
