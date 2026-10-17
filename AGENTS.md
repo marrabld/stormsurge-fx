@@ -14,7 +14,7 @@ stated so they can be judged by ear later.
 
 StormSurge FX is a GPL-3.0-only guitar effects suite for Bitwig and standalone use.
 Undertow, a dark stereo delay, is the first effect; more follow. Linux first,
-Windows planned, no macOS commitment.
+Windows builds and experimental macOS plugin support under issue #19.
 
 ### What is authorised
 
@@ -23,6 +23,7 @@ Windows planned, no macOS commitment.
 | Implementing Undertow's delay DSP | **Authorised** |
 | Optional wet-path dark reverb, issue #16 | **Authorised** |
 | Iterating on the pedal GUI | **Authorised** |
+| Experimental macOS VST3/AUv2 builds, issue #19 | **Authorised** |
 | Merging a PR | **Not** authorised; open a PR and wait |
 | Publishing a release or tagging | **Not** authorised |
 | Installing a plugin anywhere | **Not** authorised |
@@ -81,12 +82,15 @@ ctest --preset linux-debug
 
 - Always configure through a **preset**. There is no plain `cmake ..` path, and each
   preset has its own `build/<preset>/` tree. Presets: `linux-debug`, `linux-release`,
-  `linux-sanitized`, `windows-debug`.
+  `linux-sanitized`, `windows-debug`, `macos-debug`, `macos-release`.
 - Requires CMake 3.24+, Ninja and Clang on Linux. **No dependency install is run by
   CMake** — X11/Xcursor/Xext/Xrandr and `libgl1-mesa-dev` must already be present.
 - `linux-sanitized` enables ASan/UBSan; build its `foundation_tests` target first.
 - Windows configure **downloads** two hash-pinned Khronos headers via
   `cmake/KhronosHeaders.cmake`. That module needs network access at configure time.
+- macOS presets use Apple Clang/Ninja, universal arm64+x86_64 and deployment target
+  13.0. Preview builds VST3/AUv2; Foundation builds VST3 only. No Mac standalone
+  or native-device fallback is authorised by this first plugin preview.
 
 ## Tests
 
@@ -100,10 +104,15 @@ ctest --preset linux-debug -R '^dark_delay_core$'        # independent delay cor
 ctest --preset linux-debug -R '^preview_'                # Preview integration and monitor
 ctest --preset linux-debug -R '^tempo_sync$'             # timing math and extended buffers
 ctest --preset linux-debug -R '^dark_reverb_core$'       # reverb response and wet-insert contract
+ctest --preset linux-debug -R '^au_tempo_bridge$'        # raw AU callback policy without Apple dependencies
 ```
 
 Non-obvious test facts:
 
+- On macOS, `mac_au_adapter` loads the actual built component and registers its
+  factory only within the test process. It renders supplied buffers without an
+  audio device and does not install into a plugin directory. It is not a DAW scan,
+  listening result or substitute for auval. Do not install plugins to run a validator.
 - **`foundation_gui` is NOT a ctest test.** It builds with the project but is run by
   hand, because it needs a display/OpenGL context: `xvfb-run -a build/linux-debug/foundation_gui`.
   It renders 30 frames, asserts the 390x510 geometry constraint, opens no audio device.
@@ -202,6 +211,13 @@ submodule is bumped** ([docs/technology.md](docs/technology.md) says so explicit
   120 BPM. Its LF-normalized source hash is checked; review on DPF updates. Never
   hand-edit generated files or the submodule. Foundation is not patched. Use the raw
   bridge, not `getTimePosition().bbt.valid`, for Preview tempo availability.
+- Preview AU similarly uses `cmake/PreviewAuTempo.cmake` and `PreviewAuTempo.hpp`.
+  Query the host callback once per processing slice, preserve failures/removal, and
+  never mistake an adapter's stale/synthetic BBT clock for a valid host tempo.
+  Review its LF-normalized adapter hash on DPF updates; no submodule edits.
+- `cmake/PackageMacPreview.cmake` copies only Preview bundles, verifies both CPU
+  slices and applies ad-hoc signatures to the staged copies. It does not install,
+  publish, use Developer ID credentials or notarize. Keep that distinction explicit.
 
 ## Licensing
 

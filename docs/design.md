@@ -181,6 +181,13 @@ The Preview-only VST3 build wrapper preserves the host's raw tempo-valid flag vi
 infer clock availability. Bridge, resolver, readouts and core tests cover policy;
 actual loaded-plugin behaviour still needs the manual checks in `preview.md`.
 
+Issue #19 adds a Preview-only Audio Unit wrapper using the raw beat/tempo callback
+result rather than DPF's synthetic/stale BBT values. It follows the same BPM,
+hold/fallback and stopped-transport policy as VST3. The wrapper queries the callback
+once per processing slice and shares that result with DPF. Mac plugin builds and
+headless adapter tests are not listening or DAW compatibility evidence. See
+[Mac tester checklist](macos.md); native Mac standalone devices remain out of scope.
+
 Bounding feedback below unity alone does not guarantee safe levels for arbitrary
 input. Filters, interpolation and parameter transitions also need analysis and
 tests. Don't introduce clipping or limiting silently to hide an unstable design.

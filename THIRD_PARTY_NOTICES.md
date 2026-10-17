@@ -45,6 +45,14 @@ LF-normalized upstream adapter and wrapper SHA256 hashes before generating anyth
 retained in the copied source. Foundation and the dependency checkout are not patched.
 Keep these build sources with the corresponding source distribution.
 
+The Preview AUv2 build also compiles a generated adapter copy, via
+`cmake/PreviewAuTempo.cmake` and `cmake/PreviewAuMain.cpp.in`. Its LF-normalized
+source SHA256 is checked. The raw host callback is queried once and its result is
+shared with DPF's BBT conversion, rather than treating synthetic/stale BBT as a
+host clock. Original ISC notices are retained. No dependency checkout is edited.
+Mac staging removes the AU exporter's unnecessary broad resource-usage declarations
+and replaces generic bundle identifiers; it does not grant network/file entitlements.
+
 ## Graphics dependencies
 
 - **Pugl:** the pinned nested submodule at
@@ -61,7 +69,8 @@ Keep these build sources with the corresponding source distribution.
 CMake copies the DPF, Pugl, NanoVG and font licence texts, and the intact helper
 headers containing their own notices, into `build/<preset>/bin/notices/`. Keep
 that directory, this notice and the project LICENSE with distributed binaries.
-System OpenGL, X11 and the selected JACK implementation have their own terms;
+System OpenGL, X11, macOS Cocoa/CoreFoundation/AudioToolbox/AudioUnit frameworks
+and the selected JACK implementation have their own terms;
 they are not bundled by the current build.
 
 ## Source availability

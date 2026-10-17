@@ -46,6 +46,9 @@ engineering starting points separately from remaining integration proposals.
   was rejected to keep this project GPL-3.0-only. DPF is ISC-licensed and provides
   custom UIs, VST3 and a JACK-only standalone.
 - C++20, CMake, Ninja/Clang on Linux, MSVC x64 on Windows.
+- Issue #19 now authorises experimental Mac VST3/AUv2 plugins before release
+  packaging. A colleague is willing to test; their Mac/OS/DAW details are pending.
+  First presets target universal arm64+x86_64 and macOS 13. No Mac standalone yet.
 - **Artwork:** the maintainer confirmed personal Gemini Nano Banana, using an
   assistant-supplied text prompt without uploaded third-party reference images.
   They approved reuse of the enclosure for #15. Its prepared PNG and provenance
@@ -77,6 +80,7 @@ accurate host tails remain work.
 | #12 | `feat/11-stereo-ping-pong` | Merged into `main` | Normal/Ping-pong switch and compatibility/safety tests |
 | #14 | `feat/13-tempo-sync` | Merged into `main` | Nine synced divisions and explicit tempo source/hold/fallback |
 | #17 | `feat/16-dark-reverb` | Merged into `main` | Optional wet-path long dark reverb |
+| #18 | `feat/15-timing-controls-worn-finish` | Merged into `main` | Compact timing menus and worn, realistic pedal graphics |
 
 The foundation builds and passes automated tests on Linux and Windows, including
 sanitizers. The VST3 passed pluginval at strictness 5, with DPF teardown warnings
@@ -105,9 +109,11 @@ standalone hardware usability.
 
 ## Suggested order
 
-1. Review the issue #15 timing-controls/worn-finish PR and CI. Do not merge without approval.
-2. Check the compact timing selectors and textured finish in Bitwig, including host
-   updates and saved Sync/Division settings. Complete remaining tempo/automation/export checks too.
+1. Issue #19 is active on `feat/19-macos-preview`, with draft PR #20. Review actual
+   Apple Silicon/Intel CI evidence before claiming build/adapter/GUI coverage.
+2. Once Mac tester bundles pass checks, have the colleague follow `docs/macos.md`.
+   The bundles are ad-hoc signed, not Developer ID signed or notarized. No plugins
+   are installed by CI, and no release publication/tagging is authorised.
 3. Agree and implement remaining channel/device policies under issue #4.
 4. Resolve DPF's hardcoded zero VST3 tail report before claiming correct automatic
    tail export. Test standalone input routing and playtest under issue #5.
