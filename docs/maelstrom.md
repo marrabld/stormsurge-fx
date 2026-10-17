@@ -167,6 +167,51 @@ cannot establish that Maelstrom sounds good. Oversampling factor, clipping
 asymmetry, mid emphasis and the exact cutoff ranges remain adjustable after
 real listening through NAM, and are expected to change.
 
+## Comparison with published practice
+
+Checked 2026-10-17 against manufacturer documentation, not forums alone. These
+are external references for the design choices above, not a claim to reproduce
+any product's sound.
+
+**Neural DSP `Archetype: Petrucci` and `Archetype: Petrucci X`** are John
+Petrucci's signature plugins. Their manuals describe:
+
+- `TIGHT KNOB: High-pass filter. Useful when using extended range guitars.`
+  The Petrucci X manual phrases it as a high-pass filter control that removes low
+  frequencies when increased.
+- `BITE SWITCH: Enhances the harmonic response of the distortion.`
+- The Petrucci X product page adds that the tight knob, bite switch and bass knob
+  "all interact with the amplifier's gain structure to dial in the perfect amount
+  of attack or growl".
+
+**Neural DSP `Archetype: Rabea X`** uses the same vocabulary on its Lead
+amplifier: `Tight Knob: High-pass filter. Increase to remove low frequencies.`
+
+**Fractal Audio Blocks Guide** describes an amp input `Low Cut` that "removes bass
+frequencies at the input for a classic way to tighten an amp."
+
+What this confirms about Maelstrom:
+
+- Tight as a **high-pass** matches how commercial metal-oriented plugins and amp
+  models implement the word. Our own measurement had already rejected the
+  lowpass alternative for the same reason.
+- The note that Tight is "useful when using extended range guitars" matches the
+  low-fundamental concern raised in this document. It is a known trade, not an
+  oversight.
+- Naming the second control `Bite` and applying it to **harmonic response of the
+  distortion** matches the Petrucci plugins' Bite. Our implementation is
+  post-clip filtering rather than a switch, which is a deliberate difference.
+
+One practical data point from Fractal's user forum, for tightening a high-gain
+tone for low fast palm mutes: an input low cut "at around 80-100 depending on
+tuning and how tight you want it". That is close to our ~85 Hz default, arrived
+at independently from measurement. Forum posts are anecdotes, not specifications.
+
+Differences worth keeping in mind: those Tight controls sit inside an amp model
+with its own tone stack, gain structure and cab, while Maelstrom is a pedal
+placed before NAM. Expect the usable range to differ, and judge by ear rather
+than matching a number.
+
 ## First listening and acceptance plan
 
 1. The maintainer chooses a clean recorded guitar passage with palm-muted low
