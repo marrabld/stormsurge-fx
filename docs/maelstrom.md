@@ -141,8 +141,8 @@ Signal order is input → Tight highpass → pre-clip gain → clipping → Bite
   also attenuates a down-tuned low fundamental, which is the intended trade.
 - **Clipping is `tanh`**, chosen because it is smooth and monotonic everywhere,
   so the stage cannot fold back on itself or run away. A hard clamp would only
-  create harsher edges and more aliasing. Drive maps 1.0 to 20x pre-clip gain on
-  a squared curve, so 10% is a genuinely gentle push instead of a hidden few dB.
+  create harsher edges and more aliasing. Drive maps 1.0 to 60x pre-clip gain on
+  a cubed curve, so 10% is a genuinely gentle push instead of a hidden few dB.
 - **Bite is a post-clip lowpass** (4.5–11 kHz, clamped below Nyquist), so it
   shapes harmonics the clip stage just created rather than pre-empting them.
 - **2x oversampling** with a gentle decimating lowpass. The anti-alias cutoff
@@ -211,6 +211,51 @@ Differences worth keeping in mind: those Tight controls sit inside an amp model
 with its own tone stack, gain structure and cab, while Maelstrom is a pedal
 placed before NAM. Expect the usable range to differ, and judge by ear rather
 than matching a number.
+
+## First listening result and Drive range, issue #32
+
+The maintainer loaded Maelstrom in Bitwig (PR #31) and reported it was less
+harsh and less distorted than expected with Drive up. They confirmed the input
+level was fine, so this was not a level or routing mistake.
+
+Measuring the engine settled it. Odd-harmonic distortion through the original
+20x pre-clip ceiling, by input level:
+
+| Input level | Drive 10% | Drive 50% | Drive 100% |
+| --- | --- | --- | --- |
+| -34 dB | 0.0% | 0.1% | 0.9% |
+| -26 dB | 0.0% | 0.5% | 5.2% |
+| -20 dB | 0.1% | 1.9% | 14.4% |
+| -10 dB | 0.8% | 11.9% | 33.6% |
+| -3 dB | 3.8% | 27.5% | 41.3% |
+
+The clipper was working. The ceiling was the limit: at a normal -20 dBFS input,
+full Drive only reached about 17% distortion. A gain sweep at that level showed
+20x gives 17.3%, 40x gives 30.1%, 60x gives 35.7% and 100x gives 40.5%, with
+the `tanh` curve already approaching a square wave by 60x. No new curve was
+needed to reach an aggressive rhythm sound.
+
+The ceiling is now 60x on a cubed taper, which keeps the default position gentle
+while letting the top of the knob get properly aggressive. Measured at -20 dBFS:
+
+| Drive | Odd-harmonic distortion |
+| --- | --- |
+| 10% (default) | 0.1% |
+| 50% | 3.8% |
+| 100% | 33.6% |
+
+Two test bugs surfaced while making this measurement trustworthy. The Bite
+assertion had its comparison reversed: Bite is a lowpass, so a darker setting
+must reduce upper harmonics rather than increase them. It only appeared to pass
+at the old ceiling because that region sat at the numerical noise floor. The
+engage-fade check also used an absolute sample-step limit that the clipped
+waveform's own slew exceeded; it now compares against the wet signal's own step
+size, which is what the fade is actually responsible for.
+
+**A SMOOTH/GRIT mode switch remains undecided.** The maintainer proposed one for
+harder clipping. The gain sweep suggests extending the range may already supply
+most of what it promised, since `tanh` reaches square-wave behaviour on its own.
+Do not add a second clipping curve until the extended range has been heard.
 
 ## First listening and acceptance plan
 
