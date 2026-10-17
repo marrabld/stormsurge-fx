@@ -26,8 +26,9 @@ inner `.so`, and do not overwrite another version without keeping a backup.
 
 The candidate is built on Ubuntu 24.04, not an older universal Linux baseline.
 It needs a compatible glibc/libstdc++ plus X11/XWayland and desktop OpenGL runtime
-libraries. It does not bundle/replace your system libraries. Exact direct library
-dependencies and required symbol versions are recorded in `CANDIDATE.json`.
+libraries. It does not bundle/replace your system libraries. DPF may also link
+the system D-Bus library when it detects it. The
+direct dependencies and required symbol versions are recorded in `CANDIDATE.json`.
 Older distributions may not load it. A newer Arch-built binary is not substituted
 for the documented Ubuntu candidate. A VST3 host does not need JACK just to use it.
 

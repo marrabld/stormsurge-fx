@@ -40,13 +40,14 @@ def package(root, destination):
     manifest = {
         "schema": 1, "release_version": version, "source_commit": commit,
         "source_url": f"https://github.com/marrabld/stormsurge-fx/tree/{commit}",
-        "submodules": [line.strip() for line in modules], "tracked_file_count": len(paths),
+        "submodules": [{"commit": line[1:].split()[0], "path": line[1:].split()[1]} for line in modules],
+        "tracked_file_count": len(paths),
         "build_instructions": "docs/building.md", "recursive_dependencies_included": True,
     }
     destination.mkdir(parents=True, exist_ok=True)
     archive = destination / f"{prefix}.tar.gz"
     # Fixed metadata and gzip time make the source archive byte-reproducible.
-    with archive.open("wb") as output, gzip.GzipFile(filename="", fileobj=output, mode="wb", mtime=timestamp) as compressed:
+    with archive.open("wb") as output, gzip.GzipFile(filename="", fileobj=output, mode="wb", mtime=timestamp, compresslevel=9) as compressed:
         with tarfile.open(fileobj=compressed, mode="w", format=tarfile.PAX_FORMAT) as tar:
             for path, mode in sorted(paths):
                 info = tar.gettarinfo(str(root / path), f"{prefix}/{path}")

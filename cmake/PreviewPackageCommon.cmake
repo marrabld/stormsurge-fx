@@ -6,6 +6,16 @@ function(preview_package_metadata stage platform)
     file(READ "${SOURCE_DIR}/release/preview.json" release)
     string(JSON version GET "${release}" version)
     string(JSON plugin_version GET "${release}" plugin_version)
+    set(baseline "${CMAKE_HOST_SYSTEM_NAME}")
+    if(platform STREQUAL "linux-x86_64")
+        file(STRINGS /etc/os-release ubuntu REGEX "^ID=ubuntu$")
+        file(STRINGS /etc/os-release ubuntu_version REGEX "^VERSION_ID=\"24\\.04\"$")
+        if(NOT ubuntu STREQUAL "" AND NOT ubuntu_version STREQUAL "")
+            set(baseline "ubuntu-24.04")
+        else()
+            set(baseline "non-Ubuntu-24.04-development-build")
+        endif()
+    endif()
     execute_process(COMMAND git rev-parse HEAD WORKING_DIRECTORY "${SOURCE_DIR}"
         OUTPUT_VARIABLE commit OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE result)
     if(NOT result EQUAL 0)
@@ -20,6 +30,7 @@ function(preview_package_metadata stage platform)
         "{\n  \"schema\": 1,\n  \"release_version\": \"${version}\",\n"
         "  \"plugin_version\": \"${plugin_version}\",\n  \"platform\": \"${platform}\",\n"
         "  \"configuration\": \"Release\",\n  \"source_commit\": \"${commit}\",\n"
+        "  \"build_baseline\": \"${baseline}\",\n"
         "  \"source_url\": \"https://github.com/marrabld/stormsurge-fx/tree/${commit}\",\n"
         "  \"source_archive\": \"stormsurge-fx-${version}-source.tar.gz\"\n}\n")
     file(COPY "${BINARY_DIR}/bin/notices" DESTINATION "${stage}")

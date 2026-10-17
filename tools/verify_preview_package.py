@@ -17,7 +17,7 @@ WINDOWS_SYSTEM = set("kernel32 user32 gdi32 shell32 ole32 oleaut32 advapi32 comd
                      "crypt32 iphlpapi dwrite d2d1 d3d11 dxgi dcomp usp10 bcrypt secur32 setupapi".split())
 LINUX_SYSTEM = set("libX11.so.6 libXext.so.6 libXcursor.so.1 libXrandr.so.2 libXfixes.so.3 "
                    "libGL.so.1 libGLX.so.0 libOpenGL.so.0 libstdc++.so.6 libm.so.6 libgcc_s.so.1 "
-                   "libc.so.6 libdl.so.2 libpthread.so.0 librt.so.1 ld-linux-x86-64.so.2".split())
+                   "libc.so.6 libdl.so.2 libpthread.so.0 librt.so.1 libdbus-1.so.3 ld-linux-x86-64.so.2".split())
 
 
 def require(condition, message):
@@ -102,7 +102,7 @@ def elf_dependencies(data):
 
     tags = {}
     needed = []
-    for position in range(dynamic[0], sum(dynamic), 16):
+    for position in range(dynamic[0], dynamic[0] + dynamic[1], 16):
         tag, value = struct.unpack_from("<qQ", data, position)
         if tag == 0:
             break

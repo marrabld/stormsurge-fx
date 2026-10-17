@@ -24,6 +24,9 @@ def assemble(incoming, output, commit, release_file):
         report = verify(source, commit)
         require(report["platform"] == platform and report["release_version"] == version and
                 report["plugin_version"] == release["plugin_version"], "Mixed release identities")
+        if platform == "linux-x86_64":
+            require(report["build_baseline"] == "ubuntu-24.04",
+                    "Do not advertise a newer local Linux build as the Ubuntu 24.04 candidate")
         name = f"UndertowPreview-{version}-{platform}.zip"
         shutil.copyfile(source, output / name)
         report["filename"] = name
