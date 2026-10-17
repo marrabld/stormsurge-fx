@@ -118,19 +118,19 @@ struct KnobPosition {
     std::uint32_t parameter;
     float x, y;
 };
-inline constexpr double PreviewHeight = 840;
-inline constexpr double PreviewFootY = 696;
-inline constexpr double PreviewModeTop = 610;
-inline constexpr double PreviewMonitorTop = 763;
+inline constexpr double PreviewHeight = 900;
+inline constexpr double PreviewFootY = 756;
+inline constexpr double PreviewModeTop = 670;
+inline constexpr double PreviewMonitorTop = 823;
 inline constexpr std::array<KnobPosition, 8> previewKnobs{{
-    {Time, 155, 220},
-    {Feedback, 365, 220},
-    {Tone, 105, 365},
-    {Mix, 260, 365},
-    {Level, 415, 365},
-    {ReverbSpace, 105, 530},
-    {ReverbDarkness, 260, 530},
-    {ReverbAmount, 415, 530},
+    {Time, 155, 280},
+    {Feedback, 365, 280},
+    {Tone, 105, 425},
+    {Mix, 260, 425},
+    {Level, 415, 425},
+    {ReverbSpace, 105, 590},
+    {ReverbDarkness, 260, 590},
+    {ReverbAmount, 415, 590},
 }};
 
 // Coordinates shared by drawing, hit testing and display-independent UI tests.
@@ -159,18 +159,37 @@ inline bool pingPongButtonAt(PedalPoint point) noexcept
            point.y <= PreviewModeTop + 26;
 }
 
-// Header controls: free/sync, note division, internal/fallback BPM.
-inline int timingControlAt(PedalPoint point) noexcept
+// Popup targets are shared with tests so a scaled menu cannot edit a knob beneath it.
+inline int timingSelectorAt(PedalPoint point) noexcept
 {
-    if (point.y < 130 || point.y > 153)
-        return -1;
-    if (point.x >= 40 && point.x <= 180)
-        return Sync;
-    if (point.x >= 190 && point.x <= 330)
-        return Division;
-    if (point.x >= 340 && point.x <= 480)
-        return InternalTempo;
+    if (point.y >= 138 && point.y <= 170) {
+        if (point.x >= 40 && point.x <= 250)
+            return 0;
+        if (point.x >= 270 && point.x <= 480)
+            return 1;
+    }
+    if (point.x >= 40 && point.x <= 480 && point.y >= 178 && point.y <= 210)
+        return 2;
     return -1;
+}
+
+inline bool timingSyncAt(PedalPoint point) noexcept
+{
+    return point.x >= 170 && point.x <= 350 && point.y >= 94 && point.y <= 126;
+}
+
+inline int timingMenuRowAt(PedalPoint point, int menu) noexcept
+{
+    const double left = menu == 0 ? 40 : 270;
+    if ((menu == 0 || menu == 1) && point.x >= left && point.x <= left + 210 && point.y >= 174 &&
+        point.y < 270)
+        return static_cast<int>((point.y - 174) / 32);
+    return -1;
+}
+
+inline bool timingTempoAt(PedalPoint point) noexcept
+{
+    return point.x >= 150 && point.x <= 370 && point.y >= 230 && point.y <= 262;
 }
 
 } // namespace stormsurge

@@ -1,7 +1,23 @@
 # Third-party notices
 
 StormSurge FX's own source is GPL-3.0-only. Dependency licences remain their own.
-This foundation does not embed the supplied Gemini images or use JUCE.
+The project does not use JUCE. Preview embeds one prepared AI-generated enclosure
+texture; Foundation still uses procedural artwork only.
+
+## Undertow enclosure texture
+
+The maintainer generated the source using Gemini Nano Banana in a personal account,
+from an assistant-supplied text prompt without uploaded third-party reference images,
+and approved its use in the plugin. The prepared derivative is supplied under the
+project's GPL-3.0-only terms to the extent applicable rights exist. See
+[`assets/runtime/NOTICE.md`](assets/runtime/NOTICE.md) for provenance, preparation,
+terms links and limitations. That notice accompanies binaries in
+`bin/notices/Undertow-artwork.md`. No new image-decoding dependency was added;
+DPF's existing NanoVG/stb_image path decodes the embedded PNG.
+The knob and footswitch materials are original mathematical renders from
+`tools/render_knob.py`, also GPL-3.0-only. The local Gemini hardware images are
+visual references, not embedded image inputs. The same runtime artwork notice
+records their preparation.
 
 ## DPF and DGL
 

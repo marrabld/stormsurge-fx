@@ -46,10 +46,11 @@ engineering starting points separately from remaining integration proposals.
   was rejected to keep this project GPL-3.0-only. DPF is ISC-licensed and provides
   custom UIs, VST3 and a JACK-only standalone.
 - C++20, CMake, Ninja/Clang on Linux, MSVC x64 on Windows.
-- **Artwork:** the maintainer generates images with Banana through Google Gemini and
-  uses them as references. They are not baked into the UI; the interface is drawn
-  procedurally in C++. The generated files stay local and gitignored because
-  redistribution terms are unconfirmed.
+- **Artwork:** the maintainer confirmed personal Gemini Nano Banana, using an
+  assistant-supplied text prompt without uploaded third-party reference images.
+  They approved reuse of the enclosure for #15. Its prepared PNG and provenance
+  notice are in `assets/runtime/`; originals remain unchanged and gitignored.
+  Controls and labels stay separate from the background. See `assets/SOURCES.md`.
 - The standalone is JACK-only with native-device fallback disabled. It **starts
   muted** and requires explicit monitoring consent, which resets on every audio
   reactivation. Friendly device selection and native Windows backends are later work.
@@ -61,7 +62,7 @@ PR #9 added the basic delay core; merged PR #10 connected separate **Undertow Pr
 VST3/JACK targets and working controls. Merged PR #12 adds a Normal/Ping-pong switch,
 with left-first alternating new repeats and unchanged dry routing. Merged PR #14 adds
 tempo sync with nine note values, held/fallback/internal tempo and up to eight-second
-synced intervals. Issue #16 adds optional long dark reverb after the wet delay, with
+synced intervals. Merged PR #17 adds optional long dark reverb after the wet delay, with
 Space/Darkness/Amount controls. It defaults off and is a listening experiment, not
 the complete proposed artist-reference chain. Foundation remains pass-through. Native device usability and
 accurate host tails remain work.
@@ -75,6 +76,7 @@ accurate host tails remain work.
 | #10 | `feat/4-playable-delay` | Merged into `main` | Audible Preview controls, automation/state and monitor safety |
 | #12 | `feat/11-stereo-ping-pong` | Merged into `main` | Normal/Ping-pong switch and compatibility/safety tests |
 | #14 | `feat/13-tempo-sync` | Merged into `main` | Nine synced divisions and explicit tempo source/hold/fallback |
+| #17 | `feat/16-dark-reverb` | Merged into `main` | Optional wet-path long dark reverb |
 
 The foundation builds and passes automated tests on Linux and Windows, including
 sanitizers. The VST3 passed pluginval at strictness 5, with DPF teardown warnings
@@ -85,16 +87,27 @@ and non-default saved-setting reopening for PR #10. Linux, Windows and sanitizer
 passed for that PR and PR #12. The maintainer also confirmed Ping-pong alternation,
 Normal/bypass behaviour and mode reopening. Sync had a successful first check for
 PR #14, not an exhaustive all-division/stop/export result. The maintainer likes the
-delay sound, finds the UI clumsy and deferred broader UI work to #15. Reverb is newly
-authorised and still needs listening. None of this proves Windows playback or
+delay sound. After PR #17 the maintainer praised the reverb sound and confirmed
+bypass spillover/new clean notes and saved-setting reopening. Linux, Windows and
+sanitizer CI passed. For #15 they clarified the knobs are fine; only the small
+note/time/sync header needs usability work. They also approved a banged-up pedal
+finish. They found the first expanded button grid too busy and the procedural
+wear unconvincing, so the revised PR uses a Sync switch and paired Note/Feel menus
+over the prepared enclosure texture. They love the revised layout and texture,
+and requested more realistic knobs. This same PR now adds original rendered
+silver-metal faces, ridged sides and shadows, with fixed lighting and live value
+markers. Further feedback requested subtle grime, a realistic metal effect
+footswitch and a physical Sync lever toggle. Those refinements stay in the same PR,
+with control behaviour unchanged. Local hardware concepts are references only,
+not embedded artwork.
+None of this proves Windows playback or
 standalone hardware usability.
 
 ## Suggested order
 
-1. Review the issue #16 Reverb PR and CI. Do not merge without approval.
-2. Follow [preview.md](docs/preview.md) to compare Amount zero and a long wet wash,
-   check dry attacks, Space/Darkness, bypass spillover and saved reverb settings.
-   Complete remaining tempo/automation/export checks too.
+1. Review the issue #15 timing-controls/worn-finish PR and CI. Do not merge without approval.
+2. Check the compact timing selectors and textured finish in Bitwig, including host
+   updates and saved Sync/Division settings. Complete remaining tempo/automation/export checks too.
 3. Agree and implement remaining channel/device policies under issue #4.
 4. Resolve DPF's hardcoded zero VST3 tail report before claiming correct automatic
    tail export. Test standalone input routing and playtest under issue #5.

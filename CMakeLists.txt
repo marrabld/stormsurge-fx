@@ -40,6 +40,8 @@ dpf_add_plugin(UndertowPreview
     FILES_UI src/PreviewEditor.cpp)
 target_include_directories(UndertowPreview PUBLIC src)
 target_compile_definitions(UndertowPreview PUBLIC STORMSURGE_PREVIEW)
+include(cmake/PreviewArtwork.cmake)
+target_include_directories(UndertowPreview-ui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 include(cmake/PreviewVst3Tempo.cmake)
 # DPF's bundled self-test includes its POSIX thread helper, unavailable to MSVC.
 # Our headless processor tests still run on both platforms.
@@ -66,6 +68,7 @@ endif()
 # font and rendering helpers. Some licence notices live inside source headers;
 # retain those files intact rather than extracting incomplete paragraphs.
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/bin/notices")
+configure_file(assets/runtime/NOTICE.md "${CMAKE_BINARY_DIR}/bin/notices/Undertow-artwork.md" COPYONLY)
 configure_file(external/dpf/LICENSE "${CMAKE_BINARY_DIR}/bin/notices/DPF-LICENSE.txt" COPYONLY)
 configure_file(external/dpf/dgl/src/pugl-upstream/COPYING "${CMAKE_BINARY_DIR}/bin/notices/Pugl-COPYING.txt" COPYONLY)
 configure_file(external/dpf/dgl/src/nanovg/LICENSE.txt "${CMAKE_BINARY_DIR}/bin/notices/NanoVG-LICENSE.txt" COPYONLY)
@@ -118,6 +121,7 @@ if(BUILD_TESTING)
     add_executable(preview_gui tests/GuiSmoke.cpp src/PreviewEditor.cpp
         external/dpf/distrho/src/DistrhoUI.cpp)
     target_include_directories(preview_gui PRIVATE src external/dpf/distrho)
+    target_include_directories(preview_gui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
     target_compile_definitions(preview_gui PRIVATE STORMSURGE_PREVIEW STORMSURGE_GUI_HARNESS)
     target_link_libraries(preview_gui PRIVATE dgl-opengl)
     if(NOT WIN32)

@@ -133,7 +133,7 @@ Non-obvious test facts:
   Use `previewLogicalIndex` to receive readouts; `previewEffectIndex` excludes them.
 - `preview_gui` exercises real control events/host edit gestures; `--standalone`
   tests the standalone UI without audio. Like `foundation_gui`, it needs a display.
-  Preview now uses 520×840 coordinates, minimum 390×630. Share its geometry constants
+  Preview now uses 520×900 coordinates, minimum 390×675. Share its geometry constants
   for drawing/hit testing. Foundation keeps its original 520×680/minimum 390×510.
 
 ## Live-monitoring safety invariants
@@ -212,11 +212,16 @@ Own code is **GPL-3.0-only**; every source file carries
   reintroduce AGPL-or-weaker dependencies without raising it first.
 - Adding any dependency means: an entry in `THIRD_PARTY_NOTICES.md` **and** a
   `configure_file(...)` copy into `bin/notices/` in `CMakeLists.txt`.
-- `assets/concepts/` and `assets/ui/` are Gemini-generated and **gitignored**
-  ([assets/README.md](assets/README.md) and [assets/SOURCES.md](assets/SOURCES.md)
-  are tracked; the images are not). Redistribution rights are unconfirmed, so they
-  must not be embedded or committed. The UI is drawn procedurally in code. The mockup
-  also looks newer than intended; weathering is accepted later work.
+- `assets/concepts/` and `assets/ui/` originals are Gemini-generated and **gitignored**.
+  The maintainer confirmed personal Gemini Nano Banana, an assistant-supplied prompt
+  and no uploaded third-party references, and approved enclosure reuse for #15.
+  The prepared `assets/runtime/undertow-enclosure.png` is bundled alongside
+  original mathematically rendered knob/footswitch materials; local Gemini
+  hardware concepts are references only. Their provenance/licence notice is copied
+  to `bin/notices/`. Keep originals unchanged.
+  See `assets/SOURCES.md`; do not infer blanket clearance of other local artwork.
+  Labels and value markers stay separate from textures. CMake embeds the PNGs into
+  a generated header; no user-local file, Python or ImageMagick is needed for normal builds.
 
 ## Style
 

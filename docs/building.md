@@ -7,7 +7,7 @@ Neither is a public release. Nothing is installed into your DAW automatically.
 ## Decisions
 
 - C++20, CMake 3.24+, Ninja/Clang on Linux and Visual Studio 2022 x64 on Windows.
-- DPF pinned by Git submodule, with DGL/NanoVG for a procedural pedal face.
+- DPF pinned by Git submodule, with DGL/NanoVG for controls and an embedded enclosure texture.
 - VST3 and a JACK-only standalone. No native audio fallback or ASIO in this step.
 - The experimental foundation has its own plugin identity, `UtF0`, distinct from
   the future actual Undertow effect. Do not rely on this shell for real sessions.
@@ -162,7 +162,29 @@ Preview tests add byte-identical zero-Amount compatibility, an independently pre
 delay/reverb reference chain, dry-only identity, causal wet routing, bypass spillover,
 no new reverb excitation during bypass, saved settings and monitor clearing of both
 stages in free/sync and Normal/Ping-pong. These do not prove pleasing sound or real
-device usability. Preview GUI geometry is 390×630 minimum, not Foundation's 390×510.
+device usability. Preview GUI geometry is 390×675 minimum, not Foundation's 390×510.
+`preview_gui --small` runs the control-event harness at that minimum size. Timing
+tests cover the Sync switch, all nine Note/Feel combinations, host division updates,
+popup dismissal without click-through, coarse/fine tempo scroll and tempo drag
+with balanced host edit gestures. Embedded texture decoding is checked too. Use
+`preview_gui --standalone` to check monitor UI separation without opening audio.
+For capture-only review, `STORMSURGE_CAPTURE_POPUP=note`, `feel` or `tempo` leaves
+that popup open after the harness interactions. It has no effect in the plugin.
+`STORMSURGE_CAPTURE_SYNC=off` captures the lever's Off position after the same
+interaction tests; it also has no effect in the plugin.
+`preview_gui --snapshot` skips the control-event exercise and renders the default
+Preview settings for documentation. This is a capture mode, not an interaction
+test. To refresh the README image without opening an audio device:
+
+```sh
+STORMSURGE_CAPTURE=/tmp/opencode/undertow-readme.ppm build/linux-debug/preview_gui --snapshot
+magick /tmp/opencode/undertow-readme.ppm docs/images/undertow-preview.png
+```
+
+CMake embeds the tracked PNGs using only CMake itself. ImageMagick is needed only
+to regenerate the enclosure derivative from the maintainer's local original, and
+Python's standard library only to regenerate the original knob/footswitch
+materials. Neither is needed to build. The GUI harness checks all three textures.
 
 Preview VST3 uses a generated wrapper under `build/<preset>/preview-adapter/` to
 preserve raw host tempo validity instead of DPF's synthetic 120 BPM. The checksum-

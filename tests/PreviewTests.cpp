@@ -123,7 +123,27 @@ static void mappings()
             require(knobAt(point) == static_cast<int>(knob.parameter),
                     "Scaled knob hit test wrong");
         }
+        auto scaledPoint = [scale](double x, double y) {
+            return pedalPoint(x * scale + 40, y * scale, 520 * scale + 80, PreviewHeight * scale);
+        };
+        require(timingSyncAt(scaledPoint(170, 94)) && timingSyncAt(scaledPoint(350, 126)),
+                "Scaled Sync switch target wrong");
+        require(timingSelectorAt(scaledPoint(40, 138)) == 0 &&
+                    timingSelectorAt(scaledPoint(480, 170)) == 1 &&
+                    timingSelectorAt(scaledPoint(260, 194)) == 2,
+                "Scaled selector targets wrong");
+        for (int menu = 0; menu < 2; ++menu) {
+            for (int row = 0; row < 3; ++row) {
+                require(timingMenuRowAt(scaledPoint(menu == 0 ? 145 : 375, 174 + row * 32), menu) ==
+                            row,
+                        "Scaled popup row target wrong");
+            }
+        }
+        require(timingTempoAt(scaledPoint(260, 246)), "Scaled tempo popup target wrong");
     }
+    require(timingSelectorAt({260, 154}) == -1 && timingMenuRowAt({260, 200}, 0) == -1 &&
+                timingMenuRowAt({145, 270}, 0) == -1 && timingMenuRowAt({260, 246}, 2) == -1,
+            "Timing gaps or tempo popup selected a note");
     require(knobAt({260, PreviewFootY}) == -1, "Footswitch overlaps a knob");
     require(pingPongButtonAt({260, PreviewModeTop + 13}) && !pingPongButtonAt({260, PreviewFootY}),
             "Mode switch hit test wrong");
