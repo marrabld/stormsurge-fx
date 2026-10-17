@@ -62,10 +62,12 @@ class MaelstromUI final : public UI
             mouse.pos.setPos(dx + knob.x * scale, dy + knob.y * scale);
             if (!onMouse(mouse))
                 return false;
-            MotionEvent motion;
-            motion.pos.setPos(dx + knob.x * scale, dy + (knob.y - 20) * scale);
-            if (!onMotion(motion) || values[knob.parameter] <= before)
-                return false;
+            for (int step = 1; step <= 4; ++step) {
+                MotionEvent motion;
+                motion.pos.setPos(dx + knob.x * scale, dy + (knob.y - 5 * step) * scale);
+                if (!onMotion(motion) || values[knob.parameter] <= before)
+                    return false;
+            }
             mouse.press = false;
             if (!onMouse(mouse))
                 return false;
@@ -133,8 +135,14 @@ class MaelstromUI final : public UI
             return false;
         if (!event.press) {
             const bool handled = dragging >= 0;
+            if (handled)
+                editParameter(static_cast<uint32_t>(dragging), false);
             dragging = -1;
             return handled;
+        }
+        if (dragging >= 0) {
+            editParameter(static_cast<uint32_t>(dragging), false);
+            dragging = -1;
         }
         dragging = -1;
         const auto point =
@@ -143,6 +151,8 @@ class MaelstromUI final : public UI
         if (knob >= 0) {
             dragging = knob;
             lastY = point.y;
+            position = normalizedMaelstrom(static_cast<uint32_t>(knob), values[knob]);
+            editParameter(static_cast<uint32_t>(knob), true);
             return true;
         }
         if (maelstromFootAt(point)) {
@@ -162,11 +172,11 @@ class MaelstromUI final : public UI
             return false;
         const auto point =
             maelstromPoint(event.pos.getX(), event.pos.getY(), getWidth(), getHeight());
-        const double sensitivity = event.mod & kModifierShift ? 0.0005 : 0.005;
-        change(static_cast<std::uint32_t>(dragging),
-               (lastY - point.y) * sensitivity *
-                   (maelstromSpecs[dragging].maximum - maelstromSpecs[dragging].minimum));
+        const double sensitivity = event.mod & kModifierShift ? 0.001 : 0.006;
+        position = std::clamp(position + (lastY - point.y) * sensitivity, 0.0, 1.0);
         lastY = point.y;
+        send(static_cast<std::uint32_t>(dragging),
+             denormalizedMaelstrom(static_cast<uint32_t>(dragging), static_cast<float>(position)));
         return true;
     }
 
@@ -179,8 +189,11 @@ class MaelstromUI final : public UI
             return false;
         const auto &spec = maelstromSpecs[knob];
         const double step = event.mod & kModifierShift ? 0.002 : 0.02;
-        change(static_cast<std::uint32_t>(knob),
-               event.delta.getY() * step * (spec.maximum - spec.minimum));
+        change(
+            static_cast<std::uint32_t>(knob),
+            denormalizedMaelstrom(static_cast<uint32_t>(knob),
+                                  normalizedMaelstrom(static_cast<uint32_t>(knob), values[knob]) +
+                                      static_cast<float>(event.delta.getY() * step)));
         return true;
     }
 
@@ -197,13 +210,15 @@ class MaelstromUI final : public UI
     {
         if (!std::isfinite(target))
             target = maelstromSpecs[index].initial;
-        // Host gestures bracket a knob drag so automation can follow it.
         editParameter(index, true);
-        const float clamped = std::clamp(static_cast<float>(target), maelstromSpecs[index].minimum,
-                                         maelstromSpecs[index].maximum);
-        values[index] = sanitizeMaelstrom(index, clamped);
-        setParameterValue(index, values[index]);
+        send(index, static_cast<float>(target));
         editParameter(index, false);
+    }
+
+    void send(std::uint32_t index, float value)
+    {
+        values[index] = sanitizeMaelstrom(index, value);
+        setParameterValue(index, values[index]);
         repaint();
     }
 
@@ -309,17 +324,34 @@ class MaelstromUI final : public UI
     {
         const float y = static_cast<float>(MaelstromModeY);
         const bool gritty = values[MaelstromGrit] >= 0.5f;
-        caption(260, y - 24, "CLIP", 10);
+        caption(194, y, "SMOOTH", 11);
+        caption(326, y, "GRIT", 11);
+        circleFill(260, y + 1, 16, Color(3, 11, 15, 0.65f));
         beginPath();
-        roundedRect(206, y - 10, 108, 24, 12);
-        fillColor(Color(25, 28, 29));
+        circle(260, y, 13);
+        fillPaint(
+            linearGradient(249, y - 12, 271, y + 12, Color(203, 201, 184), Color(71, 75, 73)));
         fill();
+        strokeColor(Color(53, 54, 48));
+        strokeWidth(1);
+        stroke();
+        circleFill(260, y, 7, Color(58, 57, 48));
+        circleFill(260, y, 5, Color(13, 21, 23));
+        const float tipX = gritty ? 271 : 249;
+        const float tipY = y - 9;
         beginPath();
-        circle(gritty ? 289 : 231, y + 2, 8);
-        fillColor(Color(202, 72, 43));
-        fill();
-        caption(220, y + 2, "SMOOTH", 9);
-        caption(300, y + 2, "GRIT", 9);
+        moveTo(261, y + 2);
+        lineTo(tipX + 1, tipY + 2);
+        strokeColor(Color(4, 12, 16, 0.65f));
+        strokeWidth(8);
+        stroke();
+        beginPath();
+        moveTo(260, y);
+        lineTo(tipX, tipY);
+        strokePaint(linearGradient(252, y, 269, y, Color(220, 218, 202), Color(71, 76, 75)));
+        strokeWidth(7);
+        stroke();
+        circleFill(tipX, tipY, 4.5f, Color(176, 175, 157));
     }
 
     DGL_NAMESPACE::NanoImage enclosure;
@@ -327,7 +359,7 @@ class MaelstromUI final : public UI
     DGL_NAMESPACE::NanoImage footswitchMaterial;
     std::array<float, MaelstromParameterCount> values{};
     int dragging = -1;
-    double lastY = 0;
+    double lastY = 0, position = 0;
 };
 
 #ifdef STORMSURGE_GUI_HARNESS

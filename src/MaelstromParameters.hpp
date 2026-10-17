@@ -92,8 +92,8 @@ struct MaelstromPoint {
 
 inline bool maelstromModeAt(MaelstromPoint point) noexcept
 {
-    return std::abs(point.x - MaelstromWidth * 0.5) <= 62 &&
-           std::abs(point.y - MaelstromModeY) <= 20;
+    return std::abs(point.x - MaelstromWidth * 0.5) <= 75 &&
+           std::abs(point.y - MaelstromModeY) <= 24;
 }
 
 inline MaelstromPoint maelstromPoint(double x, double y, double width, double height) noexcept
