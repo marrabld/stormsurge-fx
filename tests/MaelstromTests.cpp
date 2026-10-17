@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <limits>
 #include <new>
+#include <numbers>
 #include <stdexcept>
 #include <vector>
 
