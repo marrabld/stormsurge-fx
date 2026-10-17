@@ -43,7 +43,7 @@ OSStatus tempo(void *data, Float64 *beat, Float64 *bpm)
     const auto &host = *static_cast<Host *>(data);
     *beat = 0;
     *bpm = host.bpm;
-    return host.available ? noErr : kAudio_ParamError;
+    return host.available ? static_cast<OSStatus>(noErr) : static_cast<OSStatus>(kAudio_ParamError);
 }
 OSStatus input(void *data, AudioUnitRenderActionFlags *, const AudioTimeStamp *, UInt32,
                UInt32 frames, AudioBufferList *buffers)
@@ -89,7 +89,8 @@ struct Unit {
         AudioStreamBasicDescription format{};
         format.mSampleRate = 48000;
         format.mFormatID = kAudioFormatLinearPCM;
-        format.mFormatFlags = kAudioFormatFlagsNativeFloatPacked | kAudioFormatFlagIsNonInterleaved;
+        format.mFormatFlags = static_cast<AudioFormatFlags>(kAudioFormatFlagsNativeFloatPacked) |
+                              static_cast<AudioFormatFlags>(kAudioFormatFlagIsNonInterleaved);
         format.mBytesPerPacket = format.mBytesPerFrame = sizeof(float);
         format.mFramesPerPacket = 1;
         format.mChannelsPerFrame = 2;
