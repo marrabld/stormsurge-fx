@@ -36,7 +36,7 @@ dpf_add_plugin(UndertowPreview
     TARGETS vst3 jack
     UI_TYPE opengl
     SKIP_NATIVE_AUDIO_FALLBACK
-    FILES_DSP src/PreviewPlugin.cpp src/DarkDelay.cpp
+    FILES_DSP src/PreviewPlugin.cpp src/DarkDelay.cpp src/DarkReverb.cpp
     FILES_UI src/PreviewEditor.cpp)
 target_include_directories(UndertowPreview PUBLIC src)
 target_compile_definitions(UndertowPreview PUBLIC STORMSURGE_PREVIEW)
@@ -87,7 +87,10 @@ if(BUILD_TESTING)
     add_executable(tempo_sync_tests tests/TempoSyncTests.cpp src/DarkDelay.cpp)
     target_include_directories(tempo_sync_tests PRIVATE src)
     add_test(NAME tempo_sync COMMAND tempo_sync_tests)
-    add_executable(preview_tests tests/PreviewTests.cpp src/PreviewPlugin.cpp src/DarkDelay.cpp
+    add_executable(dark_reverb_tests tests/DarkReverbTests.cpp src/DarkReverb.cpp src/DarkDelay.cpp)
+    target_include_directories(dark_reverb_tests PRIVATE src)
+    add_test(NAME dark_reverb_core COMMAND dark_reverb_tests)
+    add_executable(preview_tests tests/PreviewTests.cpp src/PreviewPlugin.cpp src/DarkDelay.cpp src/DarkReverb.cpp
         external/dpf/distrho/src/DistrhoPlugin.cpp)
     target_include_directories(preview_tests PRIVATE src external/dpf/distrho)
     target_compile_definitions(preview_tests PRIVATE STORMSURGE_PREVIEW)

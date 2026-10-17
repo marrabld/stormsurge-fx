@@ -119,15 +119,16 @@ Foundation, which remains pass-through. No audio device is opened by these check
 
 ```sh
 cmake --preset linux-debug
-cmake --build --preset linux-debug --target dark_delay_tests foundation_tests preview_tests tempo_sync_tests
+cmake --build --preset linux-debug --target dark_delay_tests foundation_tests preview_tests tempo_sync_tests dark_reverb_tests
 ctest --preset linux-debug
 # Focus only on the delay core:
 ctest --preset linux-debug -R '^dark_delay_core$'
 ctest --preset linux-debug -R '^preview_'
 ctest --preset linux-debug -R '^tempo_sync$'
+ctest --preset linux-debug -R '^dark_reverb_core$'
 # Match the sanitizer CI job:
 cmake --preset linux-sanitized
-cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests
+cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests dark_reverb_tests
 ctest --preset linux-sanitized
 ```
 
@@ -153,6 +154,15 @@ eight-second buffers at five rates. Preview tests exercise the raw context extra
 template through the actual exporter, including missing/invalid tempo, stopped
 transport, source/limit readouts, note timing in both modes, rapid changes and monitor
 isolation. This is not a loaded-VST3 adapter or real Bitwig test.
+
+`dark_reverb_core` checks causal stereo diffusion, relative decay/darkness response,
+headroom/transition cases, reset/rate changes, invalid values and ordinary C++
+allocation paths. It also tests that the wet insert cannot alter delay feedback.
+Preview tests add byte-identical zero-Amount compatibility, an independently prepared
+delay/reverb reference chain, dry-only identity, causal wet routing, bypass spillover,
+no new reverb excitation during bypass, saved settings and monitor clearing of both
+stages in free/sync and Normal/Ping-pong. These do not prove pleasing sound or real
+device usability. Preview GUI geometry is 390×630 minimum, not Foundation's 390×510.
 
 Preview VST3 uses a generated wrapper under `build/<preset>/preview-adapter/` to
 preserve raw host tempo validity instead of DPF's synthetic 120 BPM. The checksum-

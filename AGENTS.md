@@ -21,6 +21,7 @@ Windows planned, no macOS commitment.
 | Action | State |
 | --- | --- |
 | Implementing Undertow's delay DSP | **Authorised** |
+| Optional wet-path dark reverb, issue #16 | **Authorised** |
 | Iterating on the pedal GUI | **Authorised** |
 | Merging a PR | **Not** authorised; open a PR and wait |
 | Publishing a release or tagging | **Not** authorised |
@@ -37,7 +38,8 @@ PR #9 added the tested independent-stereo core. `PreviewPlugin.cpp` and
 and build target. Keep `UndertowFoundation`/`UtF0` pass-through for old test projects.
 
 Preview's parameter order/symbols are in `PreviewParameters.hpp`; append, do not
-reorder. Issue #11 adds switchable Ping-pong; #13 adds tempo sync. Final host/device
+reorder. Issue #11 adds switchable Ping-pong; #13 adds tempo sync; #16 adds optional
+wet reverb. Default Amount zero preserves existing delay sessions. Final host/device
 policies and tail reporting remain issue #4 work.
 
 ## Issue-per-task
@@ -97,6 +99,7 @@ ctest --preset linux-debug -R standalone_monitor_gate   # JACK/Standalone mode
 ctest --preset linux-debug -R '^dark_delay_core$'        # independent delay core
 ctest --preset linux-debug -R '^preview_'                # Preview integration and monitor
 ctest --preset linux-debug -R '^tempo_sync$'             # timing math and extended buffers
+ctest --preset linux-debug -R '^dark_reverb_core$'       # reverb response and wet-insert contract
 ```
 
 Non-obvious test facts:
@@ -124,11 +127,14 @@ Non-obvious test facts:
   logical ID 6 maps to DPF index 6 in VST3, but 8 in standalone; the latter's legacy
   monitor slots 6/7 must not move. Monitor constants are raw standalone slots only.
 - Sync, Division and INT/FB append at logical IDs 7–9. Read-only timing statuses are
-  10–13. Future parameters append after those outputs, not at `EffectParameterCount`.
+  10–13; Reverb Space/Darkness/Amount are 14–16. Future parameters append after the
+  current final ID. Inputs are no longer a contiguous prefix; do not count them that way.
   `previewSpecs.readOnly` controls write access; readouts are not saved parameters.
   Use `previewLogicalIndex` to receive readouts; `previewEffectIndex` excludes them.
 - `preview_gui` exercises real control events/host edit gestures; `--standalone`
   tests the standalone UI without audio. Like `foundation_gui`, it needs a display.
+  Preview now uses 520×840 coordinates, minimum 390×630. Share its geometry constants
+  for drawing/hit testing. Foundation keeps its original 520×680/minimum 390×510.
 
 ## Live-monitoring safety invariants
 
@@ -174,6 +180,10 @@ Follow the constraints already in the spec, and expect tests for them:
 - Tempo sync follows valid BPM even while stopped. Missing clock holds last valid
   BPM; initial fallback and standalone internal tempo default to 120, explicitly
   labelled. Do not silently substitute free milliseconds or hide sync range limits.
+- `DarkDelay::WetInsert` transforms only the wet return, outside delay feedback and
+  before Mix/Level. Keep it DSP-only. The reverb owner must reset both stages on
+  activation, rate changes and monitor mute. Amount zero is tested byte-identical
+  to the original delay, not an approximate bypass. Never apply reverb to dry input.
 
 ## Platform-specific CMake workarounds
 
@@ -230,7 +240,8 @@ The docs draw hard lines between "compiles" and "works". Preserve that.
   reopening in Bitwig Studio Producer 6.1.3 on Omarchy, then basic Preview knobs,
   audible echoes, effect-bypass spillover and saved-setting reopening for PR #10.
   The maintainer also confirmed Ping-pong/Normal/bypass and mode reopening for PR #12.
-  New Sync behaviour still needs its own listening/reopen checks.
+  The maintainer reported Sync works as expected for PR #14, not an exhaustive
+  all-division/stop/export result. Reverb still needs its own listening checks.
 - Don't claim zero monitoring latency, and don't claim a platform is "verified"
   without pointing at actual CI output.
 - pluginval 1.0.4 passed at strictness 5, but DPF emits teardown reference-count

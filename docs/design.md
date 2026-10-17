@@ -21,10 +21,11 @@ exact-reproduction claim. A quoted internet recipe describes an 800 ms mono dela
 feeding long reverb and a stereo ping-pong delay. That attribution is unverified;
 percentage controls are not comparable across devices and are not safe presets.
 
-Start with a dark delay that can become a ping-pong effect. Keep a long reverb,
-the multi-effect wet chain, ducking, compression and shimmer outside the first
-preview. Preserve a distinct dry path. The goal is clear riff attacks with space
-for repeats between phrases, not every part of the reference sound at once.
+The original first-delay scope excluded long reverb, the combined wet chain,
+ducking, compression and shimmer. After successful delay/ping-pong/sync listening,
+the maintainer authorised optional long dark reverb under issue #16. Preserve a
+distinct dry path and take the remaining layers one at a time. The goal is clear
+riff attacks with space behind them, not every part of the reference at once.
 
 ## Proposed boundaries
 
@@ -230,3 +231,31 @@ Implementation policies for this early preview, subject to real-host testing:
 
 These policies enable an incomplete developer build, not completion of issue #4's
 acceptance criteria or approval to publish a release.
+
+## Optional dark reverb, issue #16
+
+The maintainer approved long dark reverb after the wet delay, with clear original
+guitar and Space/Darkness/Amount controls. This is a separate ambience experiment,
+not approval of shimmer, compression or an exact artist-sound claim.
+
+Engineering starting settings: nominal decay 1–12 s, initially 6; Darkness 0–100%,
+initially 65; Amount 0–100%, initially zero so all old delay sessions stay unchanged.
+The latter blends delay and reverberated delay within the existing wet path. No
+dry processing, reverb inside delay feedback, or automatic output compensation.
+
+An original eight-line orthogonal feedback network provides the tail; two fixed
+all-pass diffusers per input build density. Wet-only 150 Hz high-pass and damping
+roughly 12 kHz to 800 Hz are listening starting points. No buffer retuning or
+allocation during controls/processing. Twenty-millisecond coefficient/Amount ramps,
+non-boosting filters and sub-unity per-line feedback preserve the intended stable
+design. Tests are not proof of every real-time property or of pleasing sound.
+
+Core `WetInsert` runs after delayed/filter returns but outside delay feedback and
+before final Mix/Level. It accepts DSP state, not a host or device. The plugin owns
+both stages and resets both on activation/reconfiguration/monitor mute. Effect
+bypass preserves both tails; Amount zero hides but does not clear the reverb state.
+
+This stage follows the current Normal/Ping-pong delay, so diffusion may soften the
+alternation. A second ping-pong after reverb remains separate scope. UI additions
+only make room for the new controls; issue #15's redesign remains deferred.
+See [preview.md](preview.md) for listening, state and export limitations.

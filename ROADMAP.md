@@ -121,6 +121,11 @@ successful compilation alone is not playback evidence.
 
 ## Later: explore the ambience chain and next pedal
 
+The maintainer has now authorised the first optional reverb experiment in issue #16:
+existing Normal/Ping-pong delay feeding long dark reverb on wet only, with a separate
+dry path. This is not yet the complete three-stage chain below. Other effects and
+release publication remain separate decisions.
+
 The larger musical destination is a parallel wet ambience path:
 
 ```text

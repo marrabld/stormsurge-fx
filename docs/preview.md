@@ -15,7 +15,9 @@ sound. This is not a public release or the completed preview scope of issue #4.
 4. Start playback at low monitoring volume. The starting settings are 400 ms,
    35% feedback, 20% wet, 2500 Hz Tone, 0 dB output and Normal mode. Listen for fading echoes.
 5. Drag knobs vertically, or scroll over them. Shift gives finer control. The
-   displayed values and pointer positions follow host parameter changes too.
+    displayed values and pointer positions follow host parameter changes too.
+6. Reverb starts off. Use the lower Reverb row to add the new ambience; Amount zero
+   preserves the existing delay sound exactly.
 
 | Control | Range | Meaning |
 | --- | --- | --- |
@@ -29,11 +31,54 @@ sound. This is not a public release or the completed preview scope of issue #4.
 | TIME header button | MS / Sync | Free milliseconds or tempo-synced note intervals |
 | NOTE header button | Nine divisions | Click forward, Shift-click backward; D = dotted, T = triplet |
 | INT / FB header field | 20–300 BPM | Drag or scroll; Shift gives finer control |
+| Reverb Space | 1–12 s, initially 6 | Nominal undamped decay, not physical room size or guaranteed measured RT60 |
+| Reverb Darkness | 0–100%, initially 65 | More damping of high frequencies in the reverb feedback network |
+| Reverb Amount | 0–100%, initially 0 | Blend delayed echoes with their reverberated version, on wet only |
 
 Use the pedal footswitch or its **Bypass** parameter to test fading tails. Bitwig's
 own device enable/hard-bypass button can stop processing and does not promise the
 same spillover behaviour. Lower monitoring volume before raising feedback or Level.
 There is no limiter, clipping or automatic level compensation.
+
+## Long dark reverb
+
+The new lower row is an optional ambience experiment toward the spacious character
+of the listening reference. It is not an exact rig, preset or recording reproduction.
+
+```text
+Guitar dry ────────────────────────────────────────────→ existing Mix/Level → output
+       └→ existing Normal/Ping-pong delay → wet reverb ─↗
+```
+
+Reverb Amount blends the original delay return with the reverb return. It does not
+increase or filter the dry guitar. Master Mix still controls the dry/wet balance,
+including the original reduction in dry gain as Mix increases. Amount zero retains
+the original delay output bit-for-bit; Amount 100% makes the wet branch reverb-only.
+Mix zero remains dry-only regardless of reverb settings. Level still applies to all.
+
+Try Space 6 s, Darkness 55% and Amount 50% at low monitoring volume, using a short
+phrase followed by silence or a sustained chord. Keep your existing delay settings
+initially; if needed, bring master Mix toward 30–40% to hear the wash clearly. Compare
+Amount zero and 50%, listen for clear attacks and a trailing cloud, and judge whether
+it supports the guitar rather than obscuring it. Save/reopen with nonzero Amount.
+
+The original eight-line feedback network uses orthogonal mixing, fixed input
+diffusers and non-boosting damping. Space changes feedback loss, not buffer length;
+it must not pitch-bend the reverb. Darkness maps damping from roughly 12 kHz toward
+800 Hz, capped at 45% of sample rate. A 150 Hz high-pass affects only input to reverb.
+These are engineering starting points for listening, not a promise of a specific
+acoustic space or exact decay across all frequencies. Controls ramp over 20 ms.
+
+The chain is the current delay, including Ping-pong if enabled, **then reverb**.
+Reverb diffusion can blur left/right echoes. This is not yet the separate proposed
+mono-delay → long reverb → second ping-pong chain, and adds no shimmer or compression.
+
+Effect bypass lets both delay and reverb tails fade while new guitar stays clean.
+Monitor mute clears both stages. Audio activation/rate changes clear both tails.
+Amount zero hides reverb but keeps its internal state running, so raising Amount
+while playing can reveal an already developing wash. No audio buffers are saved.
+The editor is now 520×840, minimum 390×630, to fit three new controls. This is not the
+broader GUI usability redesign tracked by issue #15.
 
 ## Stereo ping-pong
 
@@ -98,7 +143,8 @@ then save/reopen with a non-default division. Start at low monitoring volume.
 
 ## Save, restore and automate
 
-Time, Feedback, Mix, Tone, Output gain, Bypass, Ping-pong, Sync, Division and INT/FB are host-automatable input
+Time, Feedback, Mix, Tone, Output gain, Bypass, Ping-pong, Sync, Division, INT/FB and
+the three Reverb controls are host-automatable input
 parameters, saved by DPF's VST3 adapter. The schema marker is
 `undertow_preview_schema=1`. Host state never contains the audio delay buffers.
 Their published IDs/order must not change. This experimental identity is `UtP0`,
@@ -111,8 +157,14 @@ Old projects without a mode value start Normal; the optional appended parameter 
 not require changing the existing schema marker or plugin identity. Old projects
 without sync settings remain in MS mode. In version **0.3.0**, Sync/Division/INT-FB
 append at VST3 DPF indices 7/8/9 or standalone 9/10/11. Four read-only tempo-source,
-BPM, target-time and limit readouts append after those, and are not saved. Future
-parameters must append after those readouts, never move existing slots.
+BPM, target-time and limit readouts append after those, and are not saved. Those
+published slots must never move.
+Version **0.4.0** appends Reverb Space/Darkness/Amount at logical/VST3 DPF indices
+14/15/16, or standalone 16/17/18. They never take the place of readouts 10–13 or
+monitor slots 6/7. New projects and old projects without reverb values start at
+Amount zero. Identity `UtP0` and schema 1 stay unchanged. Future IDs append after
+Reverb Amount. Read-only status does not form a contiguous final parameter block;
+use metadata flags rather than a prefix-count assumption.
 
 New instances, audio activation/reactivation and sample-rate changes start with an
 empty tail. A buffer-size callback may cause host/DPF reactivation and clear the tail.
@@ -122,8 +174,12 @@ does not claim sample-identical tail restoration or sample-accurate host automat
 The maintainer verified basic Preview controls, audible repeats, bypass spillover
 and saved-setting reopening in Bitwig Studio Producer 6.1.3 on Omarchy for PR #10,
 then Ping-pong alternation/Normal/bypass and mode reopening for PR #12. That is not a
-numerical null test or proof of the new Sync feature. Remaining manual checks:
+numerical null test. The maintainer also reported Sync works as expected for PR #14,
+without an exhaustive per-division/stop/export claim. Reverb is new and still needs
+its own listening checks. Remaining manual checks:
 
+- Listen to reverb in both delay modes, preserve dry attack and check Space/Darkness/Amount.
+- Test effect-bypass spillover, zero-Amount old-delay comparison, and save/reopen nonzero Amount.
 - Verify Sync follows Bitwig tempo and selected note values in both modes.
 - Stop/start and change tempo while stopped; check source/target when processing resumes.
 - Reopen an older MS project, then save/reopen with Sync and a non-default division.
@@ -132,7 +188,7 @@ numerical null test or proof of the new Sync feature. Remaining manual checks:
 
 **Automatic host tail reporting is not implemented.** At the pinned DPF revision,
 VST3 `getTailSamples()` returns zero. A stable feedback tail can be much longer than
-one delay interval. Do not assume an export ending at the last note captures it;
+one delay interval, especially with long reverb. Do not assume an export ending at the last note captures it;
 extend the render region with silence, audition the result, and keep this limitation
 open under issue #4. Host suspension behaviour also needs real-host testing.
 

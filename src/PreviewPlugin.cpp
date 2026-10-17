@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "DarkDelay.hpp"
+#include "DarkReverb.hpp"
 #include "PreviewParameters.hpp"
 #include "TempoSync.hpp"
 #include "PreviewTempoBridge.hpp"
@@ -37,12 +38,12 @@ class PreviewPlugin final : public Plugin
     const char *getLabel() const override { return "undertow_preview"; }
     const char *getDescription() const override
     {
-        return "Early dark delay with stereo ping-pong, free milliseconds and tempo sync.";
+        return "Early dark delay with stereo ping-pong, tempo sync and optional wet-path reverb.";
     }
     const char *getMaker() const override { return "StormSurge FX contributors"; }
     const char *getHomePage() const override { return "https://github.com/marrabld/stormsurge-fx"; }
     const char *getLicense() const override { return "GPL-3.0-only"; }
-    uint32_t getVersion() const override { return d_version(0, 3, 0); }
+    uint32_t getVersion() const override { return d_version(0, 4, 0); }
 
     void initState(uint32_t, State &state) override
     {
@@ -124,6 +125,8 @@ class PreviewPlugin final : public Plugin
         if (supportedRate) {
             delay.setParameters(parameters());
             delay.reset();
+            reverb.setParameters(reverbParameters());
+            reverb.reset();
         }
     }
 
@@ -140,15 +143,18 @@ class PreviewPlugin final : public Plugin
             return;
         if (supportedRate) {
             delay.setParameters(parameters());
-            if (clearRequested.exchange(false, std::memory_order_relaxed))
+            reverb.setParameters(reverbParameters());
+            if (clearRequested.exchange(false, std::memory_order_relaxed)) {
                 delay.reset();
+                reverb.reset();
+            }
         }
         if (!supportedRate || (standalone && !monitoring.load(std::memory_order_relaxed))) {
             for (std::uint32_t channel = 0; channel < 2; ++channel)
                 std::fill_n(outputs[channel], frames, 0.0f);
             return;
         }
-        delay.process(inputs, outputs, frames);
+        delay.process(inputs, outputs, frames, wetReverb, &reverb);
     }
 
   private:
@@ -188,8 +194,22 @@ class PreviewPlugin final : public Plugin
     void prepare(double rate)
     {
         supportedRate = std::isfinite(rate) && rate >= 8000 && rate <= 192000;
-        if (supportedRate)
+        if (supportedRate) {
             delay.prepare(rate, parameters(), 8000);
+            reverb.prepare(rate, reverbParameters());
+        }
+    }
+
+    ReverbParameters reverbParameters() const noexcept
+    {
+        return {getParameterValue(previewHostIndex(ReverbSpace, standalone)),
+                getParameterValue(previewHostIndex(ReverbDarkness, standalone)),
+                getParameterValue(previewHostIndex(ReverbAmount, standalone)) / 100.0};
+    }
+
+    static std::array<double, 2> wetReverb(void *context, const std::array<double, 2> &wet) noexcept
+    {
+        return static_cast<DarkReverb *>(context)->processSample(wet);
     }
 
     static_assert(std::atomic<float>::is_always_lock_free);
@@ -203,6 +223,7 @@ class PreviewPlugin final : public Plugin
     double rawBpm = 0;
     TempoSync tempo;
     DarkDelay delay;
+    DarkReverb reverb;
 };
 
 Plugin *createPlugin()

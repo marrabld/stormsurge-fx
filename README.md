@@ -13,6 +13,8 @@ milestone is to use Undertow on that track.
 **Under construction.** Undertow Preview connects the dark-delay core to a VST3 and
 JACK-only standalone with working pedal controls, switchable stereo ping-pong and
 free-millisecond or tempo-synced timing. See [listening instructions](docs/preview.md).
+An optional wet-path dark reverb now adds a long ambience experiment. It starts off
+to preserve existing delay projects; use the new Space/Darkness/Amount row to try it.
 The pictured Foundation mockup remains a separate pass-through plugin; its knobs
 are still placeholders. There is no public release yet.
 This is a separate project from [Omazone](https://github.com/marrabld/omazone),
@@ -81,8 +83,9 @@ No automatic installation, live-input monitoring or release publication is part 
 the build. The maintainer has checked Foundation loading, clean recorded playback
 and project reopening in Bitwig Studio Producer 6.1.3 on Omarchy, followed by audible
 basic Preview controls, bypass spillover and saved-setting reopening. The new
-ping-pong mode also passed listening/reopen checks; new tempo sync needs its own
-real-host checks. Supplied Gemini artwork remains local; the interface is drawn in code.
+ping-pong mode also passed listening/reopen checks, and tempo sync had a successful
+first host check. Reverb still needs its own listening checks.
+Supplied Gemini artwork remains local; the interface is drawn in code.
 
 ## Next steps
 
@@ -94,6 +97,8 @@ approved basic-delay behaviour from remaining integration proposals.
 The tested basic core from issue #3 is connected in a first integration slice of
 issue #4. Ping-pong is tracked by issue #11 and tempo sync by #13. Host tail reporting
 and standalone usability remain work.
+The optional reverb experiment is tracked separately in issue #16, not an exact
+reproduction of the listening reference or the whole proposed multi-effect chain.
 Publishing a release is not authorised. Listening reports are welcome.
 
 ## Working on this
