@@ -55,7 +55,7 @@ class MaelstromPlugin final : public Plugin
         p.unit = spec.unit;
         p.ranges = ParameterRanges(spec.initial, spec.minimum, spec.maximum);
         p.hints = kParameterIsAutomatable;
-        if (index == MaelstromBypass)
+        if (index == MaelstromBypass || index == MaelstromGrit)
             p.hints |= kParameterIsBoolean | kParameterIsInteger;
     }
 
@@ -109,9 +109,10 @@ class MaelstromPlugin final : public Plugin
   private:
     OverdriveParameters parameters() const noexcept
     {
-        return {getParameterValue(Drive) / 100.0, getParameterValue(Tight) / 100.0,
-                getParameterValue(Bite) / 100.0, getParameterValue(MaelstromLevel),
-                getParameterValue(MaelstromBypass) < 0.5f};
+        return {
+            getParameterValue(Drive) / 100.0,          getParameterValue(Tight) / 100.0,
+            getParameterValue(Bite) / 100.0,           getParameterValue(MaelstromLevel),
+            getParameterValue(MaelstromBypass) < 0.5f, getParameterValue(MaelstromGrit) >= 0.5f};
     }
 
     void prepare(double rate)

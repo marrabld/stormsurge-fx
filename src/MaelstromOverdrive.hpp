@@ -17,6 +17,7 @@ struct OverdriveParameters {
     // Linear amplitude. 1.0 is unity; 3.98107 is the approved +12 dB ceiling.
     double level = 1.0;
     bool enabled = true;
+    bool grit = false;
 };
 
 // Host-independent tightening overdrive for feeding an amp modeller. One audio
@@ -60,11 +61,11 @@ class MaelstromOverdrive
     static OverdriveParameters sanitize(const OverdriveParameters &p) noexcept;
     void coefficients(bool snap) noexcept;
     // Oversampling is prepared into fixed storage; no allocation happens here.
-    double oversampled(double sample, Channel &state, double preClip) noexcept;
+    double oversampled(double sample, Channel &state, double preClip, double gritAmount) noexcept;
     void updateAntiAlias() noexcept;
 
     std::array<Channel, 2> channels{};
-    Smooth drive, tight, bite, level, engage;
+    Smooth drive, tight, bite, level, engage, grit;
     OverdriveParameters parameters;
     double rate = 48000, antiAliasPole = 0;
     std::uint32_t rampFrames = 960, engageFrames = 480;

@@ -87,7 +87,7 @@ OverdriveParameters MaelstromOverdrive::sanitize(const OverdriveParameters &p) n
 {
     return {bounded(p.drive, 0, 1, 0.10), bounded(p.tight, 0, 1, 0.50), bounded(p.bite, 0, 1, 0.50),
             // The approved ceiling is +12 dB; silence must stay reachable.
-            bounded(p.level, 0, 3.9810717055349722, unity), p.enabled};
+            bounded(p.level, 0, 3.9810717055349722, unity), p.enabled, p.grit};
 }
 
 void MaelstromOverdrive::prepare(double sampleRate, const OverdriveParameters &p)
@@ -122,6 +122,7 @@ void MaelstromOverdrive::coefficients(bool snap) noexcept
     bite.set(biteCutoff(parameters.bite, rate), frames);
     level.set(parameters.level, frames);
     engage.set(parameters.enabled ? 1.0 : 0.0, snap ? 0u : engageFrames);
+    grit.set(parameters.grit ? 1.0 : 0.0, snap ? 0u : rampFrames);
 }
 void MaelstromOverdrive::setParameters(const OverdriveParameters &p) noexcept
 {
@@ -135,7 +136,8 @@ void MaelstromOverdrive::reset() noexcept
     coefficients(true);
 }
 
-double MaelstromOverdrive::oversampled(double sample, Channel &state, double gain) noexcept
+double MaelstromOverdrive::oversampled(double sample, Channel &state, double gain,
+                                       double gritAmount) noexcept
 {
     // Interpolation is a two-tap symmetric filter, so the reported latency
     // stays the small fixed integer documented in latencySamples().
@@ -152,9 +154,12 @@ double MaelstromOverdrive::oversampled(double sample, Channel &state, double gai
     const double firstStage = sample - state.bass1;
     state.bass2 += p * (firstStage - state.bass2);
     double value = (firstStage - state.bass2) * gain;
-    // tanh saturates smoothly and monotonically, so the stage cannot run away
-    // or fold back on itself; a hard clamp here would only add aliasing.
-    value = std::tanh(value);
+    // Smooth is the original tanh. Grit reaches saturation sooner and has a
+    // firmer knee; keep it bounded and monotonic rather than hard-clipping, which
+    // would add substantially more aliasing at the existing 2x oversampling.
+    const double smooth = std::tanh(value);
+    const double gritty = 0.90 * std::tanh(value * 1.8);
+    value = smooth + (gritty - smooth) * gritAmount;
     // Bite after clipping shapes the generated harmonics instead of pre-empting them.
     state.biteLow += (1 - onePole(bite.value, rate * oversampling)) * (value - state.biteLow);
     value = state.biteLow;
@@ -168,6 +173,7 @@ std::array<double, 2> MaelstromOverdrive::processSample(const std::array<double,
     const double engageAmount = engage.tick();
     const double outputLevel = level.tick();
     const double preClip = drive.tick();
+    const double gritAmount = grit.tick();
     for (std::size_t channel = 0; channel < 2; ++channel) {
         // Fail safe before any state can hold a non-finite value.
         const bool valid = std::isfinite(input[channel]);
@@ -180,7 +186,7 @@ std::array<double, 2> MaelstromOverdrive::processSample(const std::array<double,
         for (std::uint32_t step = 0; step < oversampling; ++step) {
             const double fraction = (step + 1.0) / oversampling;
             const double up = held + (dry - held) * fraction;
-            wet = oversampled(up, state, preClip);
+            wet = oversampled(up, state, preClip, gritAmount);
             held = dry;
         }
         double value = wet * outputLevel;

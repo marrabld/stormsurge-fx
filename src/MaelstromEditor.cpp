@@ -83,6 +83,14 @@ class MaelstromUI final : public UI
             return false;
         if (!onMouse(foot) || values[MaelstromBypass] != 0)
             return false;
+        MouseEvent mode;
+        mode.button = 1;
+        mode.press = true;
+        mode.pos.setPos(dx + 260 * scale, dy + MaelstromModeY * scale);
+        if (!onMouse(mode) || values[MaelstromGrit] != 1)
+            return false;
+        if (!onMouse(mode) || values[MaelstromGrit] != 0)
+            return false;
         return true;
     }
 #endif
@@ -108,6 +116,7 @@ class MaelstromUI final : public UI
         caption(260, 113, "TIGHTENING OVERDRIVE", 11);
         for (const auto &knob : maelstromKnobs)
             drawKnob(knob);
+        drawModeSwitch();
         drawLed();
         if (footswitchMaterial.isValid())
             image(footswitchMaterial, 218, static_cast<float>(MaelstromFootY) - 42, 84, 84);
@@ -138,6 +147,10 @@ class MaelstromUI final : public UI
         }
         if (maelstromFootAt(point)) {
             change(MaelstromBypass, values[MaelstromBypass] >= 0.5f ? 0.0f : 1.0f);
+            return true;
+        }
+        if (maelstromModeAt(point)) {
+            change(MaelstromGrit, values[MaelstromGrit] >= 0.5f ? 0.0f : 1.0f);
             return true;
         }
         return false;
@@ -290,6 +303,23 @@ class MaelstromUI final : public UI
                                  on ? Color(255, 169, 99) : Color(74, 36, 27),
                                  on ? Color(119, 29, 13) : Color(25, 14, 12)));
         fill();
+    }
+
+    void drawModeSwitch()
+    {
+        const float y = static_cast<float>(MaelstromModeY);
+        const bool gritty = values[MaelstromGrit] >= 0.5f;
+        caption(260, y - 24, "CLIP", 10);
+        beginPath();
+        roundedRect(206, y - 10, 108, 24, 12);
+        fillColor(Color(25, 28, 29));
+        fill();
+        beginPath();
+        circle(gritty ? 289 : 231, y + 2, 8);
+        fillColor(Color(202, 72, 43));
+        fill();
+        caption(220, y + 2, "SMOOTH", 9);
+        caption(300, y + 2, "GRIT", 9);
     }
 
     DGL_NAMESPACE::NanoImage enclosure;

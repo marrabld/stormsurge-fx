@@ -20,6 +20,7 @@ enum MaelstromParameter : std::uint32_t {
     Bite,
     MaelstromLevel,
     MaelstromBypass,
+    MaelstromGrit,
     MaelstromParameterCount
 };
 
@@ -34,6 +35,7 @@ inline constexpr std::array<ParameterSpec, MaelstromParameterCount> maelstromSpe
     {"Bite", "bite", "%", 50, 0, 100, false},
     {"Level", "level", "", 1, 0, MaelstromMaxLevel, false},
     {"Bypass", "bypass", "", 0, 0, 1, false},
+    {"Grit", "grit", "", 0, 0, 1, false},
 }};
 
 inline float sanitizeMaelstrom(std::uint32_t index, float value) noexcept
@@ -42,8 +44,11 @@ inline float sanitizeMaelstrom(std::uint32_t index, float value) noexcept
     if (!std::isfinite(value))
         return spec.initial;
     value = std::clamp(value, spec.minimum, spec.maximum);
-    return index == MaelstromBypass ? (value >= 0.5f ? 1.0f : 0.0f) : value;
+    return (index == MaelstromBypass || index == MaelstromGrit) ? (value >= 0.5f ? 1.0f : 0.0f)
+                                                                : value;
 }
+
+inline constexpr double MaelstromModeY = 280;
 
 inline float normalizedMaelstrom(std::uint32_t index, float value) noexcept
 {
@@ -84,6 +89,12 @@ inline constexpr std::array<MaelstromKnobPosition, 4> maelstromKnobs{{
 struct MaelstromPoint {
     double x, y;
 };
+
+inline bool maelstromModeAt(MaelstromPoint point) noexcept
+{
+    return std::abs(point.x - MaelstromWidth * 0.5) <= 62 &&
+           std::abs(point.y - MaelstromModeY) <= 20;
+}
 
 inline MaelstromPoint maelstromPoint(double x, double y, double width, double height) noexcept
 {
