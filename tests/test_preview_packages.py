@@ -1,14 +1,19 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import contextlib
+import hashlib
+import io
 import json
 from pathlib import Path
 import struct
 import sys
 import tempfile
+import tarfile
 import unittest
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from verify_preview_package import elf_dependencies, pe_dependencies, verify
+from assemble_preview_assets import assemble
 
 
 def elf():
@@ -58,11 +63,13 @@ class PackageTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             pe_dependencies(data)
 
-    def write_package(self, root, extra=None, commit="a" * 40, configuration="Release"):
+    @staticmethod
+    def write_package(root, extra=None, commit="a" * 40, configuration="Release", baseline="ubuntu-24.04"):
         path = Path(root) / "candidate.zip"
         metadata = {"schema": 1, "configuration": configuration, "source_commit": commit,
                     "platform": "linux-x86_64", "release_version": "0.4.0-preview.1",
-                    "plugin_version": "0.4.0", "source_archive": "stormsurge-fx-0.4.0-preview.1-source.tar.gz"}
+                    "plugin_version": "0.4.0", "build_baseline": baseline,
+                    "source_archive": "stormsurge-fx-0.4.0-preview.1-source.tar.gz"}
         with zipfile.ZipFile(path, "w") as archive:
             archive.writestr("UndertowPreview/BUILD.json", json.dumps(metadata))
             for name in ("LICENSE", "THIRD_PARTY_NOTICES.md", "READ-ME-FIRST.md", "RELEASE-NOTES.md",
@@ -90,6 +97,62 @@ class PackageTests(unittest.TestCase):
                 verify(self.write_package(root, configuration="Debug"))
             with self.assertRaises(ValueError):
                 verify(self.write_package(root), "b" * 40)
+
+
+class AssemblyTests(unittest.TestCase):
+    def fixtures(self, root, source_commit="a" * 40, baseline="ubuntu-24.04"):
+        root = Path(root)
+        incoming, output = root / "incoming", root / "output"
+        incoming.mkdir()
+        archive = PackageTests.write_package(incoming, baseline=baseline)
+        archive = archive.rename(incoming / "UndertowPreview-linux-x86_64.zip")
+        source = incoming / "stormsurge-fx-0.4.0-preview.1-source.tar.gz"
+        prefix = source.name.removesuffix(".tar.gz")
+        manifest = {"source_commit": source_commit, "release_version": "0.4.0-preview.1"}
+        with tarfile.open(source, "w:gz") as tar:
+            files = {"SOURCE-MANIFEST.json": json.dumps(manifest).encode()}
+            for name in ("CMakePresets.json", "CMakeLists.txt", "docs/building.md",
+                         "external/dpf/distrho/DistrhoPluginMain.cpp",
+                         "external/dpf/dgl/src/pugl-upstream/include/pugl/pugl.h"):
+                files[name] = b"fixture"
+            for name, data in files.items():
+                info = tarfile.TarInfo(prefix + "/" + name)
+                info.size = len(data)
+                tar.addfile(info, io.BytesIO(data))
+        for path in (archive, source):
+            (incoming / (path.name + ".sha256")).write_text(hashlib.sha256(path.read_bytes()).hexdigest())
+        release = root / "preview.json"
+        release.write_text(json.dumps({"version": "0.4.0-preview.1", "plugin_version": "0.4.0",
+                                       "platforms": ["linux-x86_64"]}))
+        return incoming, output, release
+
+    def test_matching_candidate(self):
+        with tempfile.TemporaryDirectory() as root:
+            incoming, output, release = self.fixtures(root)
+            with contextlib.redirect_stdout(io.StringIO()):
+                assemble(incoming, output, "a" * 40, release)
+            self.assertEqual(json.loads((output / "CANDIDATE.json").read_text())["status"], "candidate-not-published")
+            self.assertEqual(len((output / "SHA256SUMS").read_text().splitlines()), 2)
+
+    def test_reject_local_arch_build(self):
+        with tempfile.TemporaryDirectory() as root:
+            incoming, output, release = self.fixtures(root, baseline="non-Ubuntu-24.04-development-build")
+            with self.assertRaises(ValueError):
+                assemble(incoming, output, "a" * 40, release)
+
+    def test_reject_mismatched_corresponding_source(self):
+        with tempfile.TemporaryDirectory() as root:
+            incoming, output, release = self.fixtures(root, source_commit="b" * 40)
+            with self.assertRaises(ValueError):
+                assemble(incoming, output, "a" * 40, release)
+
+    def test_reject_altered_archive(self):
+        with tempfile.TemporaryDirectory() as root:
+            incoming, output, release = self.fixtures(root)
+            archive = incoming / "UndertowPreview-linux-x86_64.zip"
+            archive.write_bytes(archive.read_bytes() + b"altered")
+            with self.assertRaises(ValueError):
+                assemble(incoming, output, "a" * 40, release)
 
 
 if __name__ == "__main__":

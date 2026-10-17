@@ -180,6 +180,10 @@ jobs:
           python-version: '3.12'
       - run: python -m unittest discover -s tests -p 'test_preview_packages.py' -v
       - run: python tools/package_preview_source.py --output "$RUNNER_TEMP/undertow-source"
+      - name: Check source archive reproducibility
+        run: |
+          python tools/package_preview_source.py --output "$RUNNER_TEMP/undertow-source-repeat"
+          cmp "$RUNNER_TEMP/undertow-source/"*.tar.gz "$RUNNER_TEMP/undertow-source-repeat/"*.tar.gz
       - uses: actions/upload-artifact@v4
         with:
           name: undertow-preview-source
