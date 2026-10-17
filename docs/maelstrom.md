@@ -120,15 +120,97 @@ Select the clipping curve, gain range/taper, filter orders/cutoffs, mid emphasis
 and exact Bite behaviour under #24. Tight and Bite must have distinct musical
 roles; do not lock in coefficients here without evaluating their interaction.
 
-Evaluate aliasing from the nonlinear stage at low and high Drive and across
-sample rates. Oversampling may reduce unwanted high-frequency artifacts but adds
-CPU cost and can add latency/filter colour. No oversampling factor, zero-latency
-claim, component model or extra dependency is approved yet. Document the chosen
-tradeoff with measurements and listening, and test aligned bypass if necessary.
+## Engine implemented under issue #24
 
-The final curve should retain useful dynamics, but clipping itself compresses the
-signal. Do not claim that an overdrive adds grit without any dynamic compression.
-There is no separate compressor in the agreed scope.
+`src/MaelstromOverdrive.cpp` is the host-independent core, tested by
+`tests/MaelstromTests.cpp` (the `maelstrom_overdrive` ctest). It is a
+display-free DSP module: no host, GUI, device or filesystem dependency, and it
+does not touch Undertow.
+
+Signal order is input → Tight highpass → pre-clip gain → clipping → Bite rolloff
+→ anti-alias lowpass → output Level. Choices and why:
+
+- **Tight is a two-pole highpass**, not a treble cut. A lowpass strong enough to
+  change palm mutes also dulls the 1-4 kHz attack that makes a riff audible, so
+  it is the wrong tool. Each pole forms its own highpass; subtracting one
+  doubly-filtered signal instead produced a ~2 dB resonant bump near the cutoff.
+  Cutoff sweeps 25–700 Hz, with a raised exponent so the midpoint lands near
+  85 Hz and the default position is a mild push rather than a destructive cut.
+  Measured at 48 kHz: 110 Hz falls about 8 dB at the default and 25 dB at
+  maximum, while 2 kHz stays within 2 dB. Any highpass that tightens palm mutes
+  also attenuates a down-tuned low fundamental, which is the intended trade.
+- **Clipping is `tanh`**, chosen because it is smooth and monotonic everywhere,
+  so the stage cannot fold back on itself or run away. A hard clamp would only
+  create harsher edges and more aliasing. Drive maps 1.0 to 20x pre-clip gain on
+  a squared curve, so 10% is a genuinely gentle push instead of a hidden few dB.
+- **Bite is a post-clip lowpass** (4.5–11 kHz, clamped below Nyquist), so it
+  shapes harmonics the clip stage just created rather than pre-empting them.
+- **2x oversampling** with a gentle decimating lowpass. The anti-alias cutoff
+  sits below the base-rate Nyquist, not the oversampled one; anything above it
+  would fold back, which defeats the purpose. Reported latency is one sample.
+  Near-Nyquist content under hard clipping measures more than 60 dB below the
+  intended harmonics.
+- **Bypass** is a unity dry path that ignores Drive, Tight, Bite and Level, and
+  `processSample()` reaches the same signal through a 10 ms engage fade so
+  switching cannot click or add level.
+- Non-finite samples become silence and clear that channel's state; a
+  non-finite result is caught and the channel is reset rather than emitting
+  noise into the next stage. Unsupported sample rates are rejected explicitly.
+
+Observed behaviour, not a listening verdict: with Level at 0 dB the output stage
+adds no gain, while the default Drive position raises a quiet signal by roughly
+2 dB. That is the intended push into the amp model, and it is why the approved
+contract warns that bypass and enabled are not level-matched.
+
+Numerical results establish routing, stability and spectral behaviour. They
+cannot establish that Maelstrom sounds good. Oversampling factor, clipping
+asymmetry, mid emphasis and the exact cutoff ranges remain adjustable after
+real listening through NAM, and are expected to change.
+
+## Comparison with published practice
+
+Checked 2026-10-17 against manufacturer documentation, not forums alone. These
+are external references for the design choices above, not a claim to reproduce
+any product's sound.
+
+**Neural DSP `Archetype: Petrucci` and `Archetype: Petrucci X`** are John
+Petrucci's signature plugins. Their manuals describe:
+
+- `TIGHT KNOB: High-pass filter. Useful when using extended range guitars.`
+  The Petrucci X manual phrases it as a high-pass filter control that removes low
+  frequencies when increased.
+- `BITE SWITCH: Enhances the harmonic response of the distortion.`
+- The Petrucci X product page adds that the tight knob, bite switch and bass knob
+  "all interact with the amplifier's gain structure to dial in the perfect amount
+  of attack or growl".
+
+**Neural DSP `Archetype: Rabea X`** uses the same vocabulary on its Lead
+amplifier: `Tight Knob: High-pass filter. Increase to remove low frequencies.`
+
+**Fractal Audio Blocks Guide** describes an amp input `Low Cut` that "removes bass
+frequencies at the input for a classic way to tighten an amp."
+
+What this confirms about Maelstrom:
+
+- Tight as a **high-pass** matches how commercial metal-oriented plugins and amp
+  models implement the word. Our own measurement had already rejected the
+  lowpass alternative for the same reason.
+- The note that Tight is "useful when using extended range guitars" matches the
+  low-fundamental concern raised in this document. It is a known trade, not an
+  oversight.
+- Naming the second control `Bite` and applying it to **harmonic response of the
+  distortion** matches the Petrucci plugins' Bite. Our implementation is
+  post-clip filtering rather than a switch, which is a deliberate difference.
+
+One practical data point from Fractal's user forum, for tightening a high-gain
+tone for low fast palm mutes: an input low cut "at around 80-100 depending on
+tuning and how tight you want it". That is close to our ~85 Hz default, arrived
+at independently from measurement. Forum posts are anecdotes, not specifications.
+
+Differences worth keeping in mind: those Tight controls sit inside an amp model
+with its own tone stack, gain structure and cab, while Maelstrom is a pedal
+placed before NAM. Expect the usable range to differ, and judge by ear rather
+than matching a number.
 
 ## First listening and acceptance plan
 

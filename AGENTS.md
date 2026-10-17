@@ -179,6 +179,14 @@ the opposite of the monitor's fail-safe mute. Keep the two mechanisms separate.
 Keep effect processing host-independent: no host, window, device or filesystem
 dependencies, so the plugin and standalone share one implementation.
 
+`onePole()` returns the z-plane pole, so a one-pole lowpass uses `1 - p` as the
+smoothing coefficient. Writing `y += p*(x-y)` produces `p*y + p*x`, which is not
+a lowpass at all. Build a highpass by letting each pole compute `x - lowpass`;
+subtracting one doubly-filtered signal from the input instead adds a resonant bump
+near the cutoff. Give any spectral test helper a self-check against a known
+amplitude before trusting its assertions, and remember a Goertzel bin cannot
+distinguish `f` from `sampleRate - f`, so it cannot measure an alias directly.
+
 Follow the constraints already in the spec, and expect tests for them:
 
 - No allocation, blocking locks, file access or analysis in the audio callback.
