@@ -14,9 +14,10 @@ project's GPL-3.0-only terms to the extent applicable rights exist. See
 terms links and limitations. That notice accompanies binaries in
 `bin/notices/Undertow-artwork.md`. No new image-decoding dependency was added;
 DPF's existing NanoVG/stb_image path decodes the embedded PNG.
-The knob material is an original mathematical render from `tools/render_knob.py`,
-also GPL-3.0-only. The local Gemini knob image is a visual reference, not an embedded
-image input. The same runtime artwork notice records its preparation.
+The knob and footswitch materials are original mathematical renders from
+`tools/render_knob.py`, also GPL-3.0-only. The local Gemini hardware images are
+visual references, not embedded image inputs. The same runtime artwork notice
+records their preparation.
 
 ## DPF and DGL
 

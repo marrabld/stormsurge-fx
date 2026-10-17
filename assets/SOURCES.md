@@ -16,9 +16,9 @@ the project's GPL-3.0-only terms to the extent applicable rights exist. Its
 [notice](runtime/NOTICE.md) records the preparation and terms review. This is not
 a guarantee of copyright protection or third-party clearance. No other local
 original image is currently bundled. Originals remain unchanged and gitignored.
-`runtime/undertow-knob.png` is a separate original mathematical render, with the
-source in `tools/render_knob.py`; the Gemini knob concept is a visual reference
-only and its pixels are not embedded.
+`runtime/undertow-knob.png` and `runtime/undertow-footswitch.png` are separate
+original mathematical renders, with source in `tools/render_knob.py`; the Gemini
+hardware concepts are visual references only and their pixels are not embedded.
 
 The per-original entries below retain the earlier review state for context;
 the enclosure derivative's current inclusion status is the approval above.

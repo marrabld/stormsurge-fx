@@ -215,9 +215,9 @@ Own code is **GPL-3.0-only**; every source file carries
 - `assets/concepts/` and `assets/ui/` originals are Gemini-generated and **gitignored**.
   The maintainer confirmed personal Gemini Nano Banana, an assistant-supplied prompt
   and no uploaded third-party references, and approved enclosure reuse for #15.
-  The prepared `assets/runtime/undertow-enclosure.png` is bundled alongside an
-  original mathematically rendered knob material, `undertow-knob.png`; the local
-  Gemini knob image is a reference only. Their provenance/licence notice is copied
+  The prepared `assets/runtime/undertow-enclosure.png` is bundled alongside
+  original mathematically rendered knob/footswitch materials; local Gemini
+  hardware concepts are references only. Their provenance/licence notice is copied
   to `bin/notices/`. Keep originals unchanged.
   See `assets/SOURCES.md`; do not infer blanket clearance of other local artwork.
   Labels and value markers stay separate from textures. CMake embeds the PNGs into

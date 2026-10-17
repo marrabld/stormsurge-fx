@@ -85,8 +85,11 @@ the rim and corner proportions. Labels and live controls stay separate from the
 texture; no image files are loaded from disk by the running plugin. See
 [artwork provenance](../assets/SOURCES.md).
 The knobs use an original rendered silver-metal material with ridged sides,
-bevels and a soft cast shadow. Reflections stay fixed as the separate value marker
-moves. Their positions, size, hit targets and drag/scroll response are unchanged.
+bevels and a soft cast shadow. Subtle residue, grit and scuffs make the metal look
+used. Reflections stay fixed as the separate value marker moves. Their positions,
+size, hit targets and drag/scroll response are unchanged. The bottom effect
+footswitch now has a rendered metal mounting nut and round plunger. Its LED and
+text still indicate effect on/bypass; it never enables standalone monitoring.
 
 ## Stereo ping-pong
 
@@ -114,7 +117,8 @@ Do not assume a mono laptop/output route will reveal the stereo movement.
 
 ## Tempo sync
 
-Use the **Sync** switch at the top. Off means free milliseconds. **Note** opens a
+Use the **Sync** lever toggle at the top. Up is On; down is Off, with a matching
+text label. Off means free milliseconds. **Note** opens a
 menu of quarter, eighth and sixteenth notes; **Feel** opens straight, dotted and
 triplet choices. Click a menu item to select it. Escape or a click outside closes
 the menu without changing anything underneath it. These choices remain stored

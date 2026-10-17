@@ -5,4 +5,5 @@ namespace stormsurge
 {
 inline constexpr unsigned char previewEnclosurePng[]{@artwork_bytes@};
 inline constexpr unsigned char previewKnobPng[]{@knob_bytes@};
+inline constexpr unsigned char previewFootswitchPng[]{@footswitch_bytes@};
 }

@@ -96,7 +96,10 @@ wear unconvincing, so the revised PR uses a Sync switch and paired Note/Feel men
 over the prepared enclosure texture. They love the revised layout and texture,
 and requested more realistic knobs. This same PR now adds original rendered
 silver-metal faces, ridged sides and shadows, with fixed lighting and live value
-markers. The local knob concept is only a reference, not embedded artwork.
+markers. Further feedback requested subtle grime, a realistic metal effect
+footswitch and a physical Sync lever toggle. Those refinements stay in the same PR,
+with control behaviour unchanged. Local hardware concepts are references only,
+not embedded artwork.
 None of this proves Windows playback or
 standalone hardware usability.
 

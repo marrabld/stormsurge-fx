@@ -35,19 +35,30 @@ magick assets/ui/textures/undertow-enclosure-v01.jpeg -rotate 90 \
   -resize 1040x -dither None -colors 128 -strip assets/runtime/undertow-enclosure.png
 ```
 
-## Original knob material
+## Original hardware materials
 
 `undertow-knob.png` is original GPL-3.0-only artwork rendered by
 `tools/render_knob.py`. It is not cropped from the local Gemini knob image. That
 image was used as a visual reference for the silver machined-metal style only.
 
 The renderer draws a short ridged cylinder, bevel, concentric tool marks, fixed
-metal reflections and a transparent cast shadow. The value pointer is drawn
+metal reflections and a transparent cast shadow. Residue, grit, darker crevices
+and a few handling scuffs give it a used finish. The value pointer is drawn
 separately in the editor, so changing a value does not rotate the lighting. One
 252×252 RGBA texture is shared by all eight controls. It uses the same embedded
 image path as the enclosure, with no runtime file loading or extra dependency.
 
-Regenerate with Python's standard library, not needed for normal builds:
+`undertow-footswitch.png` is another original GPL-3.0-only mathematical render
+from the same script. A metal washer, hexagonal mounting nut, threaded collar and
+round plunger replace the old flat circle. The local footswitch concept was a
+visual reference only; none of its pixels are embedded. The effect LED remains
+the indication of effect on/bypass; the metal plunger is not monitoring consent.
+
+The Sync lever toggle is drawn in code, with a mounting nut, recessed pivot and
+metal lever. Up is On; down is Off. Its position and text follow the actual Sync
+parameter, not an independent visual latch. No new local images are bundled.
+
+Regenerate both hardware textures with Python's standard library, not needed for normal builds:
 
 ```sh
 python tools/render_knob.py

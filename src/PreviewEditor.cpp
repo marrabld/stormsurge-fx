@@ -34,6 +34,8 @@ class PreviewUI final : public UI
         setGeometryConstraints(390, 675, true);
         enclosure = createImageFromMemory(previewEnclosurePng, sizeof(previewEnclosurePng), 0);
         knobMaterial = createImageFromMemory(previewKnobPng, sizeof(previewKnobPng), 0);
+        footswitchMaterial =
+            createImageFromMemory(previewFootswitchPng, sizeof(previewFootswitchPng), 0);
         if (standalone)
             getWindow().setIgnoringKeyRepeat(true);
         for (std::uint32_t i = 0; i < PreviewParameterCount; ++i)
@@ -47,7 +49,7 @@ class PreviewUI final : public UI
 #ifdef STORMSURGE_GUI_HARNESS
     bool exerciseControls()
     {
-        if (!enclosure.isValid() || !knobMaterial.isValid())
+        if (!enclosure.isValid() || !knobMaterial.isValid() || !footswitchMaterial.isValid())
             return false;
         // Dispatch real widget events without opening an audio device.
         const double scale = std::min(getWidth() / 520.0, getHeight() / PreviewHeight);
@@ -85,7 +87,7 @@ class PreviewUI final : public UI
         if (!onMouse(mode) || values[PingPong] != 1)
             return false;
         MouseEvent timing = foot;
-        timing.pos.setPos(dx + 260 * scale, dy + 110 * scale);
+        timing.pos.setPos(dx + 283 * scale, dy + 100 * scale);
         if (!onMouse(timing) || values[Sync] != 1)
             return false;
         parameterChanged(previewHostIndex(Sync, standalone), 0);
@@ -199,6 +201,9 @@ class PreviewUI final : public UI
             return false;
         if (const char *menu = std::getenv("STORMSURGE_CAPTURE_POPUP"))
             popup = std::strcmp(menu, "note") == 0 ? 0 : std::strcmp(menu, "feel") == 0 ? 1 : 2;
+        if (const char *sync = std::getenv("STORMSURGE_CAPTURE_SYNC"))
+            if (std::strcmp(sync, "off") == 0)
+                parameterChanged(previewHostIndex(Sync, standalone), 0);
         return true;
     }
 #endif
@@ -253,11 +258,7 @@ class PreviewUI final : public UI
         char status[112];
         const bool synced = values[Sync] >= 0.5f;
         caption(222, 110, "SYNC", 13);
-        beginPath();
-        roundedRect(256, 99, 54, 22, 11);
-        fillColor(synced ? Color(50, 105, 105) : Color(21, 43, 53));
-        fill();
-        circleFill(synced ? 298 : 268, 110, 8, Color(205, 209, 189));
+        drawSyncToggle(synced);
         caption(335, 110, synced ? "ON" : "OFF", 11);
         const int division = static_cast<int>(values[Division]);
         const char *lengths[]{"NOTE: QUARTER  v", "NOTE: EIGHTH  v", "NOTE: SIXTEENTH  v"};
@@ -286,13 +287,14 @@ class PreviewUI final : public UI
         const bool enabled = values[Bypass] < 0.5f;
         circleFill(260, PreviewFootY - 47, 7,
                    enabled ? Color(106, 225, 180) : Color(100, 116, 120));
-        circleFill(260, PreviewFootY + 2, 36, Color(13, 24, 30));
-        beginPath();
-        circle(260, PreviewFootY, 31);
-        fillPaint(linearGradient(232, PreviewFootY - 28, 286, PreviewFootY + 30,
-                                 Color(217, 222, 215), Color(82, 99, 106)));
-        fill();
-        circleFill(260, PreviewFootY, 22, Color(158, 170, 170));
+        if (footswitchMaterial.isValid()) {
+            beginPath();
+            rect(218, PreviewFootY - 42, 84, 84);
+            fillPaint(imagePattern(218, PreviewFootY - 42, 84, 84, 0, footswitchMaterial, 1));
+            fill();
+        } else {
+            circleFill(260, PreviewFootY, 31, Color(158, 170, 170));
+        }
         caption(260, PreviewFootY + 51,
                 enabled ? "EFFECT ON / CLICK TO BYPASS" : "BYPASSED / EXISTING TAILS FADE", 11);
         if (standalone) {
@@ -429,6 +431,50 @@ class PreviewUI final : public UI
     }
 
   private:
+    void drawSyncToggle(bool enabled)
+    {
+        circleFill(284, 113, 15, Color(3, 11, 15, 0.6f));
+        beginPath();
+        for (int corner = 0; corner < 6; ++corner) {
+            const double angle = corner * std::numbers::pi / 3;
+            const float x = 283 + static_cast<float>(std::cos(angle) * 13);
+            const float y = 111 + static_cast<float>(std::sin(angle) * 13);
+            if (corner == 0)
+                moveTo(x, y);
+            else
+                lineTo(x, y);
+        }
+        closePath();
+        fillPaint(linearGradient(272, 99, 292, 123, Color(203, 201, 184), Color(71, 75, 73)));
+        fill();
+        strokeColor(Color(53, 54, 48));
+        strokeWidth(1);
+        stroke();
+        circleFill(283, 110, 8, Color(58, 57, 48));
+        circleFill(283, 110, 6, Color(13, 21, 23));
+        const float tipY = enabled ? 100 : 120;
+        save();
+        lineCap(ROUND);
+        beginPath();
+        moveTo(285, 112);
+        lineTo(285, tipY + 2);
+        strokeColor(Color(4, 12, 16, 0.65f));
+        strokeWidth(8);
+        stroke();
+        beginPath();
+        moveTo(283, 110);
+        lineTo(283, tipY);
+        strokePaint(linearGradient(279, 110, 287, 110, Color(220, 218, 202), Color(71, 76, 75)));
+        strokeWidth(7);
+        stroke();
+        beginPath();
+        ellipse(283, tipY, 5, 4);
+        fillPaint(
+            linearGradient(279, tipY - 4, 286, tipY + 4, Color(230, 227, 208), Color(94, 96, 89)));
+        fill();
+        restore();
+    }
+
     void timingButton(float x, float y, float width, const char *label, bool selected,
                       bool active = true)
     {
@@ -608,6 +654,7 @@ class PreviewUI final : public UI
     const bool standalone;
     DGL_NAMESPACE::NanoImage enclosure;
     DGL_NAMESPACE::NanoImage knobMaterial;
+    DGL_NAMESPACE::NanoImage footswitchMaterial;
     std::array<float, PreviewParameterCount> values{};
     bool monitor = false;
     int dragging = -1;

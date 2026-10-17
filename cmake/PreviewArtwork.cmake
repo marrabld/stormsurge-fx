@@ -12,6 +12,7 @@ function(preview_embed_image filename variable)
 endfunction()
 preview_embed_image(undertow-enclosure.png artwork_bytes)
 preview_embed_image(undertow-knob.png knob_bytes)
+preview_embed_image(undertow-footswitch.png footswitch_bytes)
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PreviewArtwork.hpp.in"
     "${CMAKE_CURRENT_BINARY_DIR}/generated/PreviewArtwork.hpp" @ONLY)
