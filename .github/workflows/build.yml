@@ -75,5 +75,31 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
       - run: cmake --preset linux-sanitized
-      - run: cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests dark_reverb_tests
+      - run: cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests dark_reverb_tests au_tempo_bridge_tests
       - run: ctest --preset linux-sanitized
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - run: cmake --preset macos-release
+      - run: cmake --build --preset macos-release
+      - run: ctest --preset macos-release
+      - name: GUI checks without audio devices
+        run: |
+          build/macos-release/preview_gui
+          build/macos-release/preview_gui --small
+      - name: Package ad-hoc-signed tester plugins without installing them
+        run: cmake -DBINARY_DIR="$PWD/build/macos-release" -DSOURCE_DIR="$PWD" -P cmake/PackageMacPreview.cmake
+      - uses: actions/upload-artifact@v4
+        with:
+          name: undertow-macos-universal-tested-on-${{ matrix.runner }}
+          path: |
+            build/macos-release/UndertowPreview-macos-universal.zip
+            build/macos-release/UndertowPreview-macos-universal.zip.sha256
+          if-no-files-found: error
