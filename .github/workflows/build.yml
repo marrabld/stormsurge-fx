@@ -26,6 +26,7 @@ jobs:
           xvfb-run -a build/linux-debug/foundation_gui
           xvfb-run -a build/linux-debug/bin/UndertowFoundation selftest
           xvfb-run -a build/linux-debug/preview_gui
+          xvfb-run -a build/linux-debug/preview_gui --small
           xvfb-run -a build/linux-debug/preview_gui --standalone
           xvfb-run -a build/linux-debug/bin/UndertowPreview selftest
       - uses: actions/upload-artifact@v4

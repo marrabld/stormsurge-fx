@@ -46,9 +46,11 @@ int main(int argc, char **argv)
     const bool view = argc == 2 && std::strcmp(argv[1], "--view") == 0;
 #ifdef STORMSURGE_PREVIEW
     standalonePreview = argc == 2 && std::strcmp(argv[1], "--standalone") == 0;
-    const bool small = argc == 2 && std::strcmp(argv[1], "--small") == 0;
-    if (argc != 1 && !view && !standalonePreview && !small) {
-        std::fprintf(stderr, "Usage: preview_gui [--view|--standalone|--small]\n");
+    // Windows headers reserve `small` as a macro for their RPC declarations.
+    const bool minimumSize = argc == 2 && std::strcmp(argv[1], "--small") == 0;
+    const bool snapshot = argc == 2 && std::strcmp(argv[1], "--snapshot") == 0;
+    if (argc != 1 && !view && !standalonePreview && !minimumSize && !snapshot) {
+        std::fprintf(stderr, "Usage: preview_gui [--view|--standalone|--small|--snapshot]\n");
         return 1;
     }
 #else
@@ -69,23 +71,26 @@ int main(int argc, char **argv)
 #endif
 #ifdef STORMSURGE_PREVIEW
     editor.setWindowTitle("Undertow Preview: GUI smoke test, no audio");
-    if (small)
+    if (minimumSize)
         previewResizeForTest();
-    editor.parameterChanged(0, 800.0f);
-    editor.parameterChanged(1, 35.0f);
-    editor.parameterChanged(2, 20.0f);
+    if (!snapshot) {
+        editor.parameterChanged(0, 800.0f);
+        editor.parameterChanged(1, 35.0f);
+        editor.parameterChanged(2, 20.0f);
+    }
 #else
     editor.setWindowTitle("Undertow Foundation: GUI smoke test, no audio");
 #endif
     editor.setWindowVisible(true);
     editor.focus();
 #ifdef STORMSURGE_PREVIEW
-    if (small && (editor.getWidth() != 390 || editor.getHeight() != 675)) {
+    if (minimumSize && (editor.getWidth() != 390 || editor.getHeight() != 675)) {
         std::fprintf(stderr, "FAIL: minimum-size preview did not resize\n");
         return 1;
     }
-    if (!view && (!previewExerciseControls() || edits != 38 || gesturesStarted != gesturesEnded ||
-                  monitorRequests != (standalonePreview ? 1u : 0u))) {
+    if (!view && !snapshot &&
+        (!previewExerciseControls() || edits != 38 || gesturesStarted != gesturesEnded ||
+         monitorRequests != (standalonePreview ? 1u : 0u))) {
         std::fprintf(stderr, "FAIL: preview control events or host edit gestures\n");
         return 1;
     }

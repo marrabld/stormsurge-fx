@@ -6,7 +6,7 @@ Undertow, a delay, and growing toward a small pedalboard. Windows support planne
 Named after the maintainer's planned song, **StormSurge**. The first musical
 milestone is to use Undertow on that track.
 
-![Undertow Foundation procedural pedal face, with clearly labelled placeholder knobs](docs/images/undertow-foundation.png)
+![Undertow Preview with a worn blue enclosure, metal knobs, Sync toggle and dark-reverb controls](docs/images/undertow-preview.png)
 
 ## Status
 
@@ -15,8 +15,9 @@ JACK-only standalone with working pedal controls, switchable stereo ping-pong an
 free-millisecond or tempo-synced timing. See [listening instructions](docs/preview.md).
 An optional wet-path dark reverb now adds a long ambience experiment. It starts off
 to preserve existing delay projects; use the new Space/Darkness/Amount row to try it.
-The pictured Foundation mockup remains a separate pass-through plugin; its knobs
-are still placeholders. There is no public release yet.
+The image shows the current Preview editor, captured without opening an audio
+device. Foundation remains a separate pass-through plugin for old test projects.
+There is no public release yet.
 This is a separate project from [Omazone](https://github.com/marrabld/omazone),
 not a port of its offline mastering chain.
 

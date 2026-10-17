@@ -172,6 +172,15 @@ For capture-only review, `STORMSURGE_CAPTURE_POPUP=note`, `feel` or `tempo` leav
 that popup open after the harness interactions. It has no effect in the plugin.
 `STORMSURGE_CAPTURE_SYNC=off` captures the lever's Off position after the same
 interaction tests; it also has no effect in the plugin.
+`preview_gui --snapshot` skips the control-event exercise and renders the default
+Preview settings for documentation. This is a capture mode, not an interaction
+test. To refresh the README image without opening an audio device:
+
+```sh
+STORMSURGE_CAPTURE=/tmp/opencode/undertow-readme.ppm build/linux-debug/preview_gui --snapshot
+magick /tmp/opencode/undertow-readme.ppm docs/images/undertow-preview.png
+```
+
 CMake embeds the tracked PNGs using only CMake itself. ImageMagick is needed only
 to regenerate the enclosure derivative from the maintainer's local original, and
 Python's standard library only to regenerate the original knob/footswitch
