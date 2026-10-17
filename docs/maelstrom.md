@@ -1,8 +1,9 @@
 # Maelstrom sound and controls
 
 Design work for [issue #23](https://github.com/marrabld/stormsurge-fx/issues/23).
-The maintainer approved the direction and four controls below. Proposed defaults,
-signal policies and implementation choices are not yet approved. This document
+The maintainer approved the direction, four controls, starting settings, Level
+range, unity bypass and mono/stereo routing goals below. Remaining engineering
+policies and implementation choices are proposals, not yet approved. This document
 does not authorise DSP implementation or claim that the pedal has been heard.
 
 ## Agreed direction
@@ -37,19 +38,20 @@ Putting Undertow before the amp is also allowed, but its repeats then drive the
 amp's distortion too. The chain above is the clearer starting point for rhythm
 and delay listening, not a restriction on creative routing.
 
-## Proposed first controls
+## Approved first controls
 
-These are listening starting points for approval, not calibrated hardware values.
+The maintainer approved these listening starting points on 2026-10-17. They are
+not calibrated hardware values or evidence of a completed listening test.
 Percentages describe knob position, not the percentage of distortion or bass removed.
 
-| Control | Proposed range/default | Intended audible result |
+| Control | Approved range/default | Intended audible result |
 | --- | --- | --- |
 | Drive | 0–100%, initially 10% | Nearly clean push through gritty overdrive. Low Drive is useful into an already saturated amp. Zero does not promise a transparent bypass. |
 | Tight | 0–100%, initially 50% | Fuller low end through leaner, more percussive attack. It reduces bass before clipping, not just at the output. Maximum should remain useful for low-tuned riffs rather than simply making everything thin. |
 | Bite | 0–100%, initially 50% | Smoother edge through sharper pick definition. Avoid treating maximum as a request for unfiltered fizz. |
 | Level | Silence to +12 dB, initially 0 dB | Output gain after the tone/distortion stages. Boost drives the next amp harder; it is not a loudness-neutral control. |
 
-The proposed +12 dB ceiling allows roughly four times the output amplitude from
+The approved +12 dB ceiling allows roughly four times the output amplitude from
 the Level stage. That can strongly change a downstream model's distortion and
 produce clipping later in the chain. Starting at 0 dB avoids an automatic output
 boost on insertion, but does not guarantee that the enabled pedal and bypass are
@@ -59,7 +61,7 @@ Do not use automatic gain compensation to make the default sound louder or to
 conceal these differences. Equal-final-loudness comparisons belong in listening
 tests, with downstream amp drive kept explicit.
 
-## Proposed routing and bypass
+## Approved routing and bypass direction
 
 - Aim for mono-in/mono-out for a recorded guitar and stereo-in/stereo-out for a
   stereo bus. Stereo would process channels independently with shared settings,
@@ -68,18 +70,21 @@ tests, with downstream amp drive kept explicit.
 - Confirm what the pinned DPF adapters can negotiate before promising both
   layouts in one plugin. Mono-to-stereo expansion is not needed for this effect.
   If the first build must be stereo-only, seek approval and document host routing
-  rather than silently changing this proposal.
+  rather than silently changing this approved goal.
 - Effect bypass should restore the original input at unity, ignoring Drive,
   Tight, Bite and Level. In particular, turning the pedal off should remove its
   output boost, as a normal pedal would.
+- Bypass is not a live-monitor mute or permission to open an audio device.
+  Maelstrom's first milestone is plugins, not a new standalone workflow.
+
+### Transition and latency proposals
+
 - Smooth enable/disable over a short transition, provisionally 10 ms. Smooth
   continuous control changes over approximately 20 ms. Judge clicks and rapid
   retargeting in tests; a fade is not a promise of artifact-free automation.
 - There is no intentional delay or reverb tail. Do not invent Undertow-style
   spillover. If internal filters/oversampling add latency, keep bypass aligned and
   report the actual latency to the host. Host hard bypass remains host-controlled.
-- Bypass is not a live-monitor mute or permission to open an audio device.
-  Maelstrom's first milestone is plugins, not a new standalone workflow.
 
 ## Proposed input, headroom and lifecycle policy
 

@@ -113,8 +113,11 @@ standalone hardware usability.
 
 The maintainer requested starting issue #23 after approving a gritty tightening
 overdrive for melodic-death rhythm into NAM or another amp modeller. Drive, Tight,
-Bite and Level plus effect bypass are agreed; exact ranges/defaults, routing,
-headroom and lifecycle policies remain proposals in [docs/maelstrom.md](docs/maelstrom.md).
+Bite and Level plus effect bypass are agreed. The maintainer approved Drive 10%,
+Tight/Bite 50%, Level initially 0 dB with silence to +12 dB available, unity bypass
+excluding Level, and mono/independent-stereo routing goals. Remaining engineering
+headroom, transition and lifecycle policies are proposals in
+[docs/maelstrom.md](docs/maelstrom.md).
 This first task is documentation/design, not implementation of #24. Issues #23–#27
 record the ordered work; use one feature branch/PR at a time. Keep Undertow unchanged.
 The DAW is the pedalboard, with amp/cab models and any gate outside StormSurge.
