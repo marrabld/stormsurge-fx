@@ -162,20 +162,40 @@ static void test_bypass_is_unity()
 
 static void test_engage_fade_has_no_discontinuity()
 {
+    const auto signal = [](int i) {
+        return 0.4 * std::sin(2 * std::numbers::pi_v<double> * 220 * i / 48000);
+    };
+    // Measure how fast the wet signal already moves on its own. At high Drive it
+    // is a hard-clipped near-square wave, so an absolute step limit would only be
+    // testing the waveform's slew rate rather than our fade.
+    MaelstromOverdrive steady;
+    steady.prepare(48000, {1.0, 0.0, 1.0, 1.0, true});
+    double previous = steady.processSample({0.0, 0.0})[0], wetStep = 0;
+    for (int i = 1; i < 4800; ++i) {
+        const double out = steady.processSample({signal(i), 0.0})[0];
+        wetStep = std::max(wetStep, std::abs(out - previous));
+        previous = out;
+    }
+    require(wetStep > 0.1, "This check needs a genuinely clipped signal to mean anything");
+
     MaelstromOverdrive overdrive;
     overdrive.prepare(48000, {1.0, 0.0, 1.0, 1.0, true});
-    const auto input = sine(48000, 220, 0.2, 0.4);
-    for (const auto &frame : input)
-        overdrive.processSample(frame);
+    for (int i = 0; i < 4800; ++i)
+        previous = overdrive.processSample({signal(i), 0.0})[0];
+
+    // Disabling must reach dry without adding a discontinuity of its own.
     overdrive.setParameters({1.0, 0.0, 1.0, 1.0, false});
-    double previous = overdrive.processSample(input.front())[0];
-    for (const auto &frame : input) {
-        const double value = overdrive.processSample(frame)[0];
-        // The engage ramp is 10 ms; a hard switch would step far more than this.
-        require(std::abs(value - previous) < 0.25, "Disabling must ramp, not jump straight to dry");
-        previous = value;
+    double fadeStep = 0;
+    for (int i = 0; i < 2000; ++i) {
+        const double out = overdrive.processSample({signal(i), 0.0})[0];
+        fadeStep = std::max(fadeStep, std::abs(out - previous));
+        previous = out;
     }
-    for (std::size_t i = 0; i < 4800; ++i)
+    require(fadeStep <= wetStep * 1.05,
+            "Disabling must ramp, not jump further than the signal already slews");
+
+    // And it must actually arrive at dry rather than hovering part way.
+    for (int i = 0; i < 4800; ++i)
         previous = overdrive.processSample({0.0, 0.0})[0];
     require(previous == 0.0, "Settled bypass must be exactly silent for silent input");
 }
@@ -201,6 +221,40 @@ static void test_channels_stay_independent()
         leakPeak = std::max(leakPeak, std::abs(out[1]));
     }
     require(leakPeak == 0.0, "Channels must not cross-feed");
+}
+
+static void test_drive_reaches_real_overdrive_at_normal_levels()
+{
+    // The maintainer's first listening found Drive too polite. This pins the
+    // measured behaviour so the ceiling cannot quietly shrink again.
+    const auto distortion = [](double drive, double amplitude) {
+        MaelstromOverdrive overdrive;
+        overdrive.prepare(48000, {drive, 0.5, 0.5, 1.0, true});
+        // Render long enough that the control ramps have settled, then measure
+        // only the settled tail so the Goertzel bins stay sharp.
+        const auto output = render(overdrive, sine(48000, 220, 0.75, amplitude));
+        const auto window =
+            std::vector<double>(output.begin() + static_cast<std::ptrdiff_t>(24000), output.end());
+        const double fundamental = tone(window, 220, 48000);
+        double odd = 0;
+        for (int harmonic = 3; harmonic <= 21; harmonic += 2)
+            odd += tone(window, 220 * harmonic, 48000) * tone(window, 220 * harmonic, 48000);
+        return std::sqrt(odd) / fundamental;
+    };
+    // Around -20 dBFS, a normal guitar level in a DAW.
+    const double full = distortion(1.0, 0.1);
+    require(full > 0.28, "Full Drive must reach real overdrive at a normal input level");
+    require(full < 0.45, "Full Drive must stay in overdrive territory, not hard clipping");
+    // The approved 10% default must stay a gentle push rather than following the
+    // bigger ceiling upward.
+    require(distortion(0.1, 0.1) < 0.02, "Default Drive must stay close to clean");
+    // Monotonic across the range, so the knob has no dead or reversed zones.
+    double previous = 0;
+    for (double drive : {0.1, 0.25, 0.5, 0.75, 1.0}) {
+        const double value = distortion(drive, 0.1);
+        require(value > previous, "Distortion must rise monotonically with Drive");
+        previous = value;
+    }
 }
 
 static void test_tone_measurement_is_trustworthy()
@@ -259,16 +313,28 @@ static void test_bite_shapes_generated_harmonics()
     // measuring 8 kHz from a 1 kHz tone would compare noise against noise.
     const auto spectrum = [](double bite, double harmonic) {
         MaelstromOverdrive overdrive;
-        overdrive.prepare(48000, {0.9, 0.0, bite, 1.0, true});
-        const auto output = render(overdrive, sine(48000, 1000, 0.25, 0.1));
-        return tone(output, harmonic, 48000);
+        overdrive.prepare(48000, {1.0, 0.0, bite, 1.0, true});
+        const auto output = render(overdrive, sine(48000, 1000, 0.75, 0.1));
+        const auto window =
+            std::vector<double>(output.begin() + static_cast<std::ptrdiff_t>(24000), output.end());
+        return tone(window, harmonic, 48000);
     };
     const double dull = spectrum(0.0, 9000), sharp = spectrum(1.0, 9000);
     require(sharp > dull * 1.4, "Bite must raise the level of upper harmonics");
-    // Bite is a tone control, not a bypass: the fizziest region must still be
-    // quieter with it wide open than closed.
-    require(spectrum(0.0, 21000) > spectrum(1.0, 21000),
-            "Bite must still tame content near Nyquist");
+
+    // Bite is a tone control, not a bypass. Even wide open, the anti-alias stage
+    // must keep near-Nyquist energy far below the intended harmonics, or a
+    // brighter setting would just spray aliasing into the next plugin.
+    for (double bite : {0.0, 0.5, 1.0}) {
+        const double fundamental = spectrum(bite, 1000);
+        require(fundamental > 0.1, "The test signal must actually reach the clipping stage");
+        require(spectrum(bite, 21000) < fundamental * 0.01,
+                "Bite must not let near-Nyquist content approach the harmonic level");
+    }
+    // And Bite is a lowpass, so a darker setting must not add high-frequency
+    // energy. Getting this backwards once hid the effect at a lower drive ceiling.
+    require(spectrum(0.0, 15000) < spectrum(1.0, 15000),
+            "A closed Bite must reduce upper-harmonic level");
 }
 
 static void test_level_is_a_pure_post_clip_gain()
@@ -470,6 +536,7 @@ int main()
 {
     try {
         test_tone_measurement_is_trustworthy();
+        test_drive_reaches_real_overdrive_at_normal_levels();
         test_defaults_and_sanitisation();
         test_bypass_is_unity();
         test_engage_fade_has_no_discontinuity();
