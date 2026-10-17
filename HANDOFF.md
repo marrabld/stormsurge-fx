@@ -109,15 +109,35 @@ standalone hardware usability.
 
 ## Suggested order
 
+### Current Maelstrom work
+
+The maintainer requested starting issue #23 after approving a gritty tightening
+overdrive for melodic-death rhythm into NAM or another amp modeller. Drive, Tight,
+Bite and Level plus effect bypass are agreed. The maintainer approved Drive 10%,
+Tight/Bite 50%, Level initially 0 dB with silence to +12 dB available, unity bypass
+excluding Level, and mono/independent-stereo routing goals. Remaining engineering
+headroom, transition and lifecycle policies are proposals in
+[docs/maelstrom.md](docs/maelstrom.md).
+This first task is documentation/design, not implementation of #24. Issues #23–#27
+record the ordered work; use one feature branch/PR at a time. Keep Undertow unchanged.
+The DAW is the pedalboard, with amp/cab models and any gate outside StormSurge.
+
+Undertow `v0.4.0-preview.1` was published with explicit maintainer approval from
+commit `1f43e8da860d8ab03a7632b34fbc8b7c8ee1486f`, after PR #22 merged and all nine
+main CI jobs passed. It has Linux/Windows/Mac plugin ZIPs, recursive corresponding
+source and checksums. Mac/Windows DAW playback and final-package listening/export
+checks remain unverified. That approval does not authorise future releases.
+
+### Undertow follow-ups
+
 1. PR #20 for Mac support is merged. Native Apple Silicon/Intel CI, AU rendering,
    VST3 loading, GUI and ad-hoc archive checks passed; no real-Mac DAW claim yet.
    Dom is the colleague tester; their Mac/OS/DAW and runtime result are pending.
-2. Issue #21 is now active for optimized cross-platform plugin packages and a
-   review-only candidate artifact with matching recursive source/checksums. No
-   automatic tag, publication or merge. Linux final-package listening/export
-   checks and Windows playback remain outstanding. Have Dom follow `docs/macos.md`.
-   The bundles are ad-hoc signed, not Developer ID signed or notarized. No plugins
-   are installed by CI, and no release publication/tagging is authorised.
+2. PR #22 implemented issue #21's optimized cross-platform plugin packaging and
+   matching recursive source/checksums; the experimental preview is now published.
+   Linux final-package listening/export checks and Windows playback remain
+   outstanding. Have Dom follow `docs/macos.md`. Mac bundles are ad-hoc signed,
+   not Developer ID signed or notarized. No plugins are installed by CI.
 3. Agree and implement remaining channel/device policies under issue #4.
 4. Resolve DPF's hardcoded zero VST3 tail report before claiming correct automatic
    tail export. Test standalone input routing and playtest under issue #5.
