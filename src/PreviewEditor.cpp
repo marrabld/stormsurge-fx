@@ -9,6 +9,7 @@
 #include <numbers>
 #ifdef STORMSURGE_GUI_HARNESS
 #include <cstdlib>
+#include "OpenGL.hpp"
 #endif
 
 START_NAMESPACE_DISTRHO
@@ -25,10 +26,11 @@ class PreviewUI final : public UI
 {
   public:
     PreviewUI()
-        : UI(520, 840), standalone(std::strcmp(getPluginFormatName(), "JACK/Standalone") == 0)
+        : UI(520, PreviewHeight),
+          standalone(std::strcmp(getPluginFormatName(), "JACK/Standalone") == 0)
     {
         loadSharedResources();
-        setGeometryConstraints(390, 630, true);
+        setGeometryConstraints(390, 720, true);
         if (standalone)
             getWindow().setIgnoringKeyRepeat(true);
         for (std::uint32_t i = 0; i < PreviewParameterCount; ++i)
@@ -78,28 +80,64 @@ class PreviewUI final : public UI
         if (!onMouse(mode) || values[PingPong] != 1)
             return false;
         MouseEvent timing = foot;
-        timing.pos.setPos(dx + 110 * scale, dy + 142 * scale);
+        timing.pos.setPos(dx + 370 * scale, dy + 110 * scale);
         if (!onMouse(timing) || values[Sync] != 1)
             return false;
         parameterChanged(previewHostIndex(Sync, standalone), 0);
         if (values[Sync] != 0 || !onMouse(timing) || values[Sync] != 1)
             return false;
-        timing.pos.setPos(dx + 260 * scale, dy + 142 * scale);
-        if (!onMouse(timing) || values[Division] != 1)
+        for (int length = 0; length < 3; ++length) {
+            timing.pos.setPos(dx + (110 + length * 150) * scale, dy + 154 * scale);
+            if (!onMouse(timing))
+                return false;
+            for (int feel = 0; feel < 3; ++feel) {
+                timing.pos.setPos(dx + (110 + feel * 150) * scale, dy + 198 * scale);
+                if (!onMouse(timing) || values[Division] != length * 3 + feel)
+                    return false;
+            }
+        }
+        timing.pos.setPos(dx + 110 * scale, dy + 110 * scale);
+        if (!onMouse(timing) || values[Sync] != 0)
+            return false;
+        // Selecting an inactive note must not silently enable Sync.
+        timing.pos.setPos(dx + 110 * scale, dy + 154 * scale);
+        if (!onMouse(timing) || values[Sync] != 0 || values[Division] != 2)
             return false;
         ScrollEvent bpm;
-        bpm.pos.setPos(dx + 410 * scale, dy + 142 * scale);
+        bpm.pos.setPos(dx + 390 * scale, dy + 242 * scale);
         bpm.delta.setPos(0, 1);
         const float beforeTempo = values[InternalTempo];
         if (!onScroll(bpm) || values[InternalTempo] <= beforeTempo)
             return false;
+        const float coarseTempo = values[InternalTempo];
+        bpm.mod = kModifierShift;
+        if (!onScroll(bpm) || std::abs(values[InternalTempo] - coarseTempo - 0.1f) > 0.001f)
+            return false;
+        timing.pos = bpm.pos;
+        if (!onMouse(timing))
+            return false;
+        MotionEvent tempoDrag;
+        tempoDrag.pos.setPos(dx + 390 * scale, dy + 232 * scale);
+        if (!onMotion(tempoDrag) || values[InternalTempo] <= coarseTempo + 0.1f)
+            return false;
+        timing.press = false;
+        if (!onMouse(timing))
+            return false;
+        for (int division = 0; division < 9; ++division) {
+            parameterChanged(previewHostIndex(Division, standalone), static_cast<float>(division));
+            if (values[Division] != division)
+                return false;
+        }
+        parameterChanged(previewHostIndex(Sync, standalone), 1);
         // Mock polled DSP readouts as well as exercising input gestures.
         parameterChanged(previewHostIndex(EffectiveTempo, standalone), values[InternalTempo]);
         parameterChanged(
             previewHostIndex(TempoSource, standalone),
             static_cast<float>(standalone ? TempoOrigin::Internal : TempoOrigin::Fallback));
-        parameterChanged(previewHostIndex(EffectiveTime, standalone),
-                         60000.0f / values[InternalTempo] * 1.5f);
+        parameterChanged(
+            previewHostIndex(EffectiveTime, standalone),
+            static_cast<float>(60000.0 / values[InternalTempo] *
+                               noteDivisions[static_cast<int>(values[Division])].beats));
         parameterChanged(previewHostIndex(SyncLimited, standalone), 1);
         if (values[EffectiveTempo] != values[InternalTempo] || values[SyncLimited] != 1)
             return false;
@@ -131,58 +169,70 @@ class PreviewUI final : public UI
 
     void onNanoDisplay() override
     {
+#ifdef STORMSURGE_GUI_HARNESS
+        // DPF's PPM capture assumes tightly packed RGB rows. At 390 pixels,
+        // default four-byte alignment would skew rows and overrun its buffer.
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+#endif
         const float factor =
             std::min(getWidth() / 520.0f, getHeight() / static_cast<float>(PreviewHeight));
         translate((getWidth() - 520.0f * factor) * 0.5f,
                   (getHeight() - static_cast<float>(PreviewHeight) * factor) * 0.5f);
         scale(factor, factor);
         beginPath();
-        roundedRect(8, 8, 504, 824, 28);
-        fillPaint(linearGradient(0, 0, 520, 840, Color(142, 151, 153), Color(45, 54, 60)));
+        roundedRect(8, 8, 504, PreviewHeight - 16, 28);
+        fillPaint(
+            linearGradient(0, 0, 520, PreviewHeight, Color(119, 127, 126), Color(45, 54, 60)));
         fill();
         beginPath();
-        roundedRect(15, 15, 490, 810, 22);
-        fillPaint(linearGradient(0, 0, 520, 840, Color(25, 64, 82), Color(9, 29, 44)));
+        roundedRect(15, 15, 490, PreviewHeight - 30, 22);
+        fillPaint(linearGradient(0, 0, 520, PreviewHeight, Color(25, 58, 69), Color(9, 29, 44)));
         fill();
+        drawWear();
         save();
-        scissor(30, 120, 460, 330);
+        scissor(30, 280, 460, 290);
         strokeWidth(1);
         strokeColor(Color(106, 148, 158, 0.22f));
         for (int line = 0; line < 19; ++line) {
-            const float y = 155.0f + line * 15.0f;
+            const float y = 290.0f + line * 15.0f;
             beginPath();
             moveTo(30, y);
             bezierTo(210, y - 120, 310, y + 110, 490, y - 20);
             stroke();
         }
         restore();
-        caption(260, 48, "STORMSURGE FX", 17);
-        caption(260, 90, "UNDERTOW", 39);
+        caption(260, 34, "STORMSURGE FX", 14);
+        caption(260, 66, "UNDERTOW", 33);
         char status[112];
-        std::snprintf(status, sizeof(status), "%s / %s %.1f BPM / %.0f ms",
-                      values[Sync] >= 0.5f ? (values[SyncLimited] >= 0.5f ? "SYNC LIMIT" : "SYNC")
-                                           : "FREE MS",
-                      tempoOriginName(static_cast<int>(values[TempoSource])),
-                      values[EffectiveTempo], values[EffectiveTime]);
-        caption(260, 117, status, 10);
-        for (float x : {40.0f, 190.0f, 340.0f}) {
-            beginPath();
-            roundedRect(x, 130, 140, 23, 5);
-            fillColor(Color(30, 65, 80));
-            fill();
+        const bool synced = values[Sync] >= 0.5f;
+        timingButton(40, 94, 215, "FREE TIME", !synced);
+        timingButton(265, 94, 215, "TEMPO SYNC", synced);
+        const int division = static_cast<int>(values[Division]);
+        const char *lengths[]{"QUARTER  1/4", "EIGHTH  1/8", "SIXTEENTH  1/16"};
+        const char *feels[]{"STRAIGHT", "DOTTED", "TRIPLET"};
+        for (int column = 0; column < 3; ++column) {
+            timingButton(40 + column * 150, 138, 140, lengths[column], division / 3 == column,
+                         synced);
+            timingButton(40 + column * 150, 182, 140, feels[column], division % 3 == column,
+                         synced);
         }
-        caption(110, 142, values[Sync] >= 0.5f ? "TIME: SYNC" : "TIME: MS", 10);
-        char note[32], tempoText[32];
-        const auto division = static_cast<std::size_t>(values[Division]);
-        std::snprintf(note, sizeof(note), "NOTE: %s", noteDivisions[division].label);
-        std::snprintf(tempoText, sizeof(tempoText), "%s %.1f BPM", standalone ? "INT" : "FB",
-                      values[InternalTempo]);
-        caption(260, 142, note, 10);
-        caption(410, 142, tempoText, 10);
+        std::snprintf(status, sizeof(status), "%s %.1f BPM",
+                      tempoOriginName(static_cast<int>(values[TempoSource])),
+                      values[EffectiveTempo]);
+        caption(163, 237, synced ? status : "FREE: USE TIME KNOB", 12);
+        caption(163, 254, synced ? "ACTIVE CLOCK" : "NOTE CHOICES STORED FOR SYNC", 9);
+        char tempoText[48];
+        std::snprintf(tempoText, sizeof(tempoText), "%s %.1f BPM",
+                      standalone ? "INTERNAL" : "FALLBACK", values[InternalTempo]);
+        timingButton(300, 226, 180, tempoText, false);
+        std::snprintf(status, sizeof(status), "%s / %.0f ms%s",
+                      synced ? noteDivisions[division].label : "FREE TIME", values[EffectiveTime],
+                      synced && values[SyncLimited] >= 0.5f ? " / RANGE LIMIT" : "");
+        caption(260, 270, status, 12);
         for (const auto &knob : previewKnobs)
             drawKnob(knob);
-        caption(260, 435, "DRAG KNOBS / SHIFT FOR FINE CONTROL", 10);
-        caption(260, 452, "REVERB / WET DELAY ONLY / AMOUNT ZERO = DELAY ONLY", 10);
+        caption(260, 555, "DRAG KNOBS / SHIFT FOR FINE CONTROL", 10);
+        caption(260, 572, "REVERB / WET DELAY ONLY / AMOUNT ZERO = DELAY ONLY", 10);
         beginPath();
         roundedRect(105, PreviewModeTop, 310, 26, 6);
         fillColor(values[PingPong] >= 0.5f ? Color(30, 90, 95) : Color(30, 52, 65));
@@ -192,7 +242,8 @@ class PreviewUI final : public UI
                                          : "MODE: NORMAL / CLICK FOR PING-PONG",
                 10);
         const bool enabled = values[Bypass] < 0.5f;
-        circleFill(260, 649, 7, enabled ? Color(106, 225, 180) : Color(100, 116, 120));
+        circleFill(260, PreviewFootY - 47, 7,
+                   enabled ? Color(106, 225, 180) : Color(100, 116, 120));
         circleFill(260, PreviewFootY + 2, 36, Color(13, 24, 30));
         beginPath();
         circle(260, PreviewFootY, 31);
@@ -200,7 +251,7 @@ class PreviewUI final : public UI
                                  Color(217, 222, 215), Color(82, 99, 106)));
         fill();
         circleFill(260, PreviewFootY, 22, Color(158, 170, 170));
-        caption(260, 747,
+        caption(260, PreviewFootY + 51,
                 enabled ? "EFFECT ON / CLICK TO BYPASS" : "BYPASSED / EXISTING TAILS FADE", 11);
         if (standalone) {
             beginPath();
@@ -212,9 +263,10 @@ class PreviewUI final : public UI
                             : "MONITOR MUTED / CLICK OR SPACE TO ENABLE",
                     11);
         } else {
-            caption(260, PreviewMonitorTop + 16, "MS OR SYNC / D = DOTTED / T = TRIPLET", 10);
+            caption(260, PreviewMonitorTop + 16, "TEMPO FIELD: DRAG OR SCROLL / SHIFT FOR FINE",
+                    10);
         }
-        caption(260, 809, "0.4.0 DEVELOPMENT / START QUIETLY / GPLv3", 10);
+        caption(260, PreviewHeight - 31, "0.4.0 DEVELOPMENT / START QUIETLY / GPLv3", 10);
     }
 
     bool onMouse(const MouseEvent &event) override
@@ -243,12 +295,15 @@ class PreviewUI final : public UI
         }
         const int timing = timingControlAt(point);
         if (timing == Sync) {
-            change(Sync, values[Sync] >= 0.5f ? 0.0f : 1.0f);
+            change(Sync, static_cast<float>(timingModeAt(point)));
             return true;
         }
         if (timing == Division) {
-            const int step = (event.mod & kModifierShift) ? 8 : 1;
-            change(Division, static_cast<float>((static_cast<int>(values[Division]) + step) % 9));
+            const int length = timingColumnAt(point, 138);
+            const int feel = timingColumnAt(point, 182);
+            const int current = static_cast<int>(values[Division]);
+            change(Division, static_cast<float>(length >= 0 ? length * 3 + current % 3
+                                                            : current / 3 * 3 + feel));
             return true;
         }
         if (timing == InternalTempo) {
@@ -317,6 +372,78 @@ class PreviewUI final : public UI
     }
 
   private:
+    void timingButton(float x, float y, float width, const char *label, bool selected,
+                      bool active = true)
+    {
+        beginPath();
+        roundedRect(x, y, width, 32, 5);
+        fillColor(selected && active ? Color(50, 105, 105) : Color(21, 43, 53));
+        fill();
+        strokeWidth(selected ? 2 : 1);
+        strokeColor(selected ? Color(159, 178, 159) : Color(72, 91, 96));
+        stroke();
+        caption(x + width * 0.5f, y + 16, label, 12);
+    }
+
+    void drawWear()
+    {
+        // Fixed marks avoid animated grain and keep paint loss away from labels.
+        // All artwork is procedural; local reference images are not redistributed.
+        std::uint32_t seed = 0x554e4454;
+        auto random = [&seed]() {
+            seed = seed * 1664525u + 1013904223u;
+            return static_cast<float>(seed >> 8) / 16777216.0f;
+        };
+        for (int i = 0; i < 190; ++i) {
+            const bool right = i % 2 != 0;
+            const float x = right ? 493 + random() * 12 : 15 + random() * 12;
+            const float y = 32 + random() * (PreviewHeight - 64);
+            const float width = 1 + random() * 7;
+            const float height = 2 + random() * 12;
+            beginPath();
+            moveTo(x, y);
+            lineTo(x + width, y + height * 0.2f);
+            lineTo(x + width * 0.65f, y + height);
+            lineTo(x - 1, y + height * 0.7f);
+            closePath();
+            fillColor(i % 4 == 0 ? Color(135, 129, 111, 0.65f) : Color(7, 19, 23, 0.65f));
+            fill();
+        }
+        for (int i = 0; i < 55; ++i) {
+            const float x = 38 + random() * 440;
+            const float y = i % 2 == 0 ? 18 + random() * 5 : PreviewHeight - 24 + random() * 6;
+            beginPath();
+            moveTo(x, y);
+            lineTo(x + 2 + random() * 18, y + random() * 3);
+            strokeColor(Color(172, 163, 138, 0.35f));
+            strokeWidth(0.7f + random());
+            stroke();
+        }
+        for (float x : {34.0f, 486.0f}) {
+            for (float y : {34.0f, static_cast<float>(PreviewHeight - 34)}) {
+                circleFill(x, y, 7, Color(8, 18, 22));
+                circleFill(x, y, 5, Color(106, 110, 104));
+                beginPath();
+                moveTo(x - 3, y + 2);
+                lineTo(x + 3, y - 2);
+                strokeColor(Color(31, 39, 39));
+                strokeWidth(2);
+                stroke();
+            }
+        }
+        // Footswitch scuffs sit below the control bank, not over value readouts.
+        for (int i = 0; i < 65; ++i) {
+            const float x = 170 + random() * 180;
+            const float y = PreviewFootY - 28 + random() * 58;
+            beginPath();
+            moveTo(x, y);
+            lineTo(x + 3 + random() * 15, y - 2 + random() * 4);
+            strokeColor(Color(150, 149, 127, 0.13f));
+            strokeWidth(1);
+            stroke();
+        }
+    }
+
     void send(uint32_t index, float value)
     {
         values[index] = sanitizePreview(index, value);
@@ -422,6 +549,11 @@ UI *createUI()
 bool previewExerciseControls()
 {
     return testUI != nullptr && testUI->exerciseControls();
+}
+void previewResizeForTest()
+{
+    if (testUI != nullptr)
+        testUI->setSize(390, 720);
 }
 #endif
 

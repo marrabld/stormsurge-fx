@@ -133,7 +133,7 @@ Non-obvious test facts:
   Use `previewLogicalIndex` to receive readouts; `previewEffectIndex` excludes them.
 - `preview_gui` exercises real control events/host edit gestures; `--standalone`
   tests the standalone UI without audio. Like `foundation_gui`, it needs a display.
-  Preview now uses 520×840 coordinates, minimum 390×630. Share its geometry constants
+  Preview now uses 520×960 coordinates, minimum 390×720. Share its geometry constants
   for drawing/hit testing. Foundation keeps its original 520×680/minimum 390×510.
 
 ## Live-monitoring safety invariants

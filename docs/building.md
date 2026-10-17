@@ -162,7 +162,11 @@ Preview tests add byte-identical zero-Amount compatibility, an independently pre
 delay/reverb reference chain, dry-only identity, causal wet routing, bypass spillover,
 no new reverb excitation during bypass, saved settings and monitor clearing of both
 stages in free/sync and Normal/Ping-pong. These do not prove pleasing sound or real
-device usability. Preview GUI geometry is 390×630 minimum, not Foundation's 390×510.
+device usability. Preview GUI geometry is 390×720 minimum, not Foundation's 390×510.
+`preview_gui --small` runs the control-event harness at that minimum size. Timing
+tests cover explicit Free/Sync, all nine note combinations, host division updates,
+coarse/fine tempo scroll and tempo drag with balanced host edit gestures. Use
+`preview_gui --standalone` to check monitor UI separation without opening audio.
 
 Preview VST3 uses a generated wrapper under `build/<preset>/preview-adapter/` to
 preserve raw host tempo validity instead of DPF's synthetic 120 BPM. The checksum-

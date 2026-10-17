@@ -37,6 +37,7 @@ const char *getPluginFormatName() noexcept
 }
 #ifdef STORMSURGE_PREVIEW
 bool previewExerciseControls();
+void previewResizeForTest();
 #endif
 END_NAMESPACE_DISTRHO
 
@@ -45,8 +46,9 @@ int main(int argc, char **argv)
     const bool view = argc == 2 && std::strcmp(argv[1], "--view") == 0;
 #ifdef STORMSURGE_PREVIEW
     standalonePreview = argc == 2 && std::strcmp(argv[1], "--standalone") == 0;
-    if (argc != 1 && !view && !standalonePreview) {
-        std::fprintf(stderr, "Usage: preview_gui [--view|--standalone]\n");
+    const bool small = argc == 2 && std::strcmp(argv[1], "--small") == 0;
+    if (argc != 1 && !view && !standalonePreview && !small) {
+        std::fprintf(stderr, "Usage: preview_gui [--view|--standalone|--small]\n");
         return 1;
     }
 #else
@@ -67,6 +69,8 @@ int main(int argc, char **argv)
 #endif
 #ifdef STORMSURGE_PREVIEW
     editor.setWindowTitle("Undertow Preview: GUI smoke test, no audio");
+    if (small)
+        previewResizeForTest();
     editor.parameterChanged(0, 800.0f);
     editor.parameterChanged(1, 35.0f);
     editor.parameterChanged(2, 20.0f);
@@ -76,7 +80,11 @@ int main(int argc, char **argv)
     editor.setWindowVisible(true);
     editor.focus();
 #ifdef STORMSURGE_PREVIEW
-    if (!view && (!previewExerciseControls() || edits != 23 || gesturesStarted != gesturesEnded ||
+    if (small && (editor.getWidth() != 390 || editor.getHeight() != 720)) {
+        std::fprintf(stderr, "FAIL: minimum-size preview did not resize\n");
+        return 1;
+    }
+    if (!view && (!previewExerciseControls() || edits != 38 || gesturesStarted != gesturesEnded ||
                   monitorRequests != (standalonePreview ? 1u : 0u))) {
         std::fprintf(stderr, "FAIL: preview control events or host edit gestures\n");
         return 1;
@@ -96,7 +104,7 @@ int main(int argc, char **argv)
     bool aspect = false;
     editor.getGeometryConstraints(width, height, aspect);
 #ifdef STORMSURGE_PREVIEW
-    const uint expectedHeight = 630;
+    const uint expectedHeight = 720;
 #else
     const uint expectedHeight = 510;
 #endif

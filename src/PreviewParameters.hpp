@@ -118,19 +118,19 @@ struct KnobPosition {
     std::uint32_t parameter;
     float x, y;
 };
-inline constexpr double PreviewHeight = 840;
-inline constexpr double PreviewFootY = 696;
-inline constexpr double PreviewModeTop = 610;
-inline constexpr double PreviewMonitorTop = 763;
+inline constexpr double PreviewHeight = 960;
+inline constexpr double PreviewFootY = 816;
+inline constexpr double PreviewModeTop = 730;
+inline constexpr double PreviewMonitorTop = 883;
 inline constexpr std::array<KnobPosition, 8> previewKnobs{{
-    {Time, 155, 220},
-    {Feedback, 365, 220},
-    {Tone, 105, 365},
-    {Mix, 260, 365},
-    {Level, 415, 365},
-    {ReverbSpace, 105, 530},
-    {ReverbDarkness, 260, 530},
-    {ReverbAmount, 415, 530},
+    {Time, 155, 340},
+    {Feedback, 365, 340},
+    {Tone, 105, 485},
+    {Mix, 260, 485},
+    {Level, 415, 485},
+    {ReverbSpace, 105, 650},
+    {ReverbDarkness, 260, 650},
+    {ReverbAmount, 415, 650},
 }};
 
 // Coordinates shared by drawing, hit testing and display-independent UI tests.
@@ -159,16 +159,33 @@ inline bool pingPongButtonAt(PedalPoint point) noexcept
            point.y <= PreviewModeTop + 26;
 }
 
-// Header controls: free/sync, note division, internal/fallback BPM.
+// Generous separated targets keep timing choices usable at minimum scale.
+inline int timingColumnAt(PedalPoint point, double top) noexcept
+{
+    if (point.y < top || point.y > top + 32)
+        return -1;
+    for (int column = 0; column < 3; ++column)
+        if (point.x >= 40 + column * 150 && point.x <= 180 + column * 150)
+            return column;
+    return -1;
+}
+
+inline int timingModeAt(PedalPoint point) noexcept
+{
+    if (point.y < 94 || point.y > 126)
+        return -1;
+    if (point.x >= 40 && point.x <= 255)
+        return 0;
+    return point.x >= 265 && point.x <= 480 ? 1 : -1;
+}
+
 inline int timingControlAt(PedalPoint point) noexcept
 {
-    if (point.y < 130 || point.y > 153)
-        return -1;
-    if (point.x >= 40 && point.x <= 180)
+    if (timingModeAt(point) >= 0)
         return Sync;
-    if (point.x >= 190 && point.x <= 330)
+    if (timingColumnAt(point, 138) >= 0 || timingColumnAt(point, 182) >= 0)
         return Division;
-    if (point.x >= 340 && point.x <= 480)
+    if (point.x >= 300 && point.x <= 480 && point.y >= 226 && point.y <= 258)
         return InternalTempo;
     return -1;
 }
