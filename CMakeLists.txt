@@ -26,9 +26,13 @@ add_subdirectory(external/dpf EXCLUDE_FROM_ALL)
 if(APPLE)
     set(foundation_formats vst3)
     set(preview_formats vst3 au)
+    set(maelstrom_formats vst3 au)
 else()
     set(foundation_formats vst3 jack)
     set(preview_formats vst3 jack)
+    # Maelstrom's first integration slice is plugin-only: its bypass has no
+    # monitoring gate, so a standalone app would open a device with no consent UI.
+    set(maelstrom_formats vst3)
 endif()
 
 # JACK-only standalone: never silently open a fallback native audio device.
@@ -56,6 +60,19 @@ include(cmake/PreviewVst3Tempo.cmake)
 if(APPLE)
     include(cmake/PreviewAuTempo.cmake)
 endif()
+
+# Third pedal: a tightening overdrive that feeds an amp model. Its own identity,
+# parameter space and state schema, so Undertow projects never change.
+dpf_add_plugin(Maelstrom
+    TARGETS ${maelstrom_formats}
+    UI_TYPE opengl
+    SKIP_NATIVE_AUDIO_FALLBACK
+    FILES_DSP src/MaelstromPlugin.cpp src/MaelstromOverdrive.cpp
+    FILES_UI src/MaelstromEditor.cpp)
+target_include_directories(Maelstrom PUBLIC src)
+target_compile_definitions(Maelstrom PUBLIC STORMSURGE_MAELSTROM)
+include(cmake/MaelstromArtwork.cmake)
+target_include_directories(Maelstrom-ui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 # DPF's bundled self-test includes its POSIX thread helper, unavailable to MSVC.
 # Our headless processor tests still run on both platforms.
 if(NOT WIN32)
@@ -115,8 +132,10 @@ if(BUILD_TESTING)
         add_executable(mac_vst3_tests tests/Vst3ModuleTests.cpp)
         target_include_directories(mac_vst3_tests PRIVATE external/dpf/distrho/src)
         target_link_libraries(mac_vst3_tests PRIVATE "-framework CoreFoundation")
-        add_dependencies(mac_vst3_tests UndertowPreview-vst3)
+        add_dependencies(mac_vst3_tests UndertowPreview-vst3 Maelstrom-vst3)
         add_test(NAME mac_vst3_loader COMMAND mac_vst3_tests "${CMAKE_BINARY_DIR}/bin/UndertowPreview.vst3")
+        add_test(NAME mac_maelstrom_vst3_loader
+            COMMAND mac_vst3_tests "${CMAKE_BINARY_DIR}/bin/Maelstrom.vst3" "Maelstrom")
     endif()
     # The sanitizer job deliberately builds only headless DSP harnesses. Actual
     # binary loading is checked by the normal and Release platform jobs instead.
@@ -130,7 +149,16 @@ if(BUILD_TESTING)
         else()
             set(preview_module "${CMAKE_BINARY_DIR}/bin/UndertowPreview.vst3/Contents/x86_64-linux/UndertowPreview.so")
         endif()
-        add_test(NAME preview_vst3_loader COMMAND vst3_loader_tests "${preview_module}" 0.4.0)
+        add_test(NAME preview_vst3_loader COMMAND vst3_loader_tests "${preview_module}" "Undertow Preview" 0.4.0)
+        if(WIN32)
+            set(maelstrom_module
+                "${CMAKE_BINARY_DIR}/bin/Maelstrom.vst3/Contents/x86_64-win/Maelstrom.vst3")
+        else()
+            set(maelstrom_module
+                "${CMAKE_BINARY_DIR}/bin/Maelstrom.vst3/Contents/x86_64-linux/Maelstrom.so")
+        endif()
+        add_test(NAME maelstrom_vst3_loader
+            COMMAND vst3_loader_tests "${maelstrom_module}" "Maelstrom" 0.4.0)
     endif()
     add_executable(dark_reverb_tests tests/DarkReverbTests.cpp src/DarkReverb.cpp src/DarkDelay.cpp)
     target_include_directories(dark_reverb_tests PRIVATE src)
@@ -138,6 +166,15 @@ if(BUILD_TESTING)
     add_executable(maelstrom_tests tests/MaelstromTests.cpp src/MaelstromOverdrive.cpp)
     target_include_directories(maelstrom_tests PRIVATE src)
     add_test(NAME maelstrom_overdrive COMMAND maelstrom_tests)
+    add_executable(maelstrom_plugin_tests tests/MaelstromPluginTests.cpp
+        src/MaelstromPlugin.cpp src/MaelstromOverdrive.cpp
+        external/dpf/distrho/src/DistrhoPlugin.cpp)
+    target_include_directories(maelstrom_plugin_tests PRIVATE src external/dpf/distrho)
+    target_compile_definitions(maelstrom_plugin_tests PRIVATE STORMSURGE_MAELSTROM)
+    if(NOT WIN32)
+        target_link_libraries(maelstrom_plugin_tests PRIVATE ${CMAKE_DL_LIBS})
+    endif()
+    add_test(NAME maelstrom_plugin COMMAND maelstrom_plugin_tests vst3)
     add_executable(preview_tests tests/PreviewTests.cpp src/PreviewPlugin.cpp src/DarkDelay.cpp src/DarkReverb.cpp
         external/dpf/distrho/src/DistrhoPlugin.cpp)
     target_include_directories(preview_tests PRIVATE src external/dpf/distrho)
@@ -170,15 +207,13 @@ if(BUILD_TESTING)
     target_compile_definitions(preview_gui PRIVATE STORMSURGE_PREVIEW STORMSURGE_GUI_HARNESS)
     target_link_libraries(preview_gui PRIVATE dgl-opengl)
     # Display-only prototype, not a plugin/standalone processor or release payload.
-    preview_embed_image(maelstrom-enclosure.png maelstrom_bytes)
-    configure_file(cmake/MaelstromArtwork.hpp.in
-        "${CMAKE_CURRENT_BINARY_DIR}/generated/MaelstromArtwork.hpp" @ONLY)
     configure_file(assets/runtime/MAELSTROM-NOTICE.md
         "${CMAKE_CURRENT_BINARY_DIR}/mockup-notices/Maelstrom-artwork.md" COPYONLY)
     add_executable(maelstrom_mockup tests/MaelstromMockup.cpp
         external/dpf/distrho/src/DistrhoUI.cpp)
     target_include_directories(maelstrom_mockup PRIVATE src external/dpf/distrho
         "${CMAKE_CURRENT_BINARY_DIR}/generated")
+    target_compile_definitions(maelstrom_mockup PRIVATE STORMSURGE_GUI_HARNESS)
     target_link_libraries(maelstrom_mockup PRIVATE dgl-opengl)
     if(APPLE)
         # DPF adds this Cocoa scale helper to plugin UI libraries, but these

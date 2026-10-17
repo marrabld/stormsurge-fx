@@ -11,6 +11,17 @@
 // Pinned DPF's AU metadata exporter reuses this name even without a CLAP target.
 #define DISTRHO_PLUGIN_CLAP_ID "org.stormsurgefx.undertow-preview.au"
 #endif
+#elif defined(STORMSURGE_MAELSTROM)
+// Separate identity from Undertow Preview: existing projects must never acquire
+// an overdrive, and saved Maelstrom settings must not disturb them.
+#define DISTRHO_PLUGIN_NAME "Maelstrom"
+#define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/maelstrom"
+#define DISTRHO_PLUGIN_UNIQUE_ID UtM0
+// The engine oversamples, so it owes the host an accurate one-sample report.
+#define DISTRHO_PLUGIN_WANT_LATENCY 1
+#ifdef __APPLE__
+#define DISTRHO_PLUGIN_CLAP_ID "org.stormsurgefx.maelstrom.au"
+#endif
 #else
 #define DISTRHO_PLUGIN_NAME "Undertow Foundation"
 #define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/foundation"
@@ -27,8 +38,11 @@
 #define DISTRHO_UI_USE_NANOVG 1
 #define DISTRHO_UI_USER_RESIZABLE 1
 #define DISTRHO_UI_DEFAULT_WIDTH 520
-#ifdef STORMSURGE_PREVIEW
+#if defined(STORMSURGE_PREVIEW)
 #define DISTRHO_UI_DEFAULT_HEIGHT 900
+#elif defined(STORMSURGE_MAELSTROM)
+// Matches the shorter enclosure approved in issue #26.
+#define DISTRHO_UI_DEFAULT_HEIGHT 680
 #else
 #define DISTRHO_UI_DEFAULT_HEIGHT 680
 #endif

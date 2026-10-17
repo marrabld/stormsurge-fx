@@ -77,7 +77,7 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
       - run: cmake --preset linux-sanitized
-      - run: cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests dark_reverb_tests au_tempo_bridge_tests maelstrom_tests
+      - run: cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests dark_reverb_tests au_tempo_bridge_tests maelstrom_tests maelstrom_plugin_tests
       - run: ctest --preset linux-sanitized
   macos:
     strategy:
@@ -136,7 +136,7 @@ jobs:
         run: |
           python tools/verify_preview_package.py build/linux-release/UndertowPreview-linux-x86_64.zip --commit "$GITHUB_SHA"
           python -m zipfile -e build/linux-release/UndertowPreview-linux-x86_64.zip "$RUNNER_TEMP/undertow-linux-roundtrip"
-          build/linux-release/vst3_loader_tests "$RUNNER_TEMP/undertow-linux-roundtrip/UndertowPreview/UndertowPreview.vst3/Contents/x86_64-linux/UndertowPreview.so" 0.4.0
+          build/linux-release/vst3_loader_tests "$RUNNER_TEMP/undertow-linux-roundtrip/UndertowPreview/UndertowPreview.vst3/Contents/x86_64-linux/UndertowPreview.so" "Undertow Preview" 0.4.0
       - uses: actions/upload-artifact@v4
         with:
           name: undertow-preview-linux-x86_64
@@ -164,7 +164,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -m zipfile -e build/windows-release/UndertowPreview-windows-x86_64.zip "$env:RUNNER_TEMP/undertow-windows-roundtrip"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & build/windows-release/Release/vst3_loader_tests.exe "$env:RUNNER_TEMP/undertow-windows-roundtrip/UndertowPreview/UndertowPreview.vst3/Contents/x86_64-win/UndertowPreview.vst3" 0.4.0
+          & build/windows-release/Release/vst3_loader_tests.exe "$env:RUNNER_TEMP/undertow-windows-roundtrip/UndertowPreview/UndertowPreview.vst3/Contents/x86_64-win/UndertowPreview.vst3" "Undertow Preview" 0.4.0
           exit $LASTEXITCODE
       - uses: actions/upload-artifact@v4
         with:
