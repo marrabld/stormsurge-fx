@@ -19,6 +19,19 @@ The knob and footswitch materials are original mathematical renders from
 visual references, not embedded image inputs. The same runtime artwork notice
 records their preparation.
 
+## Maelstrom mockup enclosure
+
+The display-only Maelstrom mockup embeds a separately approved prepared
+Gemini/Nano Banana enclosure and reuses the original StormSurge hardware renders.
+The maintainer confirmed personal-account generation, our prompt and only
+StormSurge artwork as any image reference, without external artwork references.
+The derivative is supplied under GPL-3.0-only to the extent applicable rights exist.
+See [the Maelstrom notice](assets/runtime/MAELSTROM-NOTICE.md) for provenance,
+preparation and limitations. CMake copies it to `build/<preset>/mockup-notices/`.
+The documentation screenshot depicts this same artwork and separately drawn
+controls. No dependency was added. The mockup and its texture are not included in
+Undertow's binary plugin archives.
+
 ## DPF and DGL
 
 The DISTRHO Plugin Framework is pinned as the `external/dpf` Git submodule at

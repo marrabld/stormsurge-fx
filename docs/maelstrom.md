@@ -158,6 +158,12 @@ and remaining platform gaps alongside successes.
 
 ## Work order and approval boundary
 
+After merging #23's design PR #28, the maintainer requested bringing the visual
+mockup slice of #26 forward to review the appearance before DSP work. This changes
+the order only for the display-only prototype, not host/plugin integration.
+See [the UI mockup](maelstrom-mockup.md). The remaining DSP/integration sequence
+below is unchanged.
+
 1. [#23](https://github.com/marrabld/stormsurge-fx/issues/23): agree this contract.
 2. [#24](https://github.com/marrabld/stormsurge-fx/issues/24): reusable DSP and tests.
 3. [#25](https://github.com/marrabld/stormsurge-fx/issues/25): separate plugin, stable controls/state.

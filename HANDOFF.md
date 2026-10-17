@@ -118,9 +118,16 @@ Tight/Bite 50%, Level initially 0 dB with silence to +12 dB available, unity byp
 excluding Level, and mono/independent-stereo routing goals. Remaining engineering
 headroom, transition and lifecycle policies are proposals in
 [docs/maelstrom.md](docs/maelstrom.md).
-This first task is documentation/design, not implementation of #24. Issues #23–#27
+PR #28 records documentation/design, not implementation of #24. Issues #23–#27
 record the ordered work; use one feature branch/PR at a time. Keep Undertow unchanged.
 The DAW is the pedalboard, with amp/cab models and any gate outside StormSurge.
+
+The maintainer merged #28, then explicitly brought #26's visual mockup forward
+before #24/#25. `maelstrom_mockup` is a display-only development harness with local
+knob/footswitch state, not an audio processor or plugin. See
+[mockup instructions](docs/maelstrom-mockup.md). The new enclosure's personal
+Gemini/Nano Banana provenance and GPL reuse were explicitly confirmed; originals
+stay ignored/unchanged. Real plugin wiring still waits for the DSP/integration tasks.
 
 Undertow `v0.4.0-preview.1` was published with explicit maintainer approval from
 commit `1f43e8da860d8ab03a7632b34fbc8b7c8ee1486f`, after PR #22 merged and all nine

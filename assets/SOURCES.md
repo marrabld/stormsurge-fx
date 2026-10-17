@@ -15,13 +15,34 @@ the provenance above after a terms discussion. The prepared derivative
 the project's GPL-3.0-only terms to the extent applicable rights exist. Its
 [notice](runtime/NOTICE.md) records the preparation and terms review. This is not
 a guarantee of copyright protection or third-party clearance. No other local
-original image is currently bundled. Originals remain unchanged and gitignored.
+original image was bundled by that task. Originals remain unchanged and gitignored.
 `runtime/undertow-knob.png` and `runtime/undertow-footswitch.png` are separate
 original mathematical renders, with source in `tools/render_knob.py`; the Gemini
 hardware concepts are visual references only and their pixels are not embedded.
 
 The per-original entries below retain the earlier review state for context;
 the enclosure derivative's current inclusion status is the approval above.
+
+## Approved Maelstrom mockup enclosure, issue #26
+
+On 2026-10-17 the maintainer confirmed that
+`ui/textures/maelstrom-enclosure-v01.jpeg` was generated with personal
+Gemini/Nano Banana, our Maelstrom prompt and only StormSurge artwork as any image
+reference, without external artwork references. They explicitly approved
+preparing and bundling the derivative under the project's GPL terms to the extent
+applicable rights exist. No exact model revision or generation date is asserted.
+
+`runtime/maelstrom-enclosure.png` rotates the unlabeled enclosure into portrait
+orientation, removes the connected white outer background, trims transparent
+margins and downsizes with the original proportions. The display-only mockup
+uses nine-slice rendering for the rim/corners, and reuses the existing original
+knob and footswitch materials unchanged. Labels/markers remain separate.
+The original JPEG remains unchanged and ignored.
+
+See [Maelstrom artwork notice](runtime/MAELSTROM-NOTICE.md) for the original's
+SHA256, generation/reuse record and regeneration command. CMake copies this notice
+to `mockup-notices/`, separate from Undertow's binary-release notices. The mockup
+is not a plugin or audio processor and is not in Undertow's binary packages.
 
 ## Undertow pedal concept
 

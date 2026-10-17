@@ -25,6 +25,7 @@ Windows builds and experimental macOS plugin support under issue #19.
 | Iterating on the pedal GUI | **Authorised** |
 | Experimental macOS VST3/AUv2 builds, issue #19 | **Authorised** |
 | Cross-platform preview assets and draft release notes, issue #21 | **Authorised** |
+| Display-only Maelstrom UI mockup brought forward, issue #26 | **Authorised** |
 | Merging a PR | **Not** authorised; open a PR and wait |
 | Publishing a release or tagging | **Not** authorised |
 | Installing a plugin anywhere | **Not** authorised |
@@ -150,6 +151,11 @@ Non-obvious test facts:
   tests the standalone UI without audio. Like `foundation_gui`, it needs a display.
   Preview now uses 520×900 coordinates, minimum 390×675. Share its geometry constants
   for drawing/hit testing. Foundation keeps its original 520×680/minimum 390×510.
+- `maelstrom_mockup` is a separate display-only harness for #26, not a plugin or
+  standalone processor. It uses 520×680/minimum 390×510 and local control state only.
+  Run it manually with a display, `--small` for minimum-size checks or `--view` to
+  inspect. It sends no host edits, opens no audio device and is not a CTest test.
+  Its new artwork notice goes to `mockup-notices/`, outside Undertow binary packages.
 
 ## Live-monitoring safety invariants
 
