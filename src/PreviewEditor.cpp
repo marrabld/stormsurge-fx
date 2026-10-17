@@ -33,6 +33,7 @@ class PreviewUI final : public UI
         loadSharedResources();
         setGeometryConstraints(390, 675, true);
         enclosure = createImageFromMemory(previewEnclosurePng, sizeof(previewEnclosurePng), 0);
+        knobMaterial = createImageFromMemory(previewKnobPng, sizeof(previewKnobPng), 0);
         if (standalone)
             getWindow().setIgnoringKeyRepeat(true);
         for (std::uint32_t i = 0; i < PreviewParameterCount; ++i)
@@ -46,7 +47,7 @@ class PreviewUI final : public UI
 #ifdef STORMSURGE_GUI_HARNESS
     bool exerciseControls()
     {
-        if (!enclosure.isValid())
+        if (!enclosure.isValid() || !knobMaterial.isValid())
             return false;
         // Dispatch real widget events without opening an audio device.
         const double scale = std::min(getWidth() / 520.0, getHeight() / PreviewHeight);
@@ -571,24 +572,42 @@ class PreviewUI final : public UI
         } else
             std::snprintf(display, sizeof(display), "%.0f %%", value);
         caption(knob.x, knob.y - 59, label, 16);
-        circleFill(knob.x + 3, knob.y + 5, 37, Color(5, 17, 23, 0.7f));
-        circleFill(knob.x, knob.y, 34, Color(110, 129, 130));
-        circleFill(knob.x, knob.y, 29, Color(169, 181, 182));
+        if (knobMaterial.isValid()) {
+            beginPath();
+            rect(knob.x - 42, knob.y - 42, 84, 84);
+            fillPaint(imagePattern(knob.x - 42, knob.y - 42, 84, 84, 0, knobMaterial, 1));
+            fill();
+        } else {
+            circleFill(knob.x, knob.y, 34, Color(110, 129, 130));
+            circleFill(knob.x, knob.y, 29, Color(169, 181, 182));
+        }
         const double angle =
             (-135.0 + normalizedPreview(index, value) * 270.0) * std::numbers::pi / 180.0;
+        save();
+        lineCap(ROUND);
+        beginPath();
+        moveTo(knob.x + static_cast<float>(std::sin(angle) * 12) + 0.6f,
+               knob.y - static_cast<float>(std::cos(angle) * 12) + 0.7f);
+        lineTo(knob.x + static_cast<float>(std::sin(angle) * 24) + 0.6f,
+               knob.y - static_cast<float>(std::cos(angle) * 24) + 0.7f);
+        strokeColor(Color(241, 239, 222, 0.6f));
+        strokeWidth(4);
+        stroke();
         beginPath();
         moveTo(knob.x + static_cast<float>(std::sin(angle) * 12),
                knob.y - static_cast<float>(std::cos(angle) * 12));
         lineTo(knob.x + static_cast<float>(std::sin(angle) * 24),
                knob.y - static_cast<float>(std::cos(angle) * 24));
-        strokeColor(Color(26, 37, 41));
+        strokeColor(Color(20, 24, 25));
         strokeWidth(3);
         stroke();
+        restore();
         caption(knob.x, knob.y + 53, display, 12);
     }
 
     const bool standalone;
     DGL_NAMESPACE::NanoImage enclosure;
+    DGL_NAMESPACE::NanoImage knobMaterial;
     std::array<float, PreviewParameterCount> values{};
     bool monitor = false;
     int dragging = -1;

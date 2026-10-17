@@ -170,8 +170,10 @@ with balanced host edit gestures. Embedded texture decoding is checked too. Use
 `preview_gui --standalone` to check monitor UI separation without opening audio.
 For capture-only review, `STORMSURGE_CAPTURE_POPUP=note`, `feel` or `tempo` leaves
 that popup open after the harness interactions. It has no effect in the plugin.
-CMake embeds the tracked PNG using only CMake itself. ImageMagick is needed only
-to regenerate that derivative from the maintainer's local original, not to build.
+CMake embeds the tracked PNGs using only CMake itself. ImageMagick is needed only
+to regenerate the enclosure derivative from the maintainer's local original, and
+Python's standard library only to regenerate the original knob material. Neither
+is needed to build. The GUI harness checks decoding of both materials.
 
 Preview VST3 uses a generated wrapper under `build/<preset>/preview-adapter/` to
 preserve raw host tempo validity instead of DPF's synthetic 120 BPM. The checksum-

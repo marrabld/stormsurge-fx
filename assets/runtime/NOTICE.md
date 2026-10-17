@@ -1,4 +1,6 @@
-# Undertow enclosure artwork
+# Undertow artwork
+
+## Prepared enclosure
 
 `undertow-enclosure.png` is a prepared derivative of the maintainer's local
 `assets/ui/textures/undertow-enclosure-v01.jpeg`. The original remains unchanged.
@@ -31,4 +33,22 @@ Preparation command, requiring ImageMagick only when regenerating the PNG:
 magick assets/ui/textures/undertow-enclosure-v01.jpeg -rotate 90 \
   -alpha on -fuzz 8% -fill none -draw 'color 0,0 floodfill' \
   -resize 1040x -dither None -colors 128 -strip assets/runtime/undertow-enclosure.png
+```
+
+## Original knob material
+
+`undertow-knob.png` is original GPL-3.0-only artwork rendered by
+`tools/render_knob.py`. It is not cropped from the local Gemini knob image. That
+image was used as a visual reference for the silver machined-metal style only.
+
+The renderer draws a short ridged cylinder, bevel, concentric tool marks, fixed
+metal reflections and a transparent cast shadow. The value pointer is drawn
+separately in the editor, so changing a value does not rotate the lighting. One
+252×252 RGBA texture is shared by all eight controls. It uses the same embedded
+image path as the enclosure, with no runtime file loading or extra dependency.
+
+Regenerate with Python's standard library, not needed for normal builds:
+
+```sh
+python tools/render_knob.py
 ```

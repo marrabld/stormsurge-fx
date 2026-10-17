@@ -93,7 +93,11 @@ sanitizer CI passed. For #15 they clarified the knobs are fine; only the small
 note/time/sync header needs usability work. They also approved a banged-up pedal
 finish. They found the first expanded button grid too busy and the procedural
 wear unconvincing, so the revised PR uses a Sync switch and paired Note/Feel menus
-over the prepared enclosure texture. None of this proves Windows playback or
+over the prepared enclosure texture. They love the revised layout and texture,
+and requested more realistic knobs. This same PR now adds original rendered
+silver-metal faces, ridged sides and shadows, with fixed lighting and live value
+markers. The local knob concept is only a reference, not embedded artwork.
+None of this proves Windows playback or
 standalone hardware usability.
 
 ## Suggested order

@@ -84,6 +84,9 @@ prepared texture from the maintainer's Gemini artwork. Nine-slice rendering keep
 the rim and corner proportions. Labels and live controls stay separate from the
 texture; no image files are loaded from disk by the running plugin. See
 [artwork provenance](../assets/SOURCES.md).
+The knobs use an original rendered silver-metal material with ridged sides,
+bevels and a soft cast shadow. Reflections stay fixed as the separate value marker
+moves. Their positions, size, hit targets and drag/scroll response are unchanged.
 
 ## Stereo ping-pong
 

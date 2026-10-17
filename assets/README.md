@@ -15,6 +15,8 @@ It is a full enclosure surface, not a seamless repeating texture. The original
 has not been edited. `runtime/undertow-enclosure.png` is a separate rotated,
 masked and reduced-colour derivative. The editor preserves rim/corner proportions
 with nine-slice drawing rather than stretching the whole image.
+The runtime knob material is a separate original render from `tools/render_knob.py`,
+not a crop of the local knob concept. Its value marker remains a live control.
 
 Keep labels and interactive controls separate from backgrounds. See [SOURCES.md](SOURCES.md)
 for provenance and usage status before publishing or bundling artwork.
