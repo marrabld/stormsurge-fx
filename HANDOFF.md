@@ -127,7 +127,17 @@ before #24/#25. `maelstrom_mockup` is a display-only development harness with lo
 knob/footswitch state, not an audio processor or plugin. See
 [mockup instructions](docs/maelstrom-mockup.md). The new enclosure's personal
 Gemini/Nano Banana provenance and GPL reuse were explicitly confirmed; originals
-stay ignored/unchanged. Real plugin wiring still waits for the DSP/integration tasks.
+stay ignored/unchanged. The maintainer approved the merged mockup's appearance.
+
+Issue #24 then added `src/MaelstromOverdrive.cpp` plus the `maelstrom_overdrive`
+ctest: a standalone DSP core with no plugin/UI/device dependency. Three bugs were
+caught while testing and are worth remembering because they are easy to repeat.
+A one-pole lowpass must use `y += (1-p)*(x-y)`; using `y += p*(x-y)` is not a
+lowpass at all. Forming a highpass by subtracting a *doubly* filtered signal from
+the input adds a resonant bump, so each pole must form its own highpass. And a
+test's own Goertzel measurement needs a self-check against a known amplitude
+before any spectral assertion can be trusted. Tight/Bite cutoffs, clipping
+asymmetry and the oversampling factor are expected to move after listening.
 
 Undertow `v0.4.0-preview.1` was published with explicit maintainer approval from
 commit `1f43e8da860d8ab03a7632b34fbc8b7c8ee1486f`, after PR #22 merged and all nine

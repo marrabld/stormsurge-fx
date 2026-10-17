@@ -120,15 +120,52 @@ Select the clipping curve, gain range/taper, filter orders/cutoffs, mid emphasis
 and exact Bite behaviour under #24. Tight and Bite must have distinct musical
 roles; do not lock in coefficients here without evaluating their interaction.
 
-Evaluate aliasing from the nonlinear stage at low and high Drive and across
-sample rates. Oversampling may reduce unwanted high-frequency artifacts but adds
-CPU cost and can add latency/filter colour. No oversampling factor, zero-latency
-claim, component model or extra dependency is approved yet. Document the chosen
-tradeoff with measurements and listening, and test aligned bypass if necessary.
+## Engine implemented under issue #24
 
-The final curve should retain useful dynamics, but clipping itself compresses the
-signal. Do not claim that an overdrive adds grit without any dynamic compression.
-There is no separate compressor in the agreed scope.
+`src/MaelstromOverdrive.cpp` is the host-independent core, tested by
+`tests/MaelstromTests.cpp` (the `maelstrom_overdrive` ctest). It is a
+display-free DSP module: no host, GUI, device or filesystem dependency, and it
+does not touch Undertow.
+
+Signal order is input → Tight highpass → pre-clip gain → clipping → Bite rolloff
+→ anti-alias lowpass → output Level. Choices and why:
+
+- **Tight is a two-pole highpass**, not a treble cut. A lowpass strong enough to
+  change palm mutes also dulls the 1-4 kHz attack that makes a riff audible, so
+  it is the wrong tool. Each pole forms its own highpass; subtracting one
+  doubly-filtered signal instead produced a ~2 dB resonant bump near the cutoff.
+  Cutoff sweeps 25–700 Hz, with a raised exponent so the midpoint lands near
+  85 Hz and the default position is a mild push rather than a destructive cut.
+  Measured at 48 kHz: 110 Hz falls about 8 dB at the default and 25 dB at
+  maximum, while 2 kHz stays within 2 dB. Any highpass that tightens palm mutes
+  also attenuates a down-tuned low fundamental, which is the intended trade.
+- **Clipping is `tanh`**, chosen because it is smooth and monotonic everywhere,
+  so the stage cannot fold back on itself or run away. A hard clamp would only
+  create harsher edges and more aliasing. Drive maps 1.0 to 20x pre-clip gain on
+  a squared curve, so 10% is a genuinely gentle push instead of a hidden few dB.
+- **Bite is a post-clip lowpass** (4.5–11 kHz, clamped below Nyquist), so it
+  shapes harmonics the clip stage just created rather than pre-empting them.
+- **2x oversampling** with a gentle decimating lowpass. The anti-alias cutoff
+  sits below the base-rate Nyquist, not the oversampled one; anything above it
+  would fold back, which defeats the purpose. Reported latency is one sample.
+  Near-Nyquist content under hard clipping measures more than 60 dB below the
+  intended harmonics.
+- **Bypass** is a unity dry path that ignores Drive, Tight, Bite and Level, and
+  `processSample()` reaches the same signal through a 10 ms engage fade so
+  switching cannot click or add level.
+- Non-finite samples become silence and clear that channel's state; a
+  non-finite result is caught and the channel is reset rather than emitting
+  noise into the next stage. Unsupported sample rates are rejected explicitly.
+
+Observed behaviour, not a listening verdict: with Level at 0 dB the output stage
+adds no gain, while the default Drive position raises a quiet signal by roughly
+2 dB. That is the intended push into the amp model, and it is why the approved
+contract warns that bypass and enabled are not level-matched.
+
+Numerical results establish routing, stability and spectral behaviour. They
+cannot establish that Maelstrom sounds good. Oversampling factor, clipping
+asymmetry, mid emphasis and the exact cutoff ranges remain adjustable after
+real listening through NAM, and are expected to change.
 
 ## First listening and acceptance plan
 
