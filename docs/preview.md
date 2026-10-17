@@ -28,9 +28,9 @@ sound. This is not a public release or the completed preview scope of issue #4.
 | Level | Silence to +6 dB | Output gain, also applied during effect bypass |
 | Footswitch | Delay / bypass | Stops new notes entering the delay and preserves existing echoes |
 | Mode button above LED | Normal / Ping-pong | Independent stereo or left-first alternating repeats |
-| FREE TIME / TEMPO SYNC | Two explicit choices | Free milliseconds or tempo-synced note intervals |
-| Note length and feel buttons | Nine divisions | Choose quarter/eighth/sixteenth, then straight/dotted/triplet |
-| INTERNAL / FALLBACK tempo field | 20–300 BPM | Drag or scroll; Shift gives finer control |
+| Sync switch | Off / On | Off uses free milliseconds; On uses tempo-synced note intervals |
+| Note and Feel selectors | Nine divisions | Open each selector to choose length or straight/dotted/triplet |
+| Clock readout / ... | Tempo details | Click to open INTERNAL / FALLBACK editing, 20–300 BPM; drag or scroll, Shift for fine |
 | Reverb Space | 1–12 s, initially 6 | Nominal undamped decay, not physical room size or guaranteed measured RT60 |
 | Reverb Darkness | 0–100%, initially 65 | More damping of high frequencies in the reverb feedback network |
 | Reverb Amount | 0–100%, initially 0 | Blend delayed echoes with their reverberated version, on wet only |
@@ -77,10 +77,13 @@ Effect bypass lets both delay and reverb tails fade while new guitar stays clean
 Monitor mute clears both stages. Audio activation/rate changes clear both tails.
 Amount zero hides reverb but keeps its internal state running, so raising Amount
 while playing can reveal an already developing wash. No audio buffers are saved.
-The editor is now 520×960, minimum 390×720, to fit the expanded timing controls in
-issue #15. Knob sizes, response and values are unchanged; the bank moves down to
-make room. Chipped casing edges, scuffs and dulled metal are drawn procedurally,
-not embedded reference artwork. Wear stays away from labels and value readouts.
+The editor is now 520×900, minimum 390×675. Issue #15 replaces the first busy timing
+button grid with a Sync switch and paired Note/Feel selectors. Knob sizes, response
+and values are unchanged; the bank moves down to make room. The enclosure uses a
+prepared texture from the maintainer's Gemini artwork. Nine-slice rendering keeps
+the rim and corner proportions. Labels and live controls stay separate from the
+texture; no image files are loaded from disk by the running plugin. See
+[artwork provenance](../assets/SOURCES.md).
 
 ## Stereo ping-pong
 
@@ -108,11 +111,12 @@ Do not assume a mono laptop/output route will reveal the stereo movement.
 
 ## Tempo sync
 
-Choose **FREE TIME** or **TEMPO SYNC** at the top. The next row selects quarter,
-eighth or sixteenth notes; the row below selects straight, dotted or triplet.
-There is no cycling menu or hidden Shift-click direction. Outlined choices remain
-stored in Free mode, but only Sync activates them. Selecting a note does not turn
-Sync on. The Time knob retains its free-millisecond setting while Sync is active.
+Use the **Sync** switch at the top. Off means free milliseconds. **Note** opens a
+menu of quarter, eighth and sixteenth notes; **Feel** opens straight, dotted and
+triplet choices. Click a menu item to select it. Escape or a click outside closes
+the menu without changing anything underneath it. These choices remain stored
+in Free mode, but only Sync activates them. Selecting a note does not turn Sync on.
+The Time knob retains its free-millisecond setting while Sync is active.
 Sync sets the interval relative to
 each input note; it does not quantize attacks or force echoes to bar lines. In
 Ping-pong the interval is between channel hops, not a full left/right round trip.
@@ -126,9 +130,10 @@ an ongoing fade has already finished. Source labels mean:
 - **FALLBACK:** no valid host BPM has arrived yet; use FALLBACK, initially 120 BPM.
 - **INTERNAL:** standalone always uses its editable INTERNAL tempo, initially 120 BPM.
 
-The separate editable FALLBACK field does not override HOST or HELD. The ACTIVE
-CLOCK readout reports what actually drives Sync. In Free mode it is replaced by
-a reminder to use the Time knob, rather than implying that tempo drives the delay.
+Click the clock readout with **...** to open the editable INTERNAL/FALLBACK tempo
+field. That popup explains that FALLBACK does not override HOST or HELD. The closed
+readout reports what actually drives Sync. In Free mode it shows free milliseconds
+instead, rather than implying that tempo drives the delay.
 Tempo history is per instance and not saved. FALLBACK is saved with the VST3 project;
 standalone still has no in-app preset or
 preferences storage. A fresh instance consults the current host

@@ -1,10 +1,24 @@
 # Artwork sources and usage status
 
 These files were supplied locally by the maintainer during AI-assisted artwork
-planning. The maintainer identified the generator as **Banana through Google
-Gemini**. The exact model, generation date, exact prompts, source inputs
-and account-specific output terms have not yet been recorded. Do not infer permission
-or exclusive copyright ownership from their presence in this checkout.
+planning. On 2026-10-17 the maintainer confirmed **Nano Banana through Google
+Gemini**, a personal Gemini account, an assistant-supplied text prompt and no
+uploaded third-party reference images. Exact model revision, generation date and
+original prompt text have not been recovered. Do not infer exclusive copyright
+ownership from AI generation.
+
+## Approved prepared enclosure, issue #15
+
+The maintainer requested reuse of the existing artwork in the GUI and confirmed
+the provenance above after a terms discussion. The prepared derivative
+`runtime/undertow-enclosure.png` is approved for bundling with StormSurge FX, under
+the project's GPL-3.0-only terms to the extent applicable rights exist. Its
+[notice](runtime/NOTICE.md) records the preparation and terms review. This is not
+a guarantee of copyright protection or third-party clearance. No other local
+image is currently bundled. Originals remain unchanged and gitignored.
+
+The per-original entries below retain the earlier review state for context;
+the enclosure derivative's current inclusion status is the approval above.
 
 ## Undertow pedal concept
 
@@ -51,8 +65,10 @@ guarantee of exclusive copyright, clearance or applicability to every account.
 The review is informational, not legal advice. Do not treat API terms as a
 substitute for the terms of the app/account actually used.
 
-The first compiled mockup is original procedural C++ drawing. It loads none of
-these images. Only this provenance note and the asset guide are tracked so far.
+The first compiled mockup was original procedural C++ drawing. Issue #15 now
+embeds only the prepared enclosure derivative, not the local originals. All labels
+and controls remain live C++ drawing, separate from the texture. Its notice is
+copied to `bin/notices/Undertow-artwork.md` by CMake.
 
 ## Before publishing or bundling the images
 
@@ -61,4 +77,5 @@ applicable output terms and check redistribution in both the public repository
 and compiled application. Record any third-party restrictions and required
 attribution. The project's GPL-3.0-only declaration does not establish rights
 over unverified supplied assets. Keep these files local until their status is
-confirmed; no licence has been assigned to them by this note.
+confirmed. This precaution continues to apply to additional assets, not the
+explicitly approved prepared enclosure described above.

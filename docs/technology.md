@@ -51,8 +51,10 @@ are documented in the build guide and notices, rather than hidden in CI scripts.
 
 ## Art provenance
 
-The maintainer identified **Banana through Google Gemini**. The exact model,
-generation dates, prompts/inputs and account-specific terms remain unrecorded.
+The maintainer confirmed **Nano Banana through Google Gemini** in a personal
+Gemini account, with an assistant-supplied text prompt and no uploaded third-party
+reference images. Exact model revision, generation date and original prompt text
+have not been recovered.
 [Gemini Apps image help](https://support.google.com/gemini/answer/14286560?hl=en)
 points to Google's terms and warns users to respect others' rights; work/school
 accounts may have different terms. The [general Google terms](https://policies.google.com/terms?hl=en)
@@ -61,6 +63,7 @@ establish copyright protection, eliminate third-party rights or prove that every
 account is covered by the same terms. Do not substitute Gemini API terms for an
 unknown Gemini Apps account.
 
-Record details in [assets/SOURCES.md](../assets/SOURCES.md). Original supplied
-images stay local and ignored until redistribution is confirmed. This does not
-block drawing an original procedural mockup or testing the plugin foundation.
+Details are in [assets/SOURCES.md](../assets/SOURCES.md). The maintainer approved
+enclosure reuse for issue #15. Preview embeds only the prepared derivative in
+`assets/runtime/`, with its provenance notice accompanying binaries. Originals
+remain local, unchanged and ignored. Foundation still uses procedural artwork.

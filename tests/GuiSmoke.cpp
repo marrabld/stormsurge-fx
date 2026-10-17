@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     editor.setWindowVisible(true);
     editor.focus();
 #ifdef STORMSURGE_PREVIEW
-    if (small && (editor.getWidth() != 390 || editor.getHeight() != 720)) {
+    if (small && (editor.getWidth() != 390 || editor.getHeight() != 675)) {
         std::fprintf(stderr, "FAIL: minimum-size preview did not resize\n");
         return 1;
     }
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
     bool aspect = false;
     editor.getGeometryConstraints(width, height, aspect);
 #ifdef STORMSURGE_PREVIEW
-    const uint expectedHeight = 720;
+    const uint expectedHeight = 675;
 #else
     const uint expectedHeight = 510;
 #endif

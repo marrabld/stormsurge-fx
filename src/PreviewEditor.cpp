@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "PreviewParameters.hpp"
+#include "PreviewArtwork.hpp"
 #include "TempoSync.hpp"
 #include "DistrhoUI.hpp"
 #include "DistrhoPluginUtils.hpp"
@@ -30,7 +31,8 @@ class PreviewUI final : public UI
           standalone(std::strcmp(getPluginFormatName(), "JACK/Standalone") == 0)
     {
         loadSharedResources();
-        setGeometryConstraints(390, 720, true);
+        setGeometryConstraints(390, 675, true);
+        enclosure = createImageFromMemory(previewEnclosurePng, sizeof(previewEnclosurePng), 0);
         if (standalone)
             getWindow().setIgnoringKeyRepeat(true);
         for (std::uint32_t i = 0; i < PreviewParameterCount; ++i)
@@ -44,6 +46,8 @@ class PreviewUI final : public UI
 #ifdef STORMSURGE_GUI_HARNESS
     bool exerciseControls()
     {
+        if (!enclosure.isValid())
+            return false;
         // Dispatch real widget events without opening an audio device.
         const double scale = std::min(getWidth() / 520.0, getHeight() / PreviewHeight);
         const double dx = (getWidth() - 520 * scale) * 0.5;
@@ -80,31 +84,44 @@ class PreviewUI final : public UI
         if (!onMouse(mode) || values[PingPong] != 1)
             return false;
         MouseEvent timing = foot;
-        timing.pos.setPos(dx + 370 * scale, dy + 110 * scale);
+        timing.pos.setPos(dx + 260 * scale, dy + 110 * scale);
         if (!onMouse(timing) || values[Sync] != 1)
             return false;
         parameterChanged(previewHostIndex(Sync, standalone), 0);
         if (values[Sync] != 0 || !onMouse(timing) || values[Sync] != 1)
             return false;
         for (int length = 0; length < 3; ++length) {
-            timing.pos.setPos(dx + (110 + length * 150) * scale, dy + 154 * scale);
-            if (!onMouse(timing))
+            timing.pos.setPos(dx + 145 * scale, dy + 154 * scale);
+            if (!onMouse(timing) || popup != 0)
+                return false;
+            timing.pos.setPos(dx + 145 * scale, dy + (190 + length * 32) * scale);
+            if (!onMouse(timing) || popup != -1)
                 return false;
             for (int feel = 0; feel < 3; ++feel) {
-                timing.pos.setPos(dx + (110 + feel * 150) * scale, dy + 198 * scale);
-                if (!onMouse(timing) || values[Division] != length * 3 + feel)
+                timing.pos.setPos(dx + 375 * scale, dy + 154 * scale);
+                if (!onMouse(timing) || popup != 1)
+                    return false;
+                timing.pos.setPos(dx + 375 * scale, dy + (190 + feel * 32) * scale);
+                if (!onMouse(timing) || values[Division] != length * 3 + feel || popup != -1)
                     return false;
             }
         }
-        timing.pos.setPos(dx + 110 * scale, dy + 110 * scale);
+        timing.pos.setPos(dx + 260 * scale, dy + 110 * scale);
         if (!onMouse(timing) || values[Sync] != 0)
             return false;
         // Selecting an inactive note must not silently enable Sync.
-        timing.pos.setPos(dx + 110 * scale, dy + 154 * scale);
-        if (!onMouse(timing) || values[Sync] != 0 || values[Division] != 2)
+        timing.pos.setPos(dx + 145 * scale, dy + 154 * scale);
+        if (!onMouse(timing))
+            return false;
+        parameterChanged(previewHostIndex(Division, standalone), 7);
+        timing.pos.setPos(dx + 145 * scale, dy + 190 * scale);
+        if (!onMouse(timing) || values[Sync] != 0 || values[Division] != 1)
+            return false;
+        timing.pos.setPos(dx + 260 * scale, dy + 194 * scale);
+        if (!onMouse(timing) || popup != 2)
             return false;
         ScrollEvent bpm;
-        bpm.pos.setPos(dx + 390 * scale, dy + 242 * scale);
+        bpm.pos.setPos(dx + 260 * scale, dy + 246 * scale);
         bpm.delta.setPos(0, 1);
         const float beforeTempo = values[InternalTempo];
         if (!onScroll(bpm) || values[InternalTempo] <= beforeTempo)
@@ -117,12 +134,39 @@ class PreviewUI final : public UI
         if (!onMouse(timing))
             return false;
         MotionEvent tempoDrag;
-        tempoDrag.pos.setPos(dx + 390 * scale, dy + 232 * scale);
+        tempoDrag.pos.setPos(dx + 260 * scale, dy + 236 * scale);
         if (!onMotion(tempoDrag) || values[InternalTempo] <= coarseTempo + 0.1f)
             return false;
         timing.press = false;
         if (!onMouse(timing))
             return false;
+        KeyboardEvent escape;
+        escape.key = kKeyEscape;
+        escape.press = true;
+        if (!onKeyboard(escape) || popup != -1)
+            return false;
+        timing.press = true;
+        timing.pos.setPos(dx + 145 * scale, dy + 154 * scale);
+        if (!onMouse(timing))
+            return false;
+        ScrollEvent blockedScroll;
+        blockedScroll.pos.setPos(dx + 155 * scale, dy + 280 * scale);
+        blockedScroll.delta.setPos(0, 1);
+        const float priorTime = values[Time];
+        if (!onScroll(blockedScroll) || values[Time] != priorTime)
+            return false;
+        // Dismissing a popup over another control must not also edit that control.
+        const float priorBypass = values[Bypass];
+        if (!onMouse(foot) || popup != -1 || values[Bypass] != priorBypass)
+            return false;
+        if (standalone) {
+            if (!onMouse(timing))
+                return false;
+            MouseEvent monitorClick = foot;
+            monitorClick.pos.setPos(dx + 260 * scale, dy + (PreviewMonitorTop + 16) * scale);
+            if (!onMouse(monitorClick) || popup != -1)
+                return false;
+        }
         for (int division = 0; division < 9; ++division) {
             parameterChanged(previewHostIndex(Division, standalone), static_cast<float>(division));
             if (values[Division] != division)
@@ -152,6 +196,8 @@ class PreviewUI final : public UI
         key.press = true;
         if (onKeyboard(key) != standalone)
             return false;
+        if (const char *menu = std::getenv("STORMSURGE_CAPTURE_POPUP"))
+            popup = std::strcmp(menu, "note") == 0 ? 0 : std::strcmp(menu, "feel") == 0 ? 1 : 2;
         return true;
     }
 #endif
@@ -188,13 +234,13 @@ class PreviewUI final : public UI
         roundedRect(15, 15, 490, PreviewHeight - 30, 22);
         fillPaint(linearGradient(0, 0, 520, PreviewHeight, Color(25, 58, 69), Color(9, 29, 44)));
         fill();
-        drawWear();
+        drawEnclosure();
         save();
-        scissor(30, 280, 460, 290);
+        scissor(30, 220, 460, 290);
         strokeWidth(1);
         strokeColor(Color(106, 148, 158, 0.22f));
         for (int line = 0; line < 19; ++line) {
-            const float y = 290.0f + line * 15.0f;
+            const float y = 230.0f + line * 15.0f;
             beginPath();
             moveTo(30, y);
             bezierTo(210, y - 120, 310, y + 110, 490, y - 20);
@@ -205,34 +251,29 @@ class PreviewUI final : public UI
         caption(260, 66, "UNDERTOW", 33);
         char status[112];
         const bool synced = values[Sync] >= 0.5f;
-        timingButton(40, 94, 215, "FREE TIME", !synced);
-        timingButton(265, 94, 215, "TEMPO SYNC", synced);
+        caption(222, 110, "SYNC", 13);
+        beginPath();
+        roundedRect(256, 99, 54, 22, 11);
+        fillColor(synced ? Color(50, 105, 105) : Color(21, 43, 53));
+        fill();
+        circleFill(synced ? 298 : 268, 110, 8, Color(205, 209, 189));
+        caption(335, 110, synced ? "ON" : "OFF", 11);
         const int division = static_cast<int>(values[Division]);
-        const char *lengths[]{"QUARTER  1/4", "EIGHTH  1/8", "SIXTEENTH  1/16"};
-        const char *feels[]{"STRAIGHT", "DOTTED", "TRIPLET"};
-        for (int column = 0; column < 3; ++column) {
-            timingButton(40 + column * 150, 138, 140, lengths[column], division / 3 == column,
-                         synced);
-            timingButton(40 + column * 150, 182, 140, feels[column], division % 3 == column,
-                         synced);
-        }
-        std::snprintf(status, sizeof(status), "%s %.1f BPM",
-                      tempoOriginName(static_cast<int>(values[TempoSource])),
-                      values[EffectiveTempo]);
-        caption(163, 237, synced ? status : "FREE: USE TIME KNOB", 12);
-        caption(163, 254, synced ? "ACTIVE CLOCK" : "NOTE CHOICES STORED FOR SYNC", 9);
-        char tempoText[48];
-        std::snprintf(tempoText, sizeof(tempoText), "%s %.1f BPM",
-                      standalone ? "INTERNAL" : "FALLBACK", values[InternalTempo]);
-        timingButton(300, 226, 180, tempoText, false);
-        std::snprintf(status, sizeof(status), "%s / %.0f ms%s",
-                      synced ? noteDivisions[division].label : "FREE TIME", values[EffectiveTime],
-                      synced && values[SyncLimited] >= 0.5f ? " / RANGE LIMIT" : "");
-        caption(260, 270, status, 12);
+        const char *lengths[]{"NOTE: QUARTER  v", "NOTE: EIGHTH  v", "NOTE: SIXTEENTH  v"};
+        const char *feels[]{"FEEL: STRAIGHT  v", "FEEL: DOTTED  v", "FEEL: TRIPLET  v"};
+        timingButton(40, 138, 210, lengths[division / 3], popup == 0);
+        timingButton(270, 138, 210, feels[division % 3], popup == 1);
+        if (synced)
+            std::snprintf(status, sizeof(status), "%s %.1f BPM / %.0f ms%s / ...",
+                          tempoOriginName(static_cast<int>(values[TempoSource])),
+                          values[EffectiveTempo], values[EffectiveTime],
+                          values[SyncLimited] >= 0.5f ? " / LIMIT" : "");
+        else
+            std::snprintf(status, sizeof(status), "FREE TIME / %.0f ms / TEMPO ...", values[Time]);
+        caption(260, 194, status, 12);
         for (const auto &knob : previewKnobs)
             drawKnob(knob);
-        caption(260, 555, "DRAG KNOBS / SHIFT FOR FINE CONTROL", 10);
-        caption(260, 572, "REVERB / WET DELAY ONLY / AMOUNT ZERO = DELAY ONLY", 10);
+        caption(260, 512, "REVERB / WET DELAY ONLY", 11);
         beginPath();
         roundedRect(105, PreviewModeTop, 310, 26, 6);
         fillColor(values[PingPong] >= 0.5f ? Color(30, 90, 95) : Color(30, 52, 65));
@@ -263,10 +304,10 @@ class PreviewUI final : public UI
                             : "MONITOR MUTED / CLICK OR SPACE TO ENABLE",
                     11);
         } else {
-            caption(260, PreviewMonitorTop + 16, "TEMPO FIELD: DRAG OR SCROLL / SHIFT FOR FINE",
-                    10);
+            caption(260, PreviewMonitorTop + 16, "SHIFT + DRAG FOR FINE CONTROL", 10);
         }
         caption(260, PreviewHeight - 31, "0.4.0 DEVELOPMENT / START QUIETLY / GPLv3", 10);
+        drawTimingPopup();
     }
 
     bool onMouse(const MouseEvent &event) override
@@ -285,32 +326,40 @@ class PreviewUI final : public UI
             editParameter(previewHostIndex(static_cast<uint32_t>(dragging), standalone), false);
             dragging = -1;
         }
+        if (popup >= 0) {
+            if (popup == 2 && timingTempoAt(point)) {
+                dragging = InternalTempo;
+                lastY = point.y;
+                position = normalizedPreview(InternalTempo, values[InternalTempo]);
+                editParameter(previewHostIndex(InternalTempo, standalone), true);
+                return true;
+            }
+            const int row = timingMenuRowAt(point, popup);
+            if (row >= 0) {
+                const int current = static_cast<int>(values[Division]);
+                change(Division, static_cast<float>(popup == 0 ? row * 3 + current % 3
+                                                               : current / 3 * 3 + row));
+            }
+            popup = -1;
+            repaint();
+            return true;
+        }
+        if (timingSyncAt(point)) {
+            change(Sync, values[Sync] >= 0.5f ? 0.0f : 1.0f);
+            return true;
+        }
+        const int selector = timingSelectorAt(point);
+        if (selector >= 0) {
+            popup = selector;
+            repaint();
+            return true;
+        }
         const int knob = knobAt(point);
         if (knob >= 0) {
             dragging = knob;
             lastY = point.y;
             position = normalizedPreview(knob, values[knob]);
             editParameter(previewHostIndex(knob, standalone), true);
-            return true;
-        }
-        const int timing = timingControlAt(point);
-        if (timing == Sync) {
-            change(Sync, static_cast<float>(timingModeAt(point)));
-            return true;
-        }
-        if (timing == Division) {
-            const int length = timingColumnAt(point, 138);
-            const int feel = timingColumnAt(point, 182);
-            const int current = static_cast<int>(values[Division]);
-            change(Division, static_cast<float>(length >= 0 ? length * 3 + current % 3
-                                                            : current / 3 * 3 + feel));
-            return true;
-        }
-        if (timing == InternalTempo) {
-            dragging = InternalTempo;
-            lastY = point.y;
-            position = normalizedPreview(InternalTempo, values[InternalTempo]);
-            editParameter(previewHostIndex(InternalTempo, standalone), true);
             return true;
         }
         if (std::hypot(point.x - 260, point.y - PreviewFootY) <= 40) {
@@ -347,12 +396,14 @@ class PreviewUI final : public UI
         if (dragging >= 0)
             return false;
         const auto point = pedalPoint(event.pos.getX(), event.pos.getY(), getWidth(), getHeight());
-        if (timingControlAt(point) == InternalTempo) {
+        if (popup == 2 && timingTempoAt(point)) {
             const float step = (event.mod & kModifierShift) ? 0.1f : 1.0f;
             change(InternalTempo,
                    values[InternalTempo] + static_cast<float>(event.delta.getY()) * step);
             return true;
         }
+        if (popup >= 0)
+            return true;
         const int knob = knobAt(point);
         if (knob < 0)
             return false;
@@ -364,6 +415,11 @@ class PreviewUI final : public UI
 
     bool onKeyboard(const KeyboardEvent &event) override
     {
+        if (popup >= 0 && event.press && event.key == kKeyEscape) {
+            popup = -1;
+            repaint();
+            return true;
+        }
         // Leave the DAW's Space transport shortcut alone in plugin mode.
         if (!standalone || event.key != ' ' || !event.press)
             return false;
@@ -385,63 +441,66 @@ class PreviewUI final : public UI
         caption(x + width * 0.5f, y + 16, label, 12);
     }
 
-    void drawWear()
+    void drawEnclosure()
     {
-        // Fixed marks avoid animated grain and keep paint loss away from labels.
-        // All artwork is procedural; local reference images are not redistributed.
-        std::uint32_t seed = 0x554e4454;
-        auto random = [&seed]() {
-            seed = seed * 1664525u + 1013904223u;
-            return static_cast<float>(seed >> 8) / 16777216.0f;
-        };
-        for (int i = 0; i < 190; ++i) {
-            const bool right = i % 2 != 0;
-            const float x = right ? 493 + random() * 12 : 15 + random() * 12;
-            const float y = 32 + random() * (PreviewHeight - 64);
-            const float width = 1 + random() * 7;
-            const float height = 2 + random() * 12;
-            beginPath();
-            moveTo(x, y);
-            lineTo(x + width, y + height * 0.2f);
-            lineTo(x + width * 0.65f, y + height);
-            lineTo(x - 1, y + height * 0.7f);
-            closePath();
-            fillColor(i % 4 == 0 ? Color(135, 129, 111, 0.65f) : Color(7, 19, 23, 0.65f));
-            fill();
-        }
-        for (int i = 0; i < 55; ++i) {
-            const float x = 38 + random() * 440;
-            const float y = i % 2 == 0 ? 18 + random() * 5 : PreviewHeight - 24 + random() * 6;
-            beginPath();
-            moveTo(x, y);
-            lineTo(x + 2 + random() * 18, y + random() * 3);
-            strokeColor(Color(172, 163, 138, 0.35f));
-            strokeWidth(0.7f + random());
-            stroke();
-        }
-        for (float x : {34.0f, 486.0f}) {
-            for (float y : {34.0f, static_cast<float>(PreviewHeight - 34)}) {
-                circleFill(x, y, 7, Color(8, 18, 22));
-                circleFill(x, y, 5, Color(106, 110, 104));
+        if (!enclosure.isValid())
+            return;
+        const auto size = enclosure.getSize();
+        const float width = static_cast<float>(size.getWidth());
+        const float height = static_cast<float>(size.getHeight());
+        // Nine slices preserve corner/rim thickness instead of stretching the
+        // whole enclosure to the pedal's tall aspect ratio.
+        const float sourceX[]{0, 64, width - 64, width};
+        const float sourceY[]{0, 64, height - 64, height};
+        const float destX[]{8, 40, 480, 512};
+        const float destY[]{8, 40, static_cast<float>(PreviewHeight - 40),
+                            static_cast<float>(PreviewHeight - 8)};
+        for (int row = 0; row < 3; ++row) {
+            for (int column = 0; column < 3; ++column) {
+                const float sx =
+                    (destX[column + 1] - destX[column]) / (sourceX[column + 1] - sourceX[column]);
+                const float sy = (destY[row + 1] - destY[row]) / (sourceY[row + 1] - sourceY[row]);
                 beginPath();
-                moveTo(x - 3, y + 2);
-                lineTo(x + 3, y - 2);
-                strokeColor(Color(31, 39, 39));
-                strokeWidth(2);
-                stroke();
+                rect(destX[column], destY[row], destX[column + 1] - destX[column],
+                     destY[row + 1] - destY[row]);
+                fillPaint(imagePattern(destX[column] - sourceX[column] * sx,
+                                       destY[row] - sourceY[row] * sy, width * sx, height * sy, 0,
+                                       enclosure, 1));
+                fill();
             }
         }
-        // Footswitch scuffs sit below the control bank, not over value readouts.
-        for (int i = 0; i < 65; ++i) {
-            const float x = 170 + random() * 180;
-            const float y = PreviewFootY - 28 + random() * 58;
-            beginPath();
-            moveTo(x, y);
-            lineTo(x + 3 + random() * 15, y - 2 + random() * 4);
-            strokeColor(Color(150, 149, 127, 0.13f));
-            strokeWidth(1);
-            stroke();
+    }
+
+    void drawTimingPopup()
+    {
+        if (popup < 0)
+            return;
+        const float left = popup == 0 ? 40 : popup == 1 ? 270 : 100;
+        const float top = popup == 2 ? 214 : 174;
+        const float width = popup == 2 ? 320 : 210;
+        beginPath();
+        roundedRect(left - 3, top - 3, width + 6, 102, 5);
+        fillColor(Color(13, 28, 37));
+        fill();
+        strokeColor(Color(142, 157, 147));
+        strokeWidth(1);
+        stroke();
+        if (popup == 2) {
+            char tempoText[48];
+            std::snprintf(tempoText, sizeof(tempoText), "%s %.1f BPM",
+                          standalone ? "INTERNAL" : "FALLBACK", values[InternalTempo]);
+            timingButton(150, 230, 220, tempoText, false);
+            caption(260, 279, "DRAG OR SCROLL / SHIFT FOR FINE", 11);
+            caption(260, 298, standalone ? "STANDALONE CLOCK" : "DOES NOT OVERRIDE HOST / HELD",
+                    10);
+            return;
         }
+        const char *lengths[]{"QUARTER  1/4", "EIGHTH  1/8", "SIXTEENTH  1/16"};
+        const char *feels[]{"STRAIGHT", "DOTTED", "TRIPLET"};
+        const int division = static_cast<int>(values[Division]);
+        for (int row = 0; row < 3; ++row)
+            timingButton(left, top + row * 32, width, popup == 0 ? lengths[row] : feels[row],
+                         row == (popup == 0 ? division / 3 : division % 3));
     }
 
     void send(uint32_t index, float value)
@@ -529,9 +588,11 @@ class PreviewUI final : public UI
     }
 
     const bool standalone;
+    DGL_NAMESPACE::NanoImage enclosure;
     std::array<float, PreviewParameterCount> values{};
     bool monitor = false;
     int dragging = -1;
+    int popup = -1;
     double lastY = 0;
     double position = 0;
 };
@@ -553,7 +614,7 @@ bool previewExerciseControls()
 void previewResizeForTest()
 {
     if (testUI != nullptr)
-        testUI->setSize(390, 720);
+        testUI->setSize(390, 675);
 }
 #endif
 

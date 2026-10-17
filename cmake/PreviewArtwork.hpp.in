@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Generated from the prepared PNG. See assets/runtime/NOTICE.md for provenance.
+#pragma once
+namespace stormsurge
+{
+inline constexpr unsigned char previewEnclosurePng[]{@artwork_bytes@};
+}

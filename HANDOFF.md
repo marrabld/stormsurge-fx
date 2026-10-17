@@ -46,10 +46,11 @@ engineering starting points separately from remaining integration proposals.
   was rejected to keep this project GPL-3.0-only. DPF is ISC-licensed and provides
   custom UIs, VST3 and a JACK-only standalone.
 - C++20, CMake, Ninja/Clang on Linux, MSVC x64 on Windows.
-- **Artwork:** the maintainer generates images with Banana through Google Gemini and
-  uses them as references. They are not baked into the UI; the interface is drawn
-  procedurally in C++. The generated files stay local and gitignored because
-  redistribution terms are unconfirmed.
+- **Artwork:** the maintainer confirmed personal Gemini Nano Banana, using an
+  assistant-supplied text prompt without uploaded third-party reference images.
+  They approved reuse of the enclosure for #15. Its prepared PNG and provenance
+  notice are in `assets/runtime/`; originals remain unchanged and gitignored.
+  Controls and labels stay separate from the background. See `assets/SOURCES.md`.
 - The standalone is JACK-only with native-device fallback disabled. It **starts
   muted** and requires explicit monitoring consent, which resets on every audio
   reactivation. Friendly device selection and native Windows backends are later work.
@@ -90,13 +91,15 @@ delay sound. After PR #17 the maintainer praised the reverb sound and confirmed
 bypass spillover/new clean notes and saved-setting reopening. Linux, Windows and
 sanitizer CI passed. For #15 they clarified the knobs are fine; only the small
 note/time/sync header needs usability work. They also approved a banged-up pedal
-finish. None of this proves Windows playback or
+finish. They found the first expanded button grid too busy and the procedural
+wear unconvincing, so the revised PR uses a Sync switch and paired Note/Feel menus
+over the prepared enclosure texture. None of this proves Windows playback or
 standalone hardware usability.
 
 ## Suggested order
 
 1. Review the issue #15 timing-controls/worn-finish PR and CI. Do not merge without approval.
-2. Check the expanded timing choices and worn finish in Bitwig, including host
+2. Check the compact timing selectors and textured finish in Bitwig, including host
    updates and saved Sync/Division settings. Complete remaining tempo/automation/export checks too.
 3. Agree and implement remaining channel/device policies under issue #4.
 4. Resolve DPF's hardcoded zero VST3 tail report before claiming correct automatic

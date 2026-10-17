@@ -85,7 +85,8 @@ and project reopening in Bitwig Studio Producer 6.1.3 on Omarchy, followed by au
 basic Preview controls, bypass spillover and saved-setting reopening. The new
 ping-pong mode also passed listening/reopen checks, and tempo sync had a successful
 first host check. Reverb still needs its own listening checks.
-Supplied Gemini artwork remains local; the interface is drawn in code.
+Local Gemini originals remain unchanged. Preview now embeds an approved prepared
+enclosure texture; labels and controls are drawn separately. See [artwork provenance](assets/SOURCES.md).
 
 ## Next steps
 
