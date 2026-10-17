@@ -88,8 +88,10 @@ The knobs use an original rendered silver-metal material with ridged sides,
 bevels and a soft cast shadow. Subtle residue, grit and scuffs make the metal look
 used. Reflections stay fixed as the separate value marker moves. Their positions,
 size, hit targets and drag/scroll response are unchanged. The bottom effect
-footswitch now has a rendered metal mounting nut and round plunger. Its LED and
-text still indicate effect on/bypass; it never enables standalone monitoring.
+footswitch now has a rendered metal mounting nut and round plunger. Its recessed
+green LED has a shaded lens, fixed reflection and subtle on-state halo. The lens
+stays dark when bypassed. LED and text indicate effect on/bypass only; they never
+enable standalone monitoring.
 
 ## Stereo ping-pong
 

@@ -285,8 +285,7 @@ class PreviewUI final : public UI
                                          : "MODE: NORMAL / CLICK FOR PING-PONG",
                 10);
         const bool enabled = values[Bypass] < 0.5f;
-        circleFill(260, PreviewFootY - 47, 7,
-                   enabled ? Color(106, 225, 180) : Color(100, 116, 120));
+        drawEffectLed(enabled);
         if (footswitchMaterial.isValid()) {
             beginPath();
             rect(218, PreviewFootY - 42, 84, 84);
@@ -431,6 +430,41 @@ class PreviewUI final : public UI
     }
 
   private:
+    void drawEffectLed(bool enabled)
+    {
+        const float x = 260, y = PreviewFootY - 47;
+        if (enabled) {
+            beginPath();
+            circle(x, y, 14);
+            fillPaint(
+                radialGradient(x, y, 6, 14, Color(70, 184, 112, 0.18f), Color(30, 120, 65, 0.0f)));
+            fill();
+        }
+        circleFill(x + 1, y + 1.5f, 10, Color(3, 12, 15, 0.65f));
+        beginPath();
+        circle(x, y, 9);
+        fillPaint(
+            linearGradient(x - 6, y - 7, x + 6, y + 8, Color(163, 163, 146), Color(43, 48, 46)));
+        fill();
+        circleFill(x, y, 7.5f, Color(8, 19, 17));
+        beginPath();
+        circle(x, y, 6.5f);
+        fillPaint(radialGradient(x - 1.5f, y - 2, 0.8f, 8,
+                                 enabled ? Color(151, 242, 175) : Color(40, 72, 49),
+                                 enabled ? Color(7, 63, 35) : Color(5, 19, 12)));
+        fill();
+        beginPath();
+        ellipse(x - 2, y - 3, 2, 1.2f);
+        fillColor(Color(243, 252, 230, enabled ? 0.85f : 0.5f));
+        fill();
+        beginPath();
+        moveTo(x - 3, y + 3.5f);
+        bezierTo(x - 1, y + 5, x + 2, y + 5, x + 3.5f, y + 2.5f);
+        strokeColor(Color(117, 181, 130, enabled ? 0.55f : 0.18f));
+        strokeWidth(0.8f);
+        stroke();
+    }
+
     void drawSyncToggle(bool enabled)
     {
         circleFill(284, 113, 15, Color(3, 11, 15, 0.6f));
