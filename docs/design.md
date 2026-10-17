@@ -2,6 +2,11 @@
 
 ## Agreed direction
 
+This page records Undertow's design. The second pedal, Maelstrom, has a separate
+[sound/control contract](maelstrom.md) under issue #23, with approved direction
+distinguished from proposed defaults and policies. The DAW hosts the separate
+pedals; StormSurge does not yet provide a shared rack or chain host.
+
 - StormSurge FX is the project; Undertow is the first delay.
 - Learn by making an effect worth playing through, rather than replicating a suite.
 - Bitwig on Linux is the primary initial DAW. Standalone use is also wanted.
