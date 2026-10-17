@@ -252,6 +252,34 @@ below is unchanged.
 4. [#26](https://github.com/marrabld/stormsurge-fx/issues/26): shared-family interface and runtime art.
 5. [#27](https://github.com/marrabld/stormsurge-fx/issues/27): NAM listening, host checks and preview preparation.
 
+## Plugin integration, issue #25
+
+`Maelstrom` is its own DPF plugin with identity `UtM0`, five parameters
+(Drive, Tight, Bite, Level, Bypass) and the `maelstrom_schema` state marker.
+Undertow Preview stays `UtP0` with `undertow_preview_schema`, so no existing
+project changes behaviour and no saved session can cross between them.
+
+- **Formats: plugin only.** Maelstrom builds VST3 everywhere plus AUv2 on macOS.
+  It deliberately ships no standalone app: its bypass is effect bypass only, with
+  no monitoring consent gate, so an executable would have no way to ask before
+  opening an audio device.
+- **Latency is reported.** The engine oversamples, so the plugin calls
+  `setLatency()` and the host sees one sample instead of an undocumented offset.
+- **Bypass is the engine's own unity dry path**, so host hard bypass and the
+  footswitch agree and neither adds level.
+- The editor reuses the approved #26 layout and Undertow's original knob and
+  footswitch renders, with real parameter and host-edit wiring. Keyboard
+  shortcuts, automation lanes and preset browsing remain #26 work.
+- `maelstrom_plugin` covers identity, defaults, host-visible ranges, bypass
+  unity, enable ramping, channel independence, saved-setting restoration,
+  unsupported sample rates, reactivation clearing filter history, zero callback
+  allocations and scaled hit testing. `maelstrom_vst3_loader` loads the real
+  module and checks its factory, name and version.
+
+Sharing the parameter metadata struct between plugins lives in
+`src/ParameterSpec.hpp`; that refactor is mechanical and leaves Undertow's
+published values unchanged.
+
 The maintainer approved the charcoal/red artwork direction and adapting the supplied
 wide enclosure texture rather than stretching its bevels. Preserve its original,
 reuse the existing hardware materials, and confirm the new image's provenance

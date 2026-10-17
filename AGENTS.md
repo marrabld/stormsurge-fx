@@ -120,6 +120,14 @@ Non-obvious test facts:
 - `tests/Vst3ModuleTests.cpp` also supplies `preview_vst3_loader` on Linux/Windows.
   It loads actual modules and can check their version, but opens no device and
   proves no DAW playback. It is not built by the headless-DSP-only sanitizer job.
+  Arguments are `<module> [expected processor name] [version]`. Each plugin has
+  its own name and identity, so the caller states which one it expects.
+- Maelstrom is the third plugin: identity `UtM0`, schema `maelstrom_schema`, five
+  parameters in `src/MaelstromParameters.hpp`. Never renumber them to match
+  Undertow, and never let `STORMSURGE_MAELSTROM` reach Preview or Foundation
+  targets. It is plugin-only with no standalone app, because its bypass has no
+  monitoring consent gate. It reports one sample of latency for oversampling.
+  `src/ParameterSpec.hpp` holds the parameter metadata struct shared by plugins.
 - **`foundation_gui` is NOT a ctest test.** It builds with the project but is run by
   hand, because it needs a display/OpenGL context: `xvfb-run -a build/linux-debug/foundation_gui`.
   It renders 30 frames, asserts the 390x510 geometry constraint, opens no audio device.

@@ -102,9 +102,9 @@ struct Module {
 int main(int argc, char **argv)
 {
     try {
-        require(
-            argc == 2 || argc == 3,
-            "Supply the VST3 bundle on Mac or module file on Linux/Windows, and optional version");
+        require(argc >= 2 && argc <= 4,
+                "Supply the VST3 bundle on Mac or module file on Linux/Windows, then optional "
+                "expected processor name and version");
         Module module(argv[1]);
         auto *factory = v3_cpp_obj(module.factory);
         const auto count = factory->num_classes(module.factory);
@@ -113,12 +113,15 @@ int main(int argc, char **argv)
         require(factory->get_factory_info(module.factory, &info) == V3_OK &&
                     std::strstr(info.vendor, "StormSurge FX") != nullptr,
                 "Incorrect VST3 factory metadata");
+        // Each StormSurge plugin has its own name, so the caller states which one
+        // it expects rather than the harness hard-coding a single identity.
+        const char *expectedName = argc >= 3 ? argv[2] : "Undertow Preview";
         v3_class_info processor{};
         require(factory->get_class_info(module.factory, 0, &processor) == V3_OK &&
-                    std::strcmp(processor.name, "Undertow Preview") == 0 &&
+                    std::strcmp(processor.name, expectedName) == 0 &&
                     std::strcmp(processor.category, "Audio Module Class") == 0,
                 "Incorrect VST3 processor metadata");
-        if (argc == 3) {
+        if (argc >= 4) {
             v3_plugin_factory_2 **extended = nullptr;
             require(v3_cpp_obj_query_interface(module.factory, v3_plugin_factory_2_iid,
                                                &extended) == V3_OK &&
@@ -126,7 +129,7 @@ int main(int argc, char **argv)
                     "Missing VST3 version metadata interface");
             v3_class_info_2 versioned{};
             const auto status = v3_cpp_obj(extended)->get_class_info_2(extended, 0, &versioned);
-            const bool matches = status == V3_OK && std::strcmp(versioned.version, argv[2]) == 0;
+            const bool matches = status == V3_OK && std::strcmp(versioned.version, argv[3]) == 0;
             v3_cpp_obj_unref(extended);
             require(matches, "Packaged plugin version does not match the release manifest");
         }

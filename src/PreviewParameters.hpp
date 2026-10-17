@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #pragma once
 
+#include "ParameterSpec.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -50,15 +52,6 @@ inline constexpr int previewLogicalIndex(std::uint32_t host, bool standalone) no
     const auto effect = standalone && host > MonitorActive ? host - 2 : host;
     return effect < PreviewParameterCount ? static_cast<int>(effect) : -1;
 }
-
-struct ParameterSpec {
-    const char *name;
-    const char *symbol;
-    const char *unit;
-    float initial, minimum, maximum;
-    bool logarithmic;
-    bool readOnly = false;
-};
 
 inline constexpr std::array<ParameterSpec, PreviewParameterCount> previewSpecs{{
     {"Time", "time_ms", "ms", 400, 20, 2000, true},
