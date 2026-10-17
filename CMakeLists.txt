@@ -147,6 +147,12 @@ if(BUILD_TESTING)
     target_include_directories(preview_gui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
     target_compile_definitions(preview_gui PRIVATE STORMSURGE_PREVIEW STORMSURGE_GUI_HARNESS)
     target_link_libraries(preview_gui PRIVATE dgl-opengl)
+    if(APPLE)
+        # DPF adds this Cocoa scale helper to plugin UI libraries, but these
+        # no-audio harnesses compile DistrhoUI.cpp directly instead.
+        target_sources(foundation_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
+        target_sources(preview_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
+    endif()
     if(NOT WIN32)
         target_link_libraries(foundation_gui PRIVATE ${CMAKE_DL_LIBS})
         target_link_libraries(preview_gui PRIVATE ${CMAKE_DL_LIBS})

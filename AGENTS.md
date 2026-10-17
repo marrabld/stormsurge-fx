@@ -215,6 +215,8 @@ submodule is bumped** ([docs/technology.md](docs/technology.md) says so explicit
   Query the host callback once per processing slice, preserve failures/removal, and
   never mistake an adapter's stale/synthetic BBT clock for a valid host tempo.
   Review its LF-normalized adapter hash on DPF updates; no submodule edits.
+  The generated copy also clears omitted HostCallbackInfo prefix bytes with byte
+  arithmetic, not upstream's struct-pointer arithmetic. Keep the Mac prefix test.
 - `cmake/PackageMacPreview.cmake` copies only Preview bundles, verifies both CPU
   slices and applies ad-hoc signatures to the staged copies. It does not install,
   publish, use Developer ID credentials or notarize. Keep that distinction explicit.

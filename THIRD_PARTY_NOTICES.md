@@ -50,6 +50,9 @@ The Preview AUv2 build also compiles a generated adapter copy, via
 source SHA256 is checked. The raw host callback is queried once and its result is
 shared with DPF's BBT conversion, rather than treating synthetic/stale BBT as a
 host clock. Original ISC notices are retained. No dependency checkout is edited.
+The same guarded copy fixes byte-wise clearing of the unused tail of an older
+`HostCallbackInfo` prefix. The original adds a byte count to a struct pointer;
+the copy uses a byte pointer to avoid writing outside the callback structure.
 Mac staging removes the AU exporter's unnecessary broad resource-usage declarations
 and replaces generic bundle identifiers; it does not grant network/file entitlements.
 

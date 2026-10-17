@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <limits>
@@ -119,13 +120,15 @@ struct Unit {
             AudioComponentInstanceDispose(value);
         }
     }
-    void callbacks(bool present)
+    void callbacks(bool present, bool prefix = false)
     {
         HostCallbackInfo callbacks{};
         callbacks.hostUserData = &host;
         callbacks.beatAndTempoProc = present ? tempo : nullptr;
+        const UInt32 bytes =
+            prefix ? offsetof(HostCallbackInfo, musicalTimeLocationProc) : sizeof(callbacks);
         checked(AudioUnitSetProperty(value, kAudioUnitProperty_HostCallbacks,
-                                     kAudioUnitScope_Global, 0, &callbacks, sizeof(callbacks)),
+                                     kAudioUnitScope_Global, 0, &callbacks, bytes),
                 "Set/remove AU host callbacks");
     }
     void set(UInt32 id, float number)
@@ -182,6 +185,7 @@ int main(int argc, char **argv)
                     std::abs(unit.get(EffectiveTime) - 666.6667f) < 0.01f,
                 "AU initial fallback differs from shared policy");
         unit.host.available = true;
+        unit.callbacks(true, true);
         unit.render();
         require(unit.get(TempoSource) == static_cast<float>(TempoOrigin::Host) &&
                     unit.get(EffectiveTime) == 500,

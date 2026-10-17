@@ -31,6 +31,16 @@ if(position LESS 0)
     message(FATAL_ERROR "Cannot locate Preview's AU beat/tempo callback")
 endif()
 string(REPLACE "${needle}" "${replacement}" adapter_source "${adapter_source}")
+
+# Hosts may send an older prefix of HostCallbackInfo. Upstream adds the byte
+# count to a struct pointer when clearing the omitted tail, writing out of bounds.
+set(needle "std::memset(&fHostCallbackInfo + usableDataSize, 0, sizeof(HostCallbackInfo) - usableDataSize);")
+set(replacement "std::memset(reinterpret_cast<unsigned char*>(&fHostCallbackInfo) + usableDataSize, 0, sizeof(HostCallbackInfo) - usableDataSize);")
+string(FIND "${adapter_source}" "${needle}" position)
+if(position LESS 0)
+    message(FATAL_ERROR "Cannot locate Preview's AU callback-prefix clearing workaround")
+endif()
+string(REPLACE "${needle}" "${replacement}" adapter_source "${adapter_source}")
 file(WRITE "${STORMSURGE_PREVIEW_ADAPTER}/DistrhoPluginAU.cpp" "${adapter_source}")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PreviewAuMain.cpp.in"
     "${STORMSURGE_PREVIEW_ADAPTER}/PreviewAuMain.cpp" @ONLY)
