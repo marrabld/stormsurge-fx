@@ -75,6 +75,14 @@ pass-through experiment. Standalone requires JACK-compatible routing and starts
 muted until monitoring is explicitly enabled. Device selection and finished
 standalone usability are not implemented yet.
 
+Cross-platform **experimental preview packages are being prepared**, not yet
+published. The proposed assets are Linux x86_64 VST3, Windows x86_64 VST3 and Mac
+universal VST3/AUv2, with matching source and checksums. See
+[installation and compatibility limits](docs/install-preview.md) and the
+[draft release notes](release/NOTES.md). Windows DAW playback and Dom's Mac test
+remain unverified; CI is not listening evidence. Standalone is not in these
+initial plugin-only downloads.
+
 To view the pedal face without opening any audio device:
 
 ```sh

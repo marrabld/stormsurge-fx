@@ -24,6 +24,7 @@ Windows builds and experimental macOS plugin support under issue #19.
 | Optional wet-path dark reverb, issue #16 | **Authorised** |
 | Iterating on the pedal GUI | **Authorised** |
 | Experimental macOS VST3/AUv2 builds, issue #19 | **Authorised** |
+| Cross-platform preview assets and draft release notes, issue #21 | **Authorised** |
 | Merging a PR | **Not** authorised; open a PR and wait |
 | Publishing a release or tagging | **Not** authorised |
 | Installing a plugin anywhere | **Not** authorised |
@@ -82,7 +83,7 @@ ctest --preset linux-debug
 
 - Always configure through a **preset**. There is no plain `cmake ..` path, and each
   preset has its own `build/<preset>/` tree. Presets: `linux-debug`, `linux-release`,
-  `linux-sanitized`, `windows-debug`, `macos-debug`, `macos-release`.
+  `linux-sanitized`, `windows-debug`, `windows-release`, `macos-debug`, `macos-release`.
 - Requires CMake 3.24+, Ninja and Clang on Linux. **No dependency install is run by
   CMake** — X11/Xcursor/Xext/Xrandr and `libgl1-mesa-dev` must already be present.
 - `linux-sanitized` enables ASan/UBSan; build its `foundation_tests` target first.
@@ -115,6 +116,9 @@ Non-obvious test facts:
   listening result or substitute for auval. Do not install plugins to run a validator.
   `mac_vst3_loader` checks actual VST3 bundle entry/factory/exit only, not audio.
   CI repeats these tests on archive-extracted, ad-hoc-signed copies before upload.
+- `tests/Vst3ModuleTests.cpp` also supplies `preview_vst3_loader` on Linux/Windows.
+  It loads actual modules and can check their version, but opens no device and
+  proves no DAW playback. It is not built by the headless-DSP-only sanitizer job.
 - **`foundation_gui` is NOT a ctest test.** It builds with the project but is run by
   hand, because it needs a display/OpenGL context: `xvfb-run -a build/linux-debug/foundation_gui`.
   It renders 30 frames, asserts the 390x510 geometry constraint, opens no audio device.
@@ -222,6 +226,12 @@ submodule is bumped** ([docs/technology.md](docs/technology.md) says so explicit
 - `cmake/PackageMacPreview.cmake` copies only Preview bundles, verifies both CPU
   slices and applies ad-hoc signatures to the staged copies. It does not install,
   publish, use Developer ID credentials or notarize. Keep that distinction explicit.
+- Issue #21 packages optimized plugins only, not Foundation or standalone apps.
+  `release/preview.json` names the proposed distribution, not an approved tag.
+  `PreviewPackageCommon.cmake` requires a clean committed source tree. Packaging
+  tools need Python 3.9+; ordinary configure/build does not. Source archives include
+  tracked recursive submodule files, never ignored local assets or `.git` contents.
+  Candidate CI has contents-read permission only and never creates a release/tag.
 
 ## Licensing
 

@@ -1,0 +1,6 @@
+{
+  "version": "0.4.0-preview.1",
+  "plugin_version": "0.4.0",
+  "status": "experimental-prerelease",
+  "platforms": ["linux-x86_64", "windows-x86_64", "macos-universal"]
+}
