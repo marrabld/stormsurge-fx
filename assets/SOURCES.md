@@ -52,8 +52,9 @@ project. The source sheet used the assistant-provided prompt; no third-party
 reference material was used. No exact model revision or generation date is known.
 The original files remain unchanged and gitignored. Four prepared derivatives are
 embedded in Maelstrom: lit/unlit LED states and left/right toggle states. The
-toggle-right derivative is rotated 180 degrees from the toggle-left source. The
-public project and plugin use is approved to the extent applicable rights allow;
+toggle states come from the matching left/right illustrations on the source
+sheet; the UI aligns the two images by their socket centers. The public project
+and plugin use is approved to the extent applicable rights allow;
 this does not assert exclusive ownership or guaranteed third-party clearance.
 See `runtime/MAELSTROM-NOTICE.md` for hashes, preparation details and the notice
 copied with development binaries.

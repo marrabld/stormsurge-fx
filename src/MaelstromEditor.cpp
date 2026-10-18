@@ -341,7 +341,7 @@ class MaelstromUI final : public UI
         caption(326, y, "GRIT", 11);
         const auto &material = gritty ? toggleRight : toggleLeft;
         if (material.isValid())
-            image(material, 224, y - 30, 72, 59);
+            image(material, gritty ? 232 : 224, y - 30, 72, 59);
     }
 
     DGL_NAMESPACE::NanoImage enclosure;

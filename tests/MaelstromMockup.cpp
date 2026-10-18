@@ -289,7 +289,7 @@ class MaelstromMockup final : public UI
     {
         caption(194, MaelstromModeY, "SMOOTH", 11);
         caption(326, MaelstromModeY, "GRIT", 11);
-        image(grit ? toggleRight : toggleLeft, 224, MaelstromModeY - 30, 72, 59);
+        image(grit ? toggleRight : toggleLeft, grit ? 232 : 224, MaelstromModeY - 30, 72, 59);
     }
 
     NanoImage enclosure, knobMaterial, footMaterial, ledOff, ledOn, toggleLeft, toggleRight;

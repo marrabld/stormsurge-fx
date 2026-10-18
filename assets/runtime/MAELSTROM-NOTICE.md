@@ -48,28 +48,37 @@ Originals, all unchanged and gitignored:
 | `ui/textures/LED_off-v01.png` | `cac522e6586f3c9cad9fb9cf4af2ef017dc0038695317b9139740ee77f61` | LED-off source |
 | `ui/textures/Toggle_on-v01.png` | `2b8407945f6ae3fcabad533342e587537b97ea77b727d277822beb3858151a09` | Toggle-left source |
 
-The prepared PNGs use a 20% magenta key and a two-pixel alpha erosion to reduce
-the JPEG/key-colour fringe. `maelstrom-led-on.png` is the 581x582 crop at
-`+1509+165` from the sheet; `maelstrom-toggle-right.png` is the 180-degree
-rotation of the left position. The two switch images are named left/right here
-because their physical orientation, not an electrical on/off function, is what
-the pedal UI displays. LED states are separate so effect bypass can change the
-light without repainting the artwork.
+The prepared PNGs use a 20% magenta key, a two-pixel alpha erosion, transparent
+pixel decontamination and Lanczos downsampling to reduce the colored fringe and
+minimize aliasing at the displayed size. `maelstrom-led-on.png` is the 581x582
+crop at `+1509+165` from the sheet. The toggle-left asset comes from the isolated
+PNG; toggle-right is the second physical position cropped at `+1515+1025` from
+the sheet. Their source socket centers differ, so at the 72x59 display size the
+UI shifts the right image by eight pixels to keep the pivot stationary while the
+lever moves. The files are named
+left/right because their physical orientation, not an electrical on/off
+function, is what the pedal UI displays. LED states are separate so effect bypass
+can change the light without repainting the artwork.
 
 Regenerate from the local originals with ImageMagick:
 
 ```sh
 magick assets/ui/textures/LED_off-v01.png -alpha set -fuzz 20% \
   -transparent '#ff00ff' -channel A -morphology Erode Disk:2 +channel \
+  -channel RGB -fx 'a==0?0:u' +channel -filter Lanczos -resize 144x144 -strip \
   assets/runtime/maelstrom-led-off.png
 magick assets/ui/textures/LED_and_Toggle-v01.jpeg -crop 581x582+1509+165 +repage \
   -alpha set -fuzz 20% -transparent '#ff00ff' -channel A \
-  -morphology Erode Disk:2 +channel assets/runtime/maelstrom-led-on.png
+  -morphology Erode Disk:2 +channel -channel RGB -fx 'a==0?0:u' +channel \
+  -filter Lanczos -resize 144x144 -strip assets/runtime/maelstrom-led-on.png
 magick assets/ui/textures/Toggle_on-v01.png -alpha set -fuzz 20% \
   -transparent '#ff00ff' -channel A -morphology Erode Disk:2 +channel \
+  -channel RGB -fx 'a==0?0:u' +channel -filter Lanczos -resize 216x176 -strip \
   assets/runtime/maelstrom-toggle-left.png
-magick assets/runtime/maelstrom-toggle-left.png -rotate 180 \
-  assets/runtime/maelstrom-toggle-right.png
+magick assets/ui/textures/LED_and_Toggle-v01.jpeg -crop 714x583+1515+1025 +repage \
+  -alpha set -fuzz 20% -transparent '#ff00ff' -channel A \
+  -morphology Erode Disk:2 +channel -channel RGB -fx 'a==0?0:u' +channel \
+  -filter Lanczos -resize 216x176 -strip assets/runtime/maelstrom-toggle-right.png
 ```
 
 CMake embeds the prepared PNGs; no source artwork is read at runtime. This notice
