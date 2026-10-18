@@ -113,7 +113,7 @@ struct KnobPosition {
 };
 inline constexpr double PreviewHeight = 900;
 inline constexpr double PreviewFootY = 756;
-inline constexpr double PreviewModeTop = 670;
+inline constexpr double PreviewModeTop = 658;
 inline constexpr double PreviewMonitorTop = 823;
 inline constexpr std::array<KnobPosition, 8> previewKnobs{{
     {Time, 155, 280},
