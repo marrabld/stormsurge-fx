@@ -36,6 +36,11 @@ class PreviewUI final : public UI
         knobMaterial = createImageFromMemory(previewKnobPng, sizeof(previewKnobPng), 0);
         footswitchMaterial =
             createImageFromMemory(previewFootswitchPng, sizeof(previewFootswitchPng), 0);
+        ledOff = createImageFromMemory(previewLedOffPng, sizeof(previewLedOffPng), 0);
+        ledOn = createImageFromMemory(previewLedOnPng, sizeof(previewLedOnPng), 0);
+        toggleLeft = createImageFromMemory(previewToggleLeftPng, sizeof(previewToggleLeftPng), 0);
+        toggleRight =
+            createImageFromMemory(previewToggleRightPng, sizeof(previewToggleRightPng), 0);
         if (standalone)
             getWindow().setIgnoringKeyRepeat(true);
         for (std::uint32_t i = 0; i < PreviewParameterCount; ++i)
@@ -49,7 +54,9 @@ class PreviewUI final : public UI
 #ifdef STORMSURGE_GUI_HARNESS
     bool exerciseControls()
     {
-        if (!enclosure.isValid() || !knobMaterial.isValid() || !footswitchMaterial.isValid())
+        if (!enclosure.isValid() || !knobMaterial.isValid() || !footswitchMaterial.isValid() ||
+            !ledOff.isValid() || !ledOn.isValid() || !toggleLeft.isValid() ||
+            !toggleRight.isValid())
             return false;
         // Dispatch real widget events without opening an audio device.
         const double scale = std::min(getWidth() / 520.0, getHeight() / PreviewHeight);
@@ -433,6 +440,14 @@ class PreviewUI final : public UI
     void drawEffectLed(bool enabled)
     {
         const float x = 260, y = PreviewFootY - 47;
+        const auto &material = enabled ? ledOn : ledOff;
+        if (material.isValid()) {
+            beginPath();
+            rect(x - 18, y - 18, 36, 36);
+            fillPaint(imagePattern(x - 18, y - 18, 36, 36, 0, material, 1));
+            fill();
+            return;
+        }
         if (enabled) {
             beginPath();
             circle(x, y, 14);
@@ -467,6 +482,17 @@ class PreviewUI final : public UI
 
     void drawSyncToggle(bool enabled)
     {
+        // Both images share the same pivot; the mirrored state is offset because
+        // the pivot is not at the center of the transparent image canvas.
+        const auto &material = enabled ? toggleRight : toggleLeft;
+        if (material.isValid()) {
+            const float x = enabled ? 264 : 256;
+            beginPath();
+            rect(x, 88, 54, 44);
+            fillPaint(imagePattern(x, 88, 54, 44, 0, material, 1));
+            fill();
+            return;
+        }
         circleFill(284, 113, 15, Color(3, 11, 15, 0.6f));
         beginPath();
         for (int corner = 0; corner < 6; ++corner) {
@@ -689,6 +715,7 @@ class PreviewUI final : public UI
     DGL_NAMESPACE::NanoImage enclosure;
     DGL_NAMESPACE::NanoImage knobMaterial;
     DGL_NAMESPACE::NanoImage footswitchMaterial;
+    DGL_NAMESPACE::NanoImage ledOff, ledOn, toggleLeft, toggleRight;
     std::array<float, PreviewParameterCount> values{};
     bool monitor = false;
     int dragging = -1;

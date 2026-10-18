@@ -44,7 +44,7 @@ SHA256, generation/reuse record and regeneration command. CMake copies this noti
 to the development binary notices and mockup notices. The Maelstrom artwork is
 not part of Undertow's binary packages.
 
-## Maelstrom LED and toggle controls, issue #34
+## Maelstrom and Undertow LED/toggle controls, issues #34 and #36
 
 On 2026-10-18 the maintainer confirmed the LED/toggle artwork was generated with
 Gemini Nano Banana using a personal Gmail account and approved its use in the
@@ -53,8 +53,10 @@ reference material was used. No exact model revision or generation date is known
 The original files remain unchanged and gitignored. Four prepared derivatives are
 embedded in Maelstrom: lit/unlit LED states and left/right toggle states. Both
 toggle images come from the isolated toggle PNG; the right position mirrors the
-left artwork, and the UI offsets it so the socket stays fixed. The public project
-and plugin use is approved to the extent applicable rights allow;
+left artwork, and the UI offsets it so the socket stays fixed. These prepared
+assets are used by Maelstrom's Smooth/Grit control and Undertow Preview's Sync
+control and effect-status LED. The public project and plugin use is approved to
+the extent applicable rights allow;
 this does not assert exclusive ownership or guaranteed third-party clearance.
 See `runtime/MAELSTROM-NOTICE.md` for hashes, preparation details and the notice
 copied with development binaries.

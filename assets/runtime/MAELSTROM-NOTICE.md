@@ -82,5 +82,6 @@ magick assets/ui/textures/Toggle_on-v01.png -flop -alpha set -fuzz 20% \
 ```
 
 CMake embeds the prepared PNGs; no source artwork is read at runtime. This notice
-is copied alongside development binaries and the display-only mockup. Maelstrom
-artwork is not included in Undertow's binary packages.
+is copied alongside development binaries and the display-only mockup. The toggle
+and LED assets are shared with Undertow Preview for its Sync control and effect
+status indicator; they do not add Maelstrom processing or controls to Undertow.

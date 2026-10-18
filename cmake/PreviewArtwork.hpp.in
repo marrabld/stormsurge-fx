@@ -6,4 +6,8 @@ namespace stormsurge
 inline constexpr unsigned char previewEnclosurePng[]{@artwork_bytes@};
 inline constexpr unsigned char previewKnobPng[]{@knob_bytes@};
 inline constexpr unsigned char previewFootswitchPng[]{@footswitch_bytes@};
+inline constexpr unsigned char previewLedOffPng[]{@led_off_bytes@};
+inline constexpr unsigned char previewLedOnPng[]{@led_on_bytes@};
+inline constexpr unsigned char previewToggleLeftPng[]{@toggle_left_bytes@};
+inline constexpr unsigned char previewToggleRightPng[]{@toggle_right_bytes@};
 }
