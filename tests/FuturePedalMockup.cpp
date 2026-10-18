@@ -283,8 +283,8 @@ int main(int argc, char **argv)
     }
     selectedPedal = std::strcmp(argv[1], "whitecap") == 0 ? Pedal::Whitecap : Pedal::Riptide;
     const bool view = argc == 3 && std::strcmp(argv[2], "--view") == 0;
-    const bool small = argc == 3 && std::strcmp(argv[2], "--small") == 0;
-    if (argc == 3 && !view && !small) {
+    const bool minimumSize = argc == 3 && std::strcmp(argv[2], "--small") == 0;
+    if (argc == 3 && !view && !minimumSize) {
         std::fprintf(stderr, "Usage: future_pedal_mockup <whitecap|riptide> [--view|--small]\n");
         return 1;
     }
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
                       nullptr);
     editor.setWindowTitle(selectedPedal == Pedal::Whitecap ? "Whitecap concept / no audio"
                                                            : "Riptide concept / no audio");
-    if (small)
+    if (minimumSize)
         mockup->setSize(390, 510);
     editor.setWindowVisible(true);
     editor.focus();
@@ -306,7 +306,7 @@ int main(int argc, char **argv)
     bool aspect = false;
     editor.getGeometryConstraints(width, height, aspect);
     if (width != 390 || height != 510 || !aspect ||
-        (small && (editor.getWidth() != 390 || editor.getHeight() != 510))) {
+        (minimumSize && (editor.getWidth() != 390 || editor.getHeight() != 510))) {
         std::fprintf(stderr, "FAIL: concept mockup geometry\n");
         return 1;
     }
