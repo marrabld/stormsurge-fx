@@ -439,12 +439,12 @@ class PreviewUI final : public UI
   private:
     void drawEffectLed(bool enabled)
     {
-        const float x = 260, y = PreviewFootY - 47;
+        const float x = 260, y = PreviewFootY - 56;
         const auto &material = enabled ? ledOn : ledOff;
         if (material.isValid()) {
             beginPath();
-            rect(x - 18, y - 18, 36, 36);
-            fillPaint(imagePattern(x - 18, y - 18, 36, 36, 0, material, 1));
+            rect(x - 14, y - 14, 28, 28);
+            fillPaint(imagePattern(x - 14, y - 14, 28, 28, 0, material, 1));
             fill();
             return;
         }
