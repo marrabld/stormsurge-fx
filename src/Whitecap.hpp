@@ -16,6 +16,7 @@ struct WhitecapParameters {
     double mix = 0.20;
     double widthDegrees = 20.0;
     WhitecapMode mode = WhitecapMode::Chorus;
+    bool bypass = false;
 };
 
 // Host-independent stereo modulation core. prepare() allocates off the audio callback.
@@ -48,7 +49,7 @@ class Whitecap
     WhitecapParameters parameters;
     std::array<std::vector<double>, 2> buffers;
     std::array<Smoother, 4> controls;
-    Smoother modeBlend;
+    Smoother modeBlend, bypassBlend;
     std::size_t write = 0;
     double sampleRate = 48000.0;
     double phase = 0.0;

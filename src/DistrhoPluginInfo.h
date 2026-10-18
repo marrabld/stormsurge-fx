@@ -11,6 +11,10 @@
 // Pinned DPF's AU metadata exporter reuses this name even without a CLAP target.
 #define DISTRHO_PLUGIN_CLAP_ID "org.stormsurgefx.undertow-preview.au"
 #endif
+#elif defined(STORMSURGE_WHITECAP)
+#define DISTRHO_PLUGIN_NAME "Whitecap"
+#define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/whitecap"
+#define DISTRHO_PLUGIN_UNIQUE_ID UtW0
 #elif defined(STORMSURGE_MAELSTROM)
 // Separate identity from Undertow Preview: existing projects must never acquire
 // an overdrive, and saved Maelstrom settings must not disturb them.

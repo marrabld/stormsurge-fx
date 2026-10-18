@@ -121,6 +121,13 @@ static void centerDelayAndModes()
         process(effect, rateInput, rateOutput, 0, static_cast<std::uint32_t>(rateInput[0].size()));
         near(rateOutput[0][expected], 1.0, 1.0e-7, "Centre delay changed with sample rate");
     }
+
+    p.bypass = true;
+    effect.prepare(rate, p);
+    auto bypassOutput = signal(input[0].size());
+    process(effect, input, bypassOutput, 0, static_cast<std::uint32_t>(input[0].size()));
+    require(bypassOutput[0] == input[0] && bypassOutput[1] == input[1],
+            "Bypass must return the unprocessed input");
 }
 
 static void stereoWidthAndModulation()

@@ -84,6 +84,7 @@ void Whitecap::reset() noexcept
     controls[2].snap(parameters.mix);
     controls[3].snap(parameters.widthDegrees);
     modeBlend.snap(parameters.mode == WhitecapMode::Vibrato ? 1.0 : 0.0);
+    bypassBlend.snap(parameters.bypass ? 1.0 : 0.0);
 }
 
 void Whitecap::setParameters(const WhitecapParameters &p) noexcept
@@ -94,6 +95,7 @@ void Whitecap::setParameters(const WhitecapParameters &p) noexcept
     controls[2].set(parameters.mix, smoothFrames);
     controls[3].set(parameters.widthDegrees, smoothFrames);
     modeBlend.set(parameters.mode == WhitecapMode::Vibrato ? 1.0 : 0.0, smoothFrames);
+    bypassBlend.set(parameters.bypass ? 1.0 : 0.0, smoothFrames);
 }
 
 double Whitecap::read(std::size_t channel, double delaySamples) const noexcept
@@ -119,6 +121,7 @@ void Whitecap::process(const float *const *inputs, float *const *outputs,
         const double mix = controls[2].tick();
         const double width = controls[3].tick() * std::numbers::pi / 180.0;
         const double vibrato = modeBlend.tick();
+        const double bypass = bypassBlend.tick();
         const std::array<double, 2> input{std::isfinite(inputs[0][frame]) ? inputs[0][frame] : 0.0,
                                           std::isfinite(inputs[1][frame]) ? inputs[1][frame] : 0.0};
 
@@ -131,7 +134,8 @@ void Whitecap::process(const float *const *inputs, float *const *outputs,
             const double delay = centreDelayMs * sampleRate / 1000.0 + modulation;
             const double wet = read(channel, delay);
             const double chorus = input[channel] * (1.0 - mix) + wet * mix;
-            const double output = chorus * (1.0 - vibrato) + wet * vibrato;
+            const double effected = chorus * (1.0 - vibrato) + wet * vibrato;
+            const double output = effected * (1.0 - bypass) + input[channel] * bypass;
             outputs[channel][frame] = static_cast<float>(output);
         }
 

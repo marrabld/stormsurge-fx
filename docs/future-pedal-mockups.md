@@ -31,4 +31,5 @@ renders 30 frames and exits. `--small` repeats at the 390x510 minimum size. All
 state is local to the mockup; it is not saved.
 
 See [artwork provenance](../assets/runtime/FUTURE-PEDALS-NOTICE.md). The prepared
-images are used only by this concept harness, not by Undertow or Maelstrom plugins.
+images appear in this concept harness and Whitecap's VST3 editor, not in Undertow or
+Maelstrom plugins.

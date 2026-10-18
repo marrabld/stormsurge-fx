@@ -27,12 +27,14 @@ if(APPLE)
     set(foundation_formats vst3)
     set(preview_formats vst3 au)
     set(maelstrom_formats vst3 au)
+    set(whitecap_formats "")
 else()
     set(foundation_formats vst3 jack)
     set(preview_formats vst3 jack)
     # Maelstrom's first integration slice is plugin-only: its bypass has no
     # monitoring gate, so a standalone app would open a device with no consent UI.
     set(maelstrom_formats vst3)
+    set(whitecap_formats vst3)
 endif()
 
 # JACK-only standalone: never silently open a fallback native audio device.
@@ -74,11 +76,27 @@ target_compile_definitions(Maelstrom PUBLIC STORMSURGE_MAELSTROM)
 include(cmake/MaelstromArtwork.cmake)
 target_include_directories(Maelstrom-ui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 include(cmake/ConceptMockupArtwork.cmake)
+
+# Whitecap's first plugin slice targets Bitwig on Linux and VST3 hosts on Windows.
+# Its DSP remains independent; no standalone device or Mac plugin is added here.
+if(whitecap_formats)
+    dpf_add_plugin(Whitecap
+        TARGETS ${whitecap_formats}
+        UI_TYPE opengl
+        FILES_DSP src/WhitecapPlugin.cpp src/Whitecap.cpp
+        FILES_UI src/WhitecapEditor.cpp)
+    target_include_directories(Whitecap PUBLIC src)
+    target_compile_definitions(Whitecap PUBLIC STORMSURGE_WHITECAP)
+    target_include_directories(Whitecap-ui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+endif()
 # DPF's bundled self-test includes its POSIX thread helper, unavailable to MSVC.
 # Our headless processor tests still run on both platforms.
 if(NOT WIN32)
     target_compile_definitions(UndertowFoundation PUBLIC DPF_RUNTIME_TESTING)
     target_compile_definitions(UndertowPreview PUBLIC DPF_RUNTIME_TESTING)
+    if(TARGET Whitecap)
+        target_compile_definitions(Whitecap PUBLIC DPF_RUNTIME_TESTING)
+    endif()
 endif()
 
 # At this pinned DPF revision the OpenGL helper treats generator-expression
@@ -102,6 +120,10 @@ file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/bin/notices")
 configure_file(assets/runtime/NOTICE.md "${CMAKE_BINARY_DIR}/bin/notices/Undertow-artwork.md" COPYONLY)
 configure_file(assets/runtime/MAELSTROM-NOTICE.md
     "${CMAKE_BINARY_DIR}/bin/notices/Maelstrom-artwork.md" COPYONLY)
+if(TARGET Whitecap)
+    configure_file(assets/runtime/FUTURE-PEDALS-NOTICE.md
+        "${CMAKE_BINARY_DIR}/bin/notices/Whitecap-artwork.md" COPYONLY)
+endif()
 configure_file(external/dpf/LICENSE "${CMAKE_BINARY_DIR}/bin/notices/DPF-LICENSE.txt" COPYONLY)
 configure_file(external/dpf/dgl/src/pugl-upstream/COPYING "${CMAKE_BINARY_DIR}/bin/notices/Pugl-COPYING.txt" COPYONLY)
 configure_file(external/dpf/dgl/src/nanovg/LICENSE.txt "${CMAKE_BINARY_DIR}/bin/notices/NanoVG-LICENSE.txt" COPYONLY)
@@ -147,12 +169,26 @@ if(BUILD_TESTING)
         target_include_directories(vst3_loader_tests PRIVATE external/dpf/distrho/src)
         target_link_libraries(vst3_loader_tests PRIVATE ${CMAKE_DL_LIBS})
         add_dependencies(vst3_loader_tests UndertowPreview-vst3)
+        if(TARGET Whitecap)
+            add_dependencies(vst3_loader_tests Whitecap-vst3)
+        endif()
         if(WIN32)
             set(preview_module "${CMAKE_BINARY_DIR}/bin/UndertowPreview.vst3/Contents/x86_64-win/UndertowPreview.vst3")
         else()
             set(preview_module "${CMAKE_BINARY_DIR}/bin/UndertowPreview.vst3/Contents/x86_64-linux/UndertowPreview.so")
         endif()
         add_test(NAME preview_vst3_loader COMMAND vst3_loader_tests "${preview_module}" "Undertow Preview" 0.4.0)
+        if(TARGET Whitecap)
+            if(WIN32)
+                set(whitecap_module
+                    "${CMAKE_BINARY_DIR}/bin/Whitecap.vst3/Contents/x86_64-win/Whitecap.vst3")
+            else()
+                set(whitecap_module
+                    "${CMAKE_BINARY_DIR}/bin/Whitecap.vst3/Contents/x86_64-linux/Whitecap.so")
+            endif()
+            add_test(NAME whitecap_vst3_loader
+                COMMAND vst3_loader_tests "${whitecap_module}" "Whitecap" 0.1.0)
+        endif()
         if(WIN32)
             set(maelstrom_module
                 "${CMAKE_BINARY_DIR}/bin/Maelstrom.vst3/Contents/x86_64-win/Maelstrom.vst3")
@@ -169,6 +205,17 @@ if(BUILD_TESTING)
     add_executable(whitecap_tests tests/WhitecapTests.cpp src/Whitecap.cpp)
     target_include_directories(whitecap_tests PRIVATE src)
     add_test(NAME whitecap_core COMMAND whitecap_tests)
+    if(TARGET Whitecap)
+        add_executable(whitecap_plugin_tests tests/WhitecapPluginTests.cpp
+            src/WhitecapPlugin.cpp src/Whitecap.cpp
+            external/dpf/distrho/src/DistrhoPlugin.cpp)
+        target_include_directories(whitecap_plugin_tests PRIVATE src external/dpf/distrho)
+        target_compile_definitions(whitecap_plugin_tests PRIVATE STORMSURGE_WHITECAP)
+        if(NOT WIN32)
+            target_link_libraries(whitecap_plugin_tests PRIVATE ${CMAKE_DL_LIBS})
+        endif()
+        add_test(NAME whitecap_plugin COMMAND whitecap_plugin_tests vst3)
+    endif()
     add_executable(maelstrom_tests tests/MaelstromTests.cpp src/MaelstromOverdrive.cpp)
     target_include_directories(maelstrom_tests PRIVATE src)
     add_test(NAME maelstrom_overdrive COMMAND maelstrom_tests)
@@ -212,6 +259,14 @@ if(BUILD_TESTING)
     target_include_directories(preview_gui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
     target_compile_definitions(preview_gui PRIVATE STORMSURGE_PREVIEW STORMSURGE_GUI_HARNESS)
     target_link_libraries(preview_gui PRIVATE dgl-opengl)
+    if(TARGET Whitecap)
+        add_executable(whitecap_gui tests/WhitecapGuiSmoke.cpp src/WhitecapEditor.cpp
+            external/dpf/distrho/src/DistrhoUI.cpp)
+        target_include_directories(whitecap_gui PRIVATE src external/dpf/distrho
+            "${CMAKE_CURRENT_BINARY_DIR}/generated")
+        target_compile_definitions(whitecap_gui PRIVATE STORMSURGE_WHITECAP STORMSURGE_GUI_HARNESS)
+        target_link_libraries(whitecap_gui PRIVATE dgl-opengl)
+    endif()
     # Display-only prototype, not a plugin/standalone processor or release payload.
     configure_file(assets/runtime/MAELSTROM-NOTICE.md
         "${CMAKE_CURRENT_BINARY_DIR}/mockup-notices/Maelstrom-artwork.md" COPYONLY)
@@ -234,12 +289,18 @@ if(BUILD_TESTING)
         # no-audio harnesses compile DistrhoUI.cpp directly instead.
         target_sources(foundation_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         target_sources(preview_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
+        if(TARGET whitecap_gui)
+            target_sources(whitecap_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
+        endif()
         target_sources(maelstrom_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         target_sources(future_pedal_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
     endif()
     if(NOT WIN32)
         target_link_libraries(foundation_gui PRIVATE ${CMAKE_DL_LIBS})
         target_link_libraries(preview_gui PRIVATE ${CMAKE_DL_LIBS})
+        if(TARGET whitecap_gui)
+            target_link_libraries(whitecap_gui PRIVATE ${CMAKE_DL_LIBS})
+        endif()
         target_link_libraries(maelstrom_mockup PRIVATE ${CMAKE_DL_LIBS})
         target_link_libraries(future_pedal_mockup PRIVATE ${CMAKE_DL_LIBS})
     endif()
