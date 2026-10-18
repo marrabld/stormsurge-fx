@@ -29,6 +29,8 @@ class WhitecapUI final : public UI
         enclosure = createImageFromMemory(whitecapEnclosurePng, sizeof(whitecapEnclosurePng), 0);
         knobMaterial = createImageFromMemory(previewKnobPng, sizeof(previewKnobPng), 0);
         footswitch = createImageFromMemory(previewFootswitchPng, sizeof(previewFootswitchPng), 0);
+        ledOff = createImageFromMemory(previewLedOffPng, sizeof(previewLedOffPng), 0);
+        ledOn = createImageFromMemory(previewLedOnPng, sizeof(previewLedOnPng), 0);
         toggleLeft =
             createImageFromMemory(maelstromToggleLeftPng, sizeof(maelstromToggleLeftPng), 0);
         toggleRight =
@@ -45,7 +47,8 @@ class WhitecapUI final : public UI
     bool exerciseControls()
     {
         if (!enclosure.isValid() || !knobMaterial.isValid() || !footswitch.isValid() ||
-            !toggleLeft.isValid() || !toggleRight.isValid())
+            !ledOff.isValid() || !ledOn.isValid() || !toggleLeft.isValid() ||
+            !toggleRight.isValid())
             return false;
         const float factor = drawingScale();
         const double dx = (getWidth() - WhitecapUiWidth * factor) * 0.5;
@@ -280,16 +283,11 @@ class WhitecapUI final : public UI
 
     void drawLed()
     {
-        const float y = static_cast<float>(WhitecapLedY);
-        beginPath();
-        circle(260, y, 11);
-        fillPaint(radialGradient(257, y - 3, 1, 11,
-                                 enabled() ? Color(170, 255, 223) : Color(62, 105, 96),
-                                 enabled() ? Color(20, 131, 115) : Color(25, 57, 55)));
-        fill();
+        const auto &material = enabled() ? ledOn : ledOff;
+        drawImage(material, 246, static_cast<float>(WhitecapLedY) - 14, 28, 28);
     }
 
-    NanoImage enclosure, knobMaterial, footswitch, toggleLeft, toggleRight;
+    NanoImage enclosure, knobMaterial, footswitch, ledOff, ledOn, toggleLeft, toggleRight;
     std::array<float, WhitecapParameterCount> values{};
     int dragging = -1;
     double lastY = 0, position = 0;
