@@ -58,12 +58,13 @@ cmake --build --preset linux-debug --target Whitecap-vst3
 
 The bundle is at `build/linux-debug/bin/Whitecap.vst3`. The project does not install
 it. To audition it in Bitwig, place that bundle in a VST3 directory Bitwig scans and
-rescan plugins. The editor is resizable, with a 390x510 minimum size. The plugin has
+rescan plugins. The editor is resizable, with a 390x525 minimum size. The plugin has
 not been verified in Bitwig by the build or tests; the maintainer's private listening
 check is still outstanding.
 
-The following is a capture from the no-audio editor harness at its defaults, not a
-Bitwig screenshot or playback result:
+The following is a capture from the no-audio editor harness at its defaults. The
+four knobs are arranged in aligned rows, and the editor is slightly taller than
+the other pedals; this is not a Bitwig screenshot or playback result:
 
 ![Whitecap VST3 editor preview with asymmetrical Rate, Depth, Mix and Width controls](images/whitecap-vst3-editor.png)
 

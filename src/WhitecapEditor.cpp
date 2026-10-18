@@ -25,7 +25,7 @@ class WhitecapUI final : public UI
     WhitecapUI() : UI(static_cast<uint32_t>(WhitecapUiWidth), static_cast<uint32_t>(WhitecapHeight))
     {
         loadSharedResources();
-        setGeometryConstraints(390, 510, true);
+        setGeometryConstraints(390, 525, true);
         enclosure = createImageFromMemory(whitecapEnclosurePng, sizeof(whitecapEnclosurePng), 0);
         knobMaterial = createImageFromMemory(previewKnobPng, sizeof(previewKnobPng), 0);
         footswitch = createImageFromMemory(previewFootswitchPng, sizeof(previewFootswitchPng), 0);
@@ -85,7 +85,7 @@ class WhitecapUI final : public UI
         return true;
     }
 
-    void resizeForTest() { setSize(390, 510); }
+    void resizeForTest() { setSize(390, 525); }
 #endif
 
   protected:
@@ -112,7 +112,7 @@ class WhitecapUI final : public UI
         drawModeSwitch();
         drawLed();
         drawImage(footswitch, 218, static_cast<float>(WhitecapFootY) - 42, 84, 84);
-        caption(260, 657, enabled() ? "EFFECT ON" : "BYPASSED", 10);
+        caption(260, 687, enabled() ? "EFFECT ON" : "BYPASSED", 10);
     }
 
     bool onMouse(const MouseEvent &event) override

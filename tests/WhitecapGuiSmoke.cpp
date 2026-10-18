@@ -59,7 +59,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    const uint expectedWidth = 390, expectedHeight = 510;
+    const uint expectedWidth = 390, expectedHeight = 525;
     if (minimumSize &&
         (editor.getWidth() != expectedWidth || editor.getHeight() != expectedHeight)) {
         std::fprintf(stderr, "FAIL: minimum-size Whitecap editor geometry\n");

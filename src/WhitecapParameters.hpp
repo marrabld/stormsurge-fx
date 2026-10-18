@@ -59,10 +59,10 @@ inline float denormalizedWhitecap(std::uint32_t index, float position) noexcept
 }
 
 inline constexpr double WhitecapUiWidth = 520;
-inline constexpr double WhitecapHeight = 680;
-inline constexpr double WhitecapModeY = 510;
-inline constexpr double WhitecapFootY = 604;
-inline constexpr double WhitecapLedY = 558;
+inline constexpr double WhitecapHeight = 700;
+inline constexpr double WhitecapModeY = 530;
+inline constexpr double WhitecapFootY = 625;
+inline constexpr double WhitecapLedY = 580;
 
 struct WhitecapKnobPosition {
     std::uint32_t parameter;
@@ -70,10 +70,10 @@ struct WhitecapKnobPosition {
     const char *label;
 };
 inline constexpr std::array<WhitecapKnobPosition, 4> whitecapKnobs{{
-    {WhitecapRate, 145, 215, "RATE"},
-    {WhitecapDepth, 370, 270, "DEPTH"},
-    {WhitecapMix, 165, 390, "MIX"},
-    {WhitecapWidth, 355, 430, "WIDTH"},
+    {WhitecapRate, 155, 235, "RATE"},
+    {WhitecapDepth, 365, 235, "DEPTH"},
+    {WhitecapMix, 155, 395, "MIX"},
+    {WhitecapWidth, 365, 395, "WIDTH"},
 }};
 
 struct WhitecapPoint {
