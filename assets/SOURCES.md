@@ -51,9 +51,9 @@ Gemini Nano Banana using a personal Gmail account and approved its use in the
 project. The source sheet used the assistant-provided prompt; no third-party
 reference material was used. No exact model revision or generation date is known.
 The original files remain unchanged and gitignored. Four prepared derivatives are
-embedded in Maelstrom: lit/unlit LED states and left/right toggle states. The
-toggle states come from the matching left/right illustrations on the source
-sheet; the UI aligns the two images by their socket centers. The public project
+embedded in Maelstrom: lit/unlit LED states and left/right toggle states. Both
+toggle images come from the isolated toggle PNG; the right position mirrors the
+left artwork, and the UI offsets it so the socket stays fixed. The public project
 and plugin use is approved to the extent applicable rights allow;
 this does not assert exclusive ownership or guaranteed third-party clearance.
 See `runtime/MAELSTROM-NOTICE.md` for hashes, preparation details and the notice

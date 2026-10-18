@@ -340,8 +340,11 @@ class MaelstromUI final : public UI
         caption(194, y, "SMOOTH", 11);
         caption(326, y, "GRIT", 11);
         const auto &material = gritty ? toggleRight : toggleLeft;
-        if (material.isValid())
-            image(material, gritty ? 232 : 224, y - 30, 72, 59);
+        if (material.isValid()) {
+            // The mirror axis is the socket, not the image canvas center.
+            const double x = gritty ? MaelstromToggleRightX : MaelstromToggleLeftX;
+            image(material, x, y - 30, 72, 59);
+        }
     }
 
     DGL_NAMESPACE::NanoImage enclosure;

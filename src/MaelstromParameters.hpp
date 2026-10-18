@@ -49,6 +49,8 @@ inline float sanitizeMaelstrom(std::uint32_t index, float value) noexcept
 }
 
 inline constexpr double MaelstromModeY = 280;
+inline constexpr double MaelstromToggleLeftX = 224;
+inline constexpr double MaelstromToggleRightX = 235;
 
 inline float normalizedMaelstrom(std::uint32_t index, float value) noexcept
 {

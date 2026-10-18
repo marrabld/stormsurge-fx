@@ -52,10 +52,10 @@ The prepared PNGs use a 20% magenta key, a two-pixel alpha erosion, transparent
 pixel decontamination and Lanczos downsampling to reduce the colored fringe and
 minimize aliasing at the displayed size. `maelstrom-led-on.png` is the 581x582
 crop at `+1509+165` from the sheet. The toggle-left asset comes from the isolated
-PNG; toggle-right is the second physical position cropped at `+1515+1025` from
-the sheet. Their source socket centers differ, so at the 72x59 display size the
-UI shifts the right image by eight pixels to keep the pivot stationary while the
-lever moves. The files are named
+PNG; toggle-right is its horizontal mirror. The socket is not centered in the
+image canvas, so the UI shifts the mirrored state 11 pixels at the 72x59 display
+size, keeping the pivot stationary and giving a symmetrical horizontal throw.
+The files are named
 left/right because their physical orientation, not an electrical on/off
 function, is what the pedal UI displays. LED states are separate so effect bypass
 can change the light without repainting the artwork.
@@ -75,8 +75,8 @@ magick assets/ui/textures/Toggle_on-v01.png -alpha set -fuzz 20% \
   -transparent '#ff00ff' -channel A -morphology Erode Disk:2 +channel \
   -channel RGB -fx 'a==0?0:u' +channel -filter Lanczos -resize 216x176 -strip \
   assets/runtime/maelstrom-toggle-left.png
-magick assets/ui/textures/LED_and_Toggle-v01.jpeg -crop 714x583+1515+1025 +repage \
-  -alpha set -fuzz 20% -transparent '#ff00ff' -channel A \
+magick assets/ui/textures/Toggle_on-v01.png -flop -alpha set -fuzz 20% \
+  -transparent '#ff00ff' -channel A \
   -morphology Erode Disk:2 +channel -channel RGB -fx 'a==0?0:u' +channel \
   -filter Lanczos -resize 216x176 -strip assets/runtime/maelstrom-toggle-right.png
 ```
