@@ -61,6 +61,17 @@ this does not assert exclusive ownership or guaranteed third-party clearance.
 See `runtime/MAELSTROM-NOTICE.md` for hashes, preparation details and the notice
 copied with development binaries.
 
+## Whitecap and Riptide concept artwork, issue #42
+
+On 2026-10-18 the maintainer confirmed the Whitecap and Riptide face images were
+generated with Gemini Nano Banana from the assistant-provided prompts, without
+third-party image references, and approved prepared derivatives for public use
+under GPL-3.0-only to the extent applicable rights exist. The clipboard originals
+remain unchanged and gitignored. Their hashes, preparation steps and limits are in
+[`runtime/FUTURE-PEDALS-NOTICE.md`](runtime/FUTURE-PEDALS-NOTICE.md). The derivatives
+are used only by display-only mockups. No DSP or plugin work is authorized by this
+visual concept task.
+
 ## Undertow pedal concept
 
 - File: `concepts/undertow-pedal-v01.jpeg`

@@ -1,0 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Generated from prepared concept art. See assets/runtime/FUTURE-PEDALS-NOTICE.md.
+#pragma once
+namespace stormsurge
+{
+inline constexpr unsigned char whitecapEnclosurePng[]{@whitecap_bytes@};
+inline constexpr unsigned char riptideEnclosurePng[]{@riptide_bytes@};
+}

@@ -73,6 +73,7 @@ target_include_directories(Maelstrom PUBLIC src)
 target_compile_definitions(Maelstrom PUBLIC STORMSURGE_MAELSTROM)
 include(cmake/MaelstromArtwork.cmake)
 target_include_directories(Maelstrom-ui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+include(cmake/ConceptMockupArtwork.cmake)
 # DPF's bundled self-test includes its POSIX thread helper, unavailable to MSVC.
 # Our headless processor tests still run on both platforms.
 if(NOT WIN32)
@@ -217,17 +218,27 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_BINARY_DIR}/generated")
     target_compile_definitions(maelstrom_mockup PRIVATE STORMSURGE_GUI_HARNESS)
     target_link_libraries(maelstrom_mockup PRIVATE dgl-opengl)
+    configure_file(assets/runtime/FUTURE-PEDALS-NOTICE.md
+        "${CMAKE_CURRENT_BINARY_DIR}/concept-mockup-notices/Future-pedals-artwork.md" COPYONLY)
+    add_executable(future_pedal_mockup tests/FuturePedalMockup.cpp
+        external/dpf/distrho/src/DistrhoUI.cpp)
+    target_include_directories(future_pedal_mockup PRIVATE src external/dpf/distrho
+        "${CMAKE_CURRENT_BINARY_DIR}/generated")
+    target_compile_definitions(future_pedal_mockup PRIVATE STORMSURGE_GUI_HARNESS)
+    target_link_libraries(future_pedal_mockup PRIVATE dgl-opengl)
     if(APPLE)
         # DPF adds this Cocoa scale helper to plugin UI libraries, but these
         # no-audio harnesses compile DistrhoUI.cpp directly instead.
         target_sources(foundation_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         target_sources(preview_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         target_sources(maelstrom_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
+        target_sources(future_pedal_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
     endif()
     if(NOT WIN32)
         target_link_libraries(foundation_gui PRIVATE ${CMAKE_DL_LIBS})
         target_link_libraries(preview_gui PRIVATE ${CMAKE_DL_LIBS})
         target_link_libraries(maelstrom_mockup PRIVATE ${CMAKE_DL_LIBS})
+        target_link_libraries(future_pedal_mockup PRIVATE ${CMAKE_DL_LIBS})
     endif()
     # GUI smoke is intentionally explicit, since it needs a display/OpenGL context.
     # `UndertowFoundation selftest` uses generated data and never opens audio devices.
