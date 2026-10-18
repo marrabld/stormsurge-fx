@@ -257,6 +257,52 @@ static void test_drive_reaches_real_overdrive_at_normal_levels()
     }
 }
 
+static void test_grit_mode_is_distinct_and_ramped()
+{
+    const auto signal = [](int i) {
+        const double value = 0.2 * std::sin(2 * std::numbers::pi_v<double> * 220 * i / 48000);
+        return std::array<double, 2>{value, value};
+    };
+    MaelstromOverdrive smooth;
+    smooth.prepare(48000, {0.85, 0.5, 0.5, 1.0, true, false});
+    std::vector<double> smoothOutput;
+    for (int i = 0; i < 36000; ++i)
+        smoothOutput.push_back(smooth.processSample(signal(i))[0]);
+
+    MaelstromOverdrive steadyGrit;
+    steadyGrit.prepare(48000, {0.85, 0.5, 0.5, 1.0, true, true});
+    double steadyPrevious = 0, steadyStep = 0;
+    for (int i = 0; i < 2000; ++i) {
+        const double value = steadyGrit.processSample(signal(i))[0];
+        steadyStep = std::max(steadyStep, std::abs(value - steadyPrevious));
+        steadyPrevious = value;
+    }
+
+    MaelstromOverdrive gritty;
+    gritty.prepare(48000, {0.85, 0.5, 0.5, 1.0, true, false});
+    for (int i = 0; i < 24000; ++i)
+        gritty.processSample(signal(i));
+    gritty.setParameters({0.85, 0.5, 0.5, 1.0, true, true});
+    double previous = gritty.processSample(signal(24000))[0];
+    double transitionStep = 0;
+    for (int i = 24001; i < 26000; ++i) {
+        const double value = gritty.processSample(signal(i))[0];
+        require(std::isfinite(value) && std::abs(value) <= 1.01,
+                "Grit transition must remain finite and bounded");
+        transitionStep = std::max(transitionStep, std::abs(value - previous));
+        previous = value;
+    }
+    require(transitionStep <= steadyStep * 1.05,
+            "Changing clipping mode must not add a step beyond the signal's own slew");
+
+    double difference = 0;
+    for (int i = 26000; i < 36000; ++i) {
+        const double gritValue = gritty.processSample(signal(i))[0];
+        difference += std::abs(gritValue - smoothOutput[static_cast<std::size_t>(i)]);
+    }
+    require(difference / 10000 > 0.01, "Grit mode must be audibly distinct from Smooth");
+}
+
 static void test_tone_measurement_is_trustworthy()
 {
     // If the measuring instrument is wrong, every other spectral assertion in
@@ -537,6 +583,7 @@ int main()
     try {
         test_tone_measurement_is_trustworthy();
         test_drive_reaches_real_overdrive_at_normal_levels();
+        test_grit_mode_is_distinct_and_ramped();
         test_defaults_and_sanitisation();
         test_bypass_is_unity();
         test_engage_fade_has_no_discontinuity();

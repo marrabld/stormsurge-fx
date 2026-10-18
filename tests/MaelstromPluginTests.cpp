@@ -147,8 +147,13 @@ static void parameter_ranges_and_sanitisation(PluginExporter &plugin)
     require(plugin.getParameterValue(MaelstromBypass) == 0.0f, "Bypass must stay boolean");
     plugin.setParameterValue(MaelstromBypass, 1.0f);
     require(plugin.getParameterValue(MaelstromBypass) == 1.0f, "Bypass must reach the on state");
+    plugin.setParameterValue(MaelstromGrit, 0.4f);
+    require(plugin.getParameterValue(MaelstromGrit) == 0.0f, "Grit must stay boolean");
+    plugin.setParameterValue(MaelstromGrit, 1.0f);
+    require(plugin.getParameterValue(MaelstromGrit) == 1.0f, "Grit mode must be selectable");
     plugin.setParameterValue(Drive, maelstromSpecs[Drive].initial);
     plugin.setParameterValue(MaelstromBypass, 0.0f);
+    plugin.setParameterValue(MaelstromGrit, 0.0f);
 }
 
 static void bypass_is_unity_and_ignores_controls(PluginExporter &plugin)
@@ -294,9 +299,10 @@ static void hit_testing_follows_the_approved_layout()
             require(maelstromKnobAt(at(knob.x, knob.y)) == static_cast<int>(knob.parameter),
                     "Scaled knob hit test wrong");
         require(maelstromFootAt(at(260, MaelstromFootY)), "Scaled footswitch target wrong");
-        // The gap between the knob rows is empty face, not a hidden control.
-        require(!maelstromFootAt(at(260, 300)) && maelstromKnobAt(at(260, 300)) == -1,
-                "Empty face must not hit the footswitch or a knob");
+        require(maelstromModeAt(at(260, MaelstromModeY)), "Mode switch hit test wrong");
+        require(!maelstromFootAt(at(260, 330)) && maelstromKnobAt(at(260, 330)) == -1 &&
+                    !maelstromModeAt(at(260, 330)),
+                "Face below the mode switch must not hit another control");
         require(maelstromKnobAt(at(260, MaelstromFootY)) == -1,
                 "Footswitch area must not overlap a knob");
     }

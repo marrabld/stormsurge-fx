@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "src/DistrhoUIInternal.hpp"
+#include "MaelstromParameters.hpp"
 #include "PreviewArtwork.hpp"
 #include "MaelstromArtwork.hpp"
 #include "OpenGL.hpp"
@@ -38,6 +39,12 @@ class MaelstromMockup final : public UI
         loadSharedResources();
         setGeometryConstraints(390, 510, true);
         enclosure = createImageFromMemory(maelstromEnclosurePng, sizeof(maelstromEnclosurePng), 0);
+        ledOff = createImageFromMemory(maelstromLedOffPng, sizeof(maelstromLedOffPng), 0);
+        ledOn = createImageFromMemory(maelstromLedOnPng, sizeof(maelstromLedOnPng), 0);
+        toggleLeft =
+            createImageFromMemory(maelstromToggleLeftPng, sizeof(maelstromToggleLeftPng), 0);
+        toggleRight =
+            createImageFromMemory(maelstromToggleRightPng, sizeof(maelstromToggleRightPng), 0);
         knobMaterial = createImageFromMemory(previewKnobPng, sizeof(previewKnobPng), 0);
         footMaterial = createImageFromMemory(previewFootswitchPng, sizeof(previewFootswitchPng), 0);
         if (const char *path = std::getenv("STORMSURGE_CAPTURE"))
@@ -46,7 +53,9 @@ class MaelstromMockup final : public UI
 
     bool exerciseControls()
     {
-        if (!enclosure.isValid() || !knobMaterial.isValid() || !footMaterial.isValid())
+        if (!enclosure.isValid() || !knobMaterial.isValid() || !footMaterial.isValid() ||
+            !ledOff.isValid() || !ledOn.isValid() || !toggleLeft.isValid() ||
+            !toggleRight.isValid())
             return false;
         const auto initial = values;
         for (unsigned i = 0; i < knobs.size(); ++i) {
@@ -84,6 +93,12 @@ class MaelstromMockup final : public UI
         foot.pos = windowPoint(FootX, FootY);
         if (!onMouse(foot) || enabled || !onMouse(foot) || !enabled)
             return false;
+        MouseEvent mode;
+        mode.button = 1;
+        mode.press = true;
+        mode.pos = windowPoint(260, MaelstromModeY);
+        if (!onMouse(mode) || !grit || !onMouse(mode) || grit)
+            return false;
         values = initial;
         repaint();
         return true;
@@ -106,6 +121,7 @@ class MaelstromMockup final : public UI
         for (unsigned i = 0; i < knobs.size(); ++i)
             drawKnob(i);
         drawLed();
+        drawModeSwitch();
         image(footMaterial, FootX - 42, FootY - 42, 84, 84);
         caption(260, 582, enabled ? "EFFECT ON" : "BYPASSED", 12);
         caption(260, 611, "DRAG OR SCROLL / SHIFT FOR FINE", 10);
@@ -132,6 +148,11 @@ class MaelstromMockup final : public UI
         }
         if (distanceSquared(point, FootX, FootY) <= 42 * 42) {
             enabled = !enabled;
+            repaint();
+            return true;
+        }
+        if (maelstromModeAt({point.getX(), point.getY()})) {
+            grit = !grit;
             repaint();
             return true;
         }
@@ -260,22 +281,24 @@ class MaelstromMockup final : public UI
 
     void drawLed()
     {
-        beginPath();
-        circle(260, 447, 11);
-        fillPaint(linearGradient(250, 437, 269, 458, Color(9, 8, 8), Color(125, 116, 105)));
-        fill();
-        beginPath();
-        circle(260, 447, 7);
-        fillPaint(radialGradient(258, 445, 1, 8, enabled ? Color(255, 169, 99) : Color(74, 36, 27),
-                                 enabled ? Color(119, 29, 13) : Color(25, 14, 12)));
-        fill();
+        const auto &material = enabled ? ledOn : ledOff;
+        image(material, 236, 423, 48, 48);
     }
 
-    NanoImage enclosure, knobMaterial, footMaterial;
+    void drawModeSwitch()
+    {
+        caption(194, MaelstromModeY, "SMOOTH", 11);
+        caption(326, MaelstromModeY, "GRIT", 11);
+        const double x = grit ? MaelstromToggleRightX : MaelstromToggleLeftX;
+        image(grit ? toggleRight : toggleLeft, x, MaelstromModeY - 30, 72, 59);
+    }
+
+    NanoImage enclosure, knobMaterial, footMaterial, ledOff, ledOn, toggleLeft, toggleRight;
     std::array<float, 4> values{{0.1f, 0.5f, 0.5f, 0.75f}};
     int dragging = -1;
     double lastY = 0;
     bool enabled = true;
+    bool grit = false;
 };
 
 MaelstromMockup *mockup = nullptr;

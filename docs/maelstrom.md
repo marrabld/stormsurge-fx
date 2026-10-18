@@ -50,6 +50,7 @@ Percentages describe knob position, not the percentage of distortion or bass rem
 | Tight | 0–100%, initially 50% | Fuller low end through leaner, more percussive attack. It reduces bass before clipping, not just at the output. Maximum should remain useful for low-tuned riffs rather than simply making everything thin. |
 | Bite | 0–100%, initially 50% | Smoother edge through sharper pick definition. Avoid treating maximum as a request for unfiltered fizz. |
 | Level | Silence to +12 dB, initially 0 dB | Output gain after the tone/distortion stages. Boost drives the next amp harder; it is not a loudness-neutral control. |
+| Clip mode | Smooth by default; optional Grit | Smooth preserves the original `tanh` sound. Grit reaches saturation sooner with a firmer, still-bounded knee. It is an alternative to audition, not a promise of a better or genre-specific sound. |
 
 The approved +12 dB ceiling allows roughly four times the output amplitude from
 the Level stage. That can strongly change a downstream model's distortion and
@@ -252,10 +253,21 @@ engage-fade check also used an absolute sample-step limit that the clipped
 waveform's own slew exceeded; it now compares against the wet signal's own step
 size, which is what the fade is actually responsible for.
 
-**A SMOOTH/GRIT mode switch remains undecided.** The maintainer proposed one for
-harder clipping. The gain sweep suggests extending the range may already supply
-most of what it promised, since `tanh` reaches square-wave behaviour on its own.
-Do not add a second clipping curve until the extended range has been heard.
+## Optional Smooth/Grit mode, issue #34
+
+The maintainer asked for the option even if the extended Drive range proves
+sufficient. Smooth remains the default and retains the original `tanh` curve.
+Grit uses a firmer `0.90 * tanh(1.8 * x)` curve: saturation begins sooner, but
+the curve remains bounded and monotonic rather than becoming a hard clipper.
+This reduces the risk of aliasing while offering a clearly distinct alternative.
+The mode is a saved, automatable boolean parameter appended after existing
+parameters, preserving their IDs. The UI toggle sits between the knob rows.
+
+Mode changes crossfade over 20 ms. This avoids abrupt changes, but does not
+guarantee exact loudness matching for every Drive/input combination. Compare the
+modes at matched listening level; Grit may sound fizzier, and listening decides
+whether it is useful. Numerical tests establish distinct output and safe
+transitions, not musical quality.
 
 ## First listening and acceptance plan
 
@@ -299,8 +311,9 @@ below is unchanged.
 
 ## Plugin integration, issue #25
 
-`Maelstrom` is its own DPF plugin with identity `UtM0`, five parameters
-(Drive, Tight, Bite, Level, Bypass) and the `maelstrom_schema` state marker.
+`Maelstrom` is its own DPF plugin with identity `UtM0`, four knobs plus effect
+bypass and the appended Smooth/Grit mode parameter, with the `maelstrom_schema`
+state marker.
 Undertow Preview stays `UtP0` with `undertow_preview_schema`, so no existing
 project changes behaviour and no saved session can cross between them.
 
@@ -313,7 +326,8 @@ project changes behaviour and no saved session can cross between them.
 - **Bypass is the engine's own unity dry path**, so host hard bypass and the
   footswitch agree and neither adds level.
 - The editor reuses the approved #26 layout and Undertow's original knob and
-  footswitch renders, with real parameter and host-edit wiring. Keyboard
+  footswitch renders, with real parameter and host-edit wiring. Gemini LED and
+  toggle assets are embedded as separate state images; labels remain live text. Keyboard
   shortcuts, automation lanes and preset browsing remain #26 work.
 - `maelstrom_plugin` covers identity, defaults, host-visible ranges, bypass
   unity, enable ramping, channel independence, saved-setting restoration,

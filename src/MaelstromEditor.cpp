@@ -33,6 +33,12 @@ class MaelstromUI final : public UI
         loadSharedResources();
         setGeometryConstraints(390, 510, true);
         enclosure = createImageFromMemory(maelstromEnclosurePng, sizeof(maelstromEnclosurePng), 0);
+        ledOff = createImageFromMemory(maelstromLedOffPng, sizeof(maelstromLedOffPng), 0);
+        ledOn = createImageFromMemory(maelstromLedOnPng, sizeof(maelstromLedOnPng), 0);
+        toggleLeft =
+            createImageFromMemory(maelstromToggleLeftPng, sizeof(maelstromToggleLeftPng), 0);
+        toggleRight =
+            createImageFromMemory(maelstromToggleRightPng, sizeof(maelstromToggleRightPng), 0);
         // The knob and footswitch materials are Undertow's original renders, so
         // both pedals stay visibly part of one product family.
         knobMaterial = createImageFromMemory(previewKnobPng, sizeof(previewKnobPng), 0);
@@ -49,7 +55,9 @@ class MaelstromUI final : public UI
 #ifdef STORMSURGE_GUI_HARNESS
     bool exerciseControls()
     {
-        if (!enclosure.isValid() || !knobMaterial.isValid() || !footswitchMaterial.isValid())
+        if (!enclosure.isValid() || !knobMaterial.isValid() || !footswitchMaterial.isValid() ||
+            !ledOff.isValid() || !ledOn.isValid() || !toggleLeft.isValid() ||
+            !toggleRight.isValid())
             return false;
         const float scale = drawingScale();
         const double dx = (getWidth() - MaelstromWidth * scale) * 0.5;
@@ -62,10 +70,12 @@ class MaelstromUI final : public UI
             mouse.pos.setPos(dx + knob.x * scale, dy + knob.y * scale);
             if (!onMouse(mouse))
                 return false;
-            MotionEvent motion;
-            motion.pos.setPos(dx + knob.x * scale, dy + (knob.y - 20) * scale);
-            if (!onMotion(motion) || values[knob.parameter] <= before)
-                return false;
+            for (int step = 1; step <= 4; ++step) {
+                MotionEvent motion;
+                motion.pos.setPos(dx + knob.x * scale, dy + (knob.y - 5 * step) * scale);
+                if (!onMotion(motion) || values[knob.parameter] <= before)
+                    return false;
+            }
             mouse.press = false;
             if (!onMouse(mouse))
                 return false;
@@ -82,6 +92,14 @@ class MaelstromUI final : public UI
         if (!onMouse(foot) || values[MaelstromBypass] != 1)
             return false;
         if (!onMouse(foot) || values[MaelstromBypass] != 0)
+            return false;
+        MouseEvent mode;
+        mode.button = 1;
+        mode.press = true;
+        mode.pos.setPos(dx + 260 * scale, dy + MaelstromModeY * scale);
+        if (!onMouse(mode) || values[MaelstromGrit] != 1)
+            return false;
+        if (!onMouse(mode) || values[MaelstromGrit] != 0)
             return false;
         return true;
     }
@@ -108,6 +126,7 @@ class MaelstromUI final : public UI
         caption(260, 113, "TIGHTENING OVERDRIVE", 11);
         for (const auto &knob : maelstromKnobs)
             drawKnob(knob);
+        drawModeSwitch();
         drawLed();
         if (footswitchMaterial.isValid())
             image(footswitchMaterial, 218, static_cast<float>(MaelstromFootY) - 42, 84, 84);
@@ -124,8 +143,14 @@ class MaelstromUI final : public UI
             return false;
         if (!event.press) {
             const bool handled = dragging >= 0;
+            if (handled)
+                editParameter(static_cast<uint32_t>(dragging), false);
             dragging = -1;
             return handled;
+        }
+        if (dragging >= 0) {
+            editParameter(static_cast<uint32_t>(dragging), false);
+            dragging = -1;
         }
         dragging = -1;
         const auto point =
@@ -134,10 +159,16 @@ class MaelstromUI final : public UI
         if (knob >= 0) {
             dragging = knob;
             lastY = point.y;
+            position = normalizedMaelstrom(static_cast<uint32_t>(knob), values[knob]);
+            editParameter(static_cast<uint32_t>(knob), true);
             return true;
         }
         if (maelstromFootAt(point)) {
             change(MaelstromBypass, values[MaelstromBypass] >= 0.5f ? 0.0f : 1.0f);
+            return true;
+        }
+        if (maelstromModeAt(point)) {
+            change(MaelstromGrit, values[MaelstromGrit] >= 0.5f ? 0.0f : 1.0f);
             return true;
         }
         return false;
@@ -149,11 +180,11 @@ class MaelstromUI final : public UI
             return false;
         const auto point =
             maelstromPoint(event.pos.getX(), event.pos.getY(), getWidth(), getHeight());
-        const double sensitivity = event.mod & kModifierShift ? 0.0005 : 0.005;
-        change(static_cast<std::uint32_t>(dragging),
-               (lastY - point.y) * sensitivity *
-                   (maelstromSpecs[dragging].maximum - maelstromSpecs[dragging].minimum));
+        const double sensitivity = event.mod & kModifierShift ? 0.001 : 0.006;
+        position = std::clamp(position + (lastY - point.y) * sensitivity, 0.0, 1.0);
         lastY = point.y;
+        send(static_cast<std::uint32_t>(dragging),
+             denormalizedMaelstrom(static_cast<uint32_t>(dragging), static_cast<float>(position)));
         return true;
     }
 
@@ -166,8 +197,11 @@ class MaelstromUI final : public UI
             return false;
         const auto &spec = maelstromSpecs[knob];
         const double step = event.mod & kModifierShift ? 0.002 : 0.02;
-        change(static_cast<std::uint32_t>(knob),
-               event.delta.getY() * step * (spec.maximum - spec.minimum));
+        change(
+            static_cast<std::uint32_t>(knob),
+            denormalizedMaelstrom(static_cast<uint32_t>(knob),
+                                  normalizedMaelstrom(static_cast<uint32_t>(knob), values[knob]) +
+                                      static_cast<float>(event.delta.getY() * step)));
         return true;
     }
 
@@ -184,13 +218,15 @@ class MaelstromUI final : public UI
     {
         if (!std::isfinite(target))
             target = maelstromSpecs[index].initial;
-        // Host gestures bracket a knob drag so automation can follow it.
         editParameter(index, true);
-        const float clamped = std::clamp(static_cast<float>(target), maelstromSpecs[index].minimum,
-                                         maelstromSpecs[index].maximum);
-        values[index] = sanitizeMaelstrom(index, clamped);
-        setParameterValue(index, values[index]);
+        send(index, static_cast<float>(target));
         editParameter(index, false);
+    }
+
+    void send(std::uint32_t index, float value)
+    {
+        values[index] = sanitizeMaelstrom(index, value);
+        setParameterValue(index, values[index]);
         repaint();
     }
 
@@ -278,6 +314,11 @@ class MaelstromUI final : public UI
     void drawLed()
     {
         const bool on = enabled();
+        const auto &material = on ? ledOn : ledOff;
+        if (material.isValid()) {
+            image(material, 236, static_cast<float>(MaelstromLedY) - 24, 48, 48);
+            return;
+        }
         beginPath();
         circle(260, static_cast<float>(MaelstromLedY), 11);
         fillPaint(linearGradient(250, static_cast<float>(MaelstromLedY) - 10, 269,
@@ -292,12 +333,27 @@ class MaelstromUI final : public UI
         fill();
     }
 
+    void drawModeSwitch()
+    {
+        const float y = static_cast<float>(MaelstromModeY);
+        const bool gritty = values[MaelstromGrit] >= 0.5f;
+        caption(194, y, "SMOOTH", 11);
+        caption(326, y, "GRIT", 11);
+        const auto &material = gritty ? toggleRight : toggleLeft;
+        if (material.isValid()) {
+            // The mirror axis is the socket, not the image canvas center.
+            const double x = gritty ? MaelstromToggleRightX : MaelstromToggleLeftX;
+            image(material, x, y - 30, 72, 59);
+        }
+    }
+
     DGL_NAMESPACE::NanoImage enclosure;
     DGL_NAMESPACE::NanoImage knobMaterial;
     DGL_NAMESPACE::NanoImage footswitchMaterial;
+    DGL_NAMESPACE::NanoImage ledOff, ledOn, toggleLeft, toggleRight;
     std::array<float, MaelstromParameterCount> values{};
     int dragging = -1;
-    double lastY = 0;
+    double lastY = 0, position = 0;
 };
 
 #ifdef STORMSURGE_GUI_HARNESS

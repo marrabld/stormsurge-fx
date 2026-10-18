@@ -41,8 +41,23 @@ The original JPEG remains unchanged and ignored.
 
 See [Maelstrom artwork notice](runtime/MAELSTROM-NOTICE.md) for the original's
 SHA256, generation/reuse record and regeneration command. CMake copies this notice
-to `mockup-notices/`, separate from Undertow's binary-release notices. The mockup
-is not a plugin or audio processor and is not in Undertow's binary packages.
+to the development binary notices and mockup notices. The Maelstrom artwork is
+not part of Undertow's binary packages.
+
+## Maelstrom LED and toggle controls, issue #34
+
+On 2026-10-18 the maintainer confirmed the LED/toggle artwork was generated with
+Gemini Nano Banana using a personal Gmail account and approved its use in the
+project. The source sheet used the assistant-provided prompt; no third-party
+reference material was used. No exact model revision or generation date is known.
+The original files remain unchanged and gitignored. Four prepared derivatives are
+embedded in Maelstrom: lit/unlit LED states and left/right toggle states. Both
+toggle images come from the isolated toggle PNG; the right position mirrors the
+left artwork, and the UI offsets it so the socket stays fixed. The public project
+and plugin use is approved to the extent applicable rights allow;
+this does not assert exclusive ownership or guaranteed third-party clearance.
+See `runtime/MAELSTROM-NOTICE.md` for hashes, preparation details and the notice
+copied with development binaries.
 
 ## Undertow pedal concept
 
