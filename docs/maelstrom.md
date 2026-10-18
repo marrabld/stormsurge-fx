@@ -311,8 +311,9 @@ below is unchanged.
 
 ## Plugin integration, issue #25
 
-`Maelstrom` is its own DPF plugin with identity `UtM0`, five parameters
-(Drive, Tight, Bite, Level, Bypass) and the `maelstrom_schema` state marker.
+`Maelstrom` is its own DPF plugin with identity `UtM0`, four knobs plus effect
+bypass and the appended Smooth/Grit mode parameter, with the `maelstrom_schema`
+state marker.
 Undertow Preview stays `UtP0` with `undertow_preview_schema`, so no existing
 project changes behaviour and no saved session can cross between them.
 
@@ -325,7 +326,8 @@ project changes behaviour and no saved session can cross between them.
 - **Bypass is the engine's own unity dry path**, so host hard bypass and the
   footswitch agree and neither adds level.
 - The editor reuses the approved #26 layout and Undertow's original knob and
-  footswitch renders, with real parameter and host-edit wiring. Keyboard
+  footswitch renders, with real parameter and host-edit wiring. Gemini LED and
+  toggle assets are embedded as separate state images; labels remain live text. Keyboard
   shortcuts, automation lanes and preset browsing remain #26 work.
 - `maelstrom_plugin` covers identity, defaults, host-visible ranges, bypass
   unity, enable ramping, channel independence, saved-setting restoration,

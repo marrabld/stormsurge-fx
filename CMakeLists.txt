@@ -99,6 +99,8 @@ endif()
 # retain those files intact rather than extracting incomplete paragraphs.
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/bin/notices")
 configure_file(assets/runtime/NOTICE.md "${CMAKE_BINARY_DIR}/bin/notices/Undertow-artwork.md" COPYONLY)
+configure_file(assets/runtime/MAELSTROM-NOTICE.md
+    "${CMAKE_BINARY_DIR}/bin/notices/Maelstrom-artwork.md" COPYONLY)
 configure_file(external/dpf/LICENSE "${CMAKE_BINARY_DIR}/bin/notices/DPF-LICENSE.txt" COPYONLY)
 configure_file(external/dpf/dgl/src/pugl-upstream/COPYING "${CMAKE_BINARY_DIR}/bin/notices/Pugl-COPYING.txt" COPYONLY)
 configure_file(external/dpf/dgl/src/nanovg/LICENSE.txt "${CMAKE_BINARY_DIR}/bin/notices/NanoVG-LICENSE.txt" COPYONLY)

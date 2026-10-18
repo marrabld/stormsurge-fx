@@ -4,4 +4,8 @@
 namespace stormsurge
 {
 inline constexpr unsigned char maelstromEnclosurePng[]{@maelstrom_bytes@};
+inline constexpr unsigned char maelstromLedOffPng[]{@maelstrom_led_off_bytes@};
+inline constexpr unsigned char maelstromLedOnPng[]{@maelstrom_led_on_bytes@};
+inline constexpr unsigned char maelstromToggleLeftPng[]{@maelstrom_toggle_left_bytes@};
+inline constexpr unsigned char maelstromToggleRightPng[]{@maelstrom_toggle_right_bytes@};
 }

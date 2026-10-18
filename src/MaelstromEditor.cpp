@@ -33,6 +33,12 @@ class MaelstromUI final : public UI
         loadSharedResources();
         setGeometryConstraints(390, 510, true);
         enclosure = createImageFromMemory(maelstromEnclosurePng, sizeof(maelstromEnclosurePng), 0);
+        ledOff = createImageFromMemory(maelstromLedOffPng, sizeof(maelstromLedOffPng), 0);
+        ledOn = createImageFromMemory(maelstromLedOnPng, sizeof(maelstromLedOnPng), 0);
+        toggleLeft =
+            createImageFromMemory(maelstromToggleLeftPng, sizeof(maelstromToggleLeftPng), 0);
+        toggleRight =
+            createImageFromMemory(maelstromToggleRightPng, sizeof(maelstromToggleRightPng), 0);
         // The knob and footswitch materials are Undertow's original renders, so
         // both pedals stay visibly part of one product family.
         knobMaterial = createImageFromMemory(previewKnobPng, sizeof(previewKnobPng), 0);
@@ -49,7 +55,9 @@ class MaelstromUI final : public UI
 #ifdef STORMSURGE_GUI_HARNESS
     bool exerciseControls()
     {
-        if (!enclosure.isValid() || !knobMaterial.isValid() || !footswitchMaterial.isValid())
+        if (!enclosure.isValid() || !knobMaterial.isValid() || !footswitchMaterial.isValid() ||
+            !ledOff.isValid() || !ledOn.isValid() || !toggleLeft.isValid() ||
+            !toggleRight.isValid())
             return false;
         const float scale = drawingScale();
         const double dx = (getWidth() - MaelstromWidth * scale) * 0.5;
@@ -306,6 +314,11 @@ class MaelstromUI final : public UI
     void drawLed()
     {
         const bool on = enabled();
+        const auto &material = on ? ledOn : ledOff;
+        if (material.isValid()) {
+            image(material, 236, static_cast<float>(MaelstromLedY) - 24, 48, 48);
+            return;
+        }
         beginPath();
         circle(260, static_cast<float>(MaelstromLedY), 11);
         fillPaint(linearGradient(250, static_cast<float>(MaelstromLedY) - 10, 269,
@@ -326,37 +339,15 @@ class MaelstromUI final : public UI
         const bool gritty = values[MaelstromGrit] >= 0.5f;
         caption(194, y, "SMOOTH", 11);
         caption(326, y, "GRIT", 11);
-        circleFill(260, y + 1, 16, Color(3, 11, 15, 0.65f));
-        beginPath();
-        circle(260, y, 13);
-        fillPaint(
-            linearGradient(249, y - 12, 271, y + 12, Color(203, 201, 184), Color(71, 75, 73)));
-        fill();
-        strokeColor(Color(53, 54, 48));
-        strokeWidth(1);
-        stroke();
-        circleFill(260, y, 7, Color(58, 57, 48));
-        circleFill(260, y, 5, Color(13, 21, 23));
-        const float tipX = gritty ? 271 : 249;
-        const float tipY = y - 9;
-        beginPath();
-        moveTo(261, y + 2);
-        lineTo(tipX + 1, tipY + 2);
-        strokeColor(Color(4, 12, 16, 0.65f));
-        strokeWidth(8);
-        stroke();
-        beginPath();
-        moveTo(260, y);
-        lineTo(tipX, tipY);
-        strokePaint(linearGradient(252, y, 269, y, Color(220, 218, 202), Color(71, 76, 75)));
-        strokeWidth(7);
-        stroke();
-        circleFill(tipX, tipY, 4.5f, Color(176, 175, 157));
+        const auto &material = gritty ? toggleRight : toggleLeft;
+        if (material.isValid())
+            image(material, 224, y - 30, 72, 59);
     }
 
     DGL_NAMESPACE::NanoImage enclosure;
     DGL_NAMESPACE::NanoImage knobMaterial;
     DGL_NAMESPACE::NanoImage footswitchMaterial;
+    DGL_NAMESPACE::NanoImage ledOff, ledOn, toggleLeft, toggleRight;
     std::array<float, MaelstromParameterCount> values{};
     int dragging = -1;
     double lastY = 0, position = 0;
