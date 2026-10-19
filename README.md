@@ -1,7 +1,7 @@
 # StormSurge FX
 
-Linux-first, GPL-3.0-only effects for Bitwig and standalone use. StormSurge has
-four separate pedals at different stages: Undertow, Maelstrom, Whitecap and Squall.
+Linux-first, GPL-3.0-only effects for Bitwig and standalone use. StormSurge has five
+separate pedals at different stages: Undertow, Maelstrom, Whitecap, Squall and Riptide.
 The DAW is the pedalboard; there is no combined rack or chain host.
 
 Named after the maintainer's planned song, **StormSurge**. The first musical
@@ -16,6 +16,11 @@ milestone is to use Undertow on that track.
 | --- | --- |
 | <img src="docs/images/whitecap-vst3-editor.png" alt="Whitecap chorus and vibrato controls" width="100%"> | <img src="docs/images/squall-vst3-editor.png" alt="Squall Clean and Heavy vocal effect controls" width="100%"> |
 | Gentle chorus and vibrato. | Clean or controlled Heavy vocal treatment. |
+
+| Riptide |
+| --- |
+| <img src="docs/images/riptide-mockup.png" alt="Riptide pitch-shift concept mockup with a static illustrative note display" width="100%"> |
+| Pitch-down concept. Its host-independent DSP is an early prototype; the pictured tuner-style readout is static, not live pitch tracking. |
 
 ## Status
 
@@ -33,6 +38,9 @@ sounds still need private musical review. Maelstrom's processing and interface a
 implemented, but its sound needs listening through an amp-model setup. See the
 [pedal status](#pedal-status) and each pedal's design page.
 
+Riptide is at an earlier stage: its host-independent pitch-down DSP is a prototype,
+not a plugin or playable pedal. Its sound and playing feel still need listening review.
+
 ## Pedal status
 
 | Pedal | Role | Current status |
@@ -41,6 +49,7 @@ implemented, but its sound needs listening through an amp-model setup. See the
 | [Maelstrom](docs/maelstrom.md) | Tightening overdrive before an amp modeller | Separate plugin and DSP are implemented. Listening through NAM or another amp modeller is still needed; numerical tests do not establish sound quality. |
 | [Whitecap](docs/whitecap.md) | Chorus and vibrato | Linux/Windows VST3 preview and DSP are implemented. Its settings are provisional pending listening in a song. |
 | [Squall](docs/squall.md) | Clean/Heavy recorded-vocal effect | Linux/Windows VST3 preview and DSP are implemented. Settings are provisional; vocal sound, mono-track handling and reverb-tail behavior need host listening. |
+| Riptide | Guitar pitch-down and blended lower layer | Host-independent DSP prototype for shifts down to 12 semitones. No plugin, device integration or live note display; sound and playing feel are unreviewed. See [prototype notes](docs/riptide-dsp-prototype.md). |
 
 These plugins are separate effects, not a finished pedalboard product. Builds and
 loader tests do not prove playback in every host. Private recordings stay out of
