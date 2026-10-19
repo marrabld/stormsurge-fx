@@ -32,6 +32,8 @@ jobs:
           xvfb-run -a build/linux-debug/maelstrom_mockup --small
           xvfb-run -a build/linux-debug/whitecap_gui
           xvfb-run -a build/linux-debug/whitecap_gui --small
+          xvfb-run -a build/linux-debug/squall_gui
+          xvfb-run -a build/linux-debug/squall_gui --small
           xvfb-run -a build/linux-debug/squall_mockup
           xvfb-run -a build/linux-debug/squall_mockup --small
           xvfb-run -a build/linux-debug/bin/UndertowPreview selftest
@@ -81,7 +83,7 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
       - run: cmake --preset linux-sanitized
-      - run: cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests dark_reverb_tests au_tempo_bridge_tests maelstrom_tests maelstrom_plugin_tests whitecap_tests whitecap_plugin_tests squall_tests
+      - run: cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests dark_reverb_tests au_tempo_bridge_tests maelstrom_tests maelstrom_plugin_tests whitecap_tests whitecap_plugin_tests squall_tests squall_plugin_tests
       - run: ctest --preset linux-sanitized
   macos:
     strategy:

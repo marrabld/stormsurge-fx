@@ -80,10 +80,10 @@ clipboard and approved its prepared derivative for public inclusion in the
 display-only mockup. The original remains unchanged and gitignored at
 `ui/textures/squall-enclosure-v01.png`. Its SHA256, preparation steps and limits
 are recorded in [`runtime/SQUALL-NOTICE.md`](runtime/SQUALL-NOTICE.md). The
-mockup embeds only `runtime/squall-enclosure.png`; it does not use the original
-at build time. The generator, exact model revision and generation date have not
-been independently confirmed, and no exclusive copyright or third-party clearance
-is claimed.
+display-only mockup and Squall's VST3 preview editor embed only
+`runtime/squall-enclosure.png`; they do not use the original at build time. The
+generator, exact model revision and generation date have not been independently
+confirmed, and no exclusive copyright or third-party clearance is claimed.
 
 ## Undertow pedal concept
 

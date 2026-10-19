@@ -26,5 +26,7 @@ magick assets/ui/textures/squall-enclosure-v01.png -alpha on -fuzz 8% \
   -dither None -colors 256 -strip assets/runtime/squall-enclosure.png
 ```
 
-This image is used only by the display-only Squall concept mockup. It is not part
-of a plugin package and does not imply authorization for Squall DSP or plugin work.
+The prepared image is embedded in the display-only Squall concept mockup and the
+Squall VST3 listening-preview editor. It is not used by the other plugins or
+authorized for a release package. Its inclusion does not imply approval of the
+provisional sound settings or any additional Squall work.
