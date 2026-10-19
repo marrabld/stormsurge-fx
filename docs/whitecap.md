@@ -1,9 +1,11 @@
-# Whitecap DSP core
+# Whitecap
 
-Whitecap is in design and DSP development under issues [#38](https://github.com/marrabld/stormsurge-fx/issues/38)
-and [#44](https://github.com/marrabld/stormsurge-fx/issues/44). It remains a separate
-effect from Undertow and Maelstrom. This core has no plugin identity, host adapter,
-parameter/state schema or UI integration.
+Whitecap's sound design, host-independent DSP core and initial VST3 listening
+preview are tracked in issues [#38](https://github.com/marrabld/stormsurge-fx/issues/38),
+[#44](https://github.com/marrabld/stormsurge-fx/issues/44) and
+[#46](https://github.com/marrabld/stormsurge-fx/issues/46). Whitecap remains a
+separate effect from Undertow and Maelstrom. The DSP core has no host, UI, device
+or filesystem dependency.
 
 ## Musical contract
 
@@ -34,13 +36,48 @@ private listening review:
 | Mode | Chorus / Vibrato | Chorus |
 
 The modulated signal uses a 10 ms centre delay, so it has intrinsic signal delay.
-This is a DSP property, not a host-latency report. Any plugin integration must decide
-how to report and verify it before a plugin is built.
+For the first listening preview, Chorus keeps its dry path immediate. Vibrato's
+10 ms delay is treated as part of the effect; the plugin reports no fixed latency.
+Live guitar monitoring still includes the Vibrato delay. This is not a claim of zero
+monitoring latency, and the policy needs review before product integration.
 
 These ranges and values are engineering starting points, not final sound-design
 approval or demonstrated listening results. Review them against the private test
-passage described in issue #38 before product integration. Private recordings must
+passage described in issue #38 before product decisions. Private recordings must
 stay out of the repository and release assets.
+
+## VST3 listening preview
+
+The preview targets Linux and Windows VST3 hosts. It does not add a standalone app
+or macOS plugin. To build on Linux:
+
+```sh
+cmake --preset linux-debug
+cmake --build --preset linux-debug --target Whitecap-vst3
+```
+
+The bundle is at `build/linux-debug/bin/Whitecap.vst3`. The project does not install
+it. To audition it in Bitwig, place that bundle in a VST3 directory Bitwig scans and
+rescan plugins. The editor is resizable, with a 390x525 minimum size. The plugin has
+not been verified in Bitwig by the build or tests; the maintainer's private listening
+check is still outstanding.
+
+The following is a capture from the no-audio editor harness at its defaults. The
+four knobs are arranged in aligned rows, and the editor is slightly taller than
+the other pedals; this is not a Bitwig screenshot or playback result:
+
+![Whitecap VST3 editor preview with asymmetrical Rate, Depth, Mix and Width controls](images/whitecap-vst3-editor.png)
+
+For a display-only editor check without an audio device:
+
+```sh
+build/linux-debug/whitecap_gui
+build/linux-debug/whitecap_gui --small
+STORMSURGE_CAPTURE=/tmp/whitecap-vst3-editor.ppm build/linux-debug/whitecap_gui --snapshot
+```
+
+These harness runs check local UI events, host edit gestures and geometry. They do
+not process audio or establish Bitwig behavior.
 
 ## Core checks
 
