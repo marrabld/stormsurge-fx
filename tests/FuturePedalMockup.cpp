@@ -296,11 +296,11 @@ class FuturePedalMockup final : public UI
 
         caption(center - 55, 186, "IN E", 10);
         caption(center - 19, 186, "→", 13);
-        beginPath();
-        rect(center + 4, 170, 39, 36);
-        fillColor(Color(5, 17, 20));
-        fill();
-        caption(center + 23, 184, "B", 24);
+        fontFace(NANOVG_DEJAVU_SANS_TTF);
+        fontSize(25);
+        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        fillColor(Color(95, 205, 255));
+        text(center + 23, 183, "B", nullptr);
         caption(center + 23, 201, "OUT", 6);
     }
 
