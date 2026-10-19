@@ -59,8 +59,10 @@ cmake --build --preset linux-debug --target Whitecap-vst3
 The bundle is at `build/linux-debug/bin/Whitecap.vst3`. The project does not install
 it. To audition it in Bitwig, place that bundle in a VST3 directory Bitwig scans and
 rescan plugins. The editor is resizable, with a 390x525 minimum size. The plugin has
-not been verified in Bitwig by the build or tests; the maintainer's private listening
-check is still outstanding.
+not been verified in Bitwig by the build or tests. The maintainer's initial listening
+feedback is positive, and they consider the current sound suitable as v0.1. Listening
+in a song is still planned and may guide later refinements; the current settings are
+not a final signoff.
 
 The following is a capture from the no-audio editor harness at its defaults. The
 four knobs are arranged in aligned rows, and the editor is slightly taller than
@@ -88,5 +90,6 @@ ctest --preset linux-debug -R '^whitecap_core$' --output-on-failure
 The numerical test covers centre-delay timing at supported sample rates, Chorus and
 Vibrato routing, coherent and widened stereo behavior, a representative mono sum,
 parameter/mode smoothing, reset, invalid inputs, and ordinary C++ allocation counts
-in selected processing calls. These checks do not establish that Whitecap sounds
-good; that requires private musical listening.
+in selected processing calls. Numerical checks do not establish musical quality.
+The maintainer's first listening result is positive, with song use still planned as
+a chance to identify any refinements.
