@@ -280,7 +280,7 @@ class FuturePedalMockup final : public UI
         for (int tick = -20; tick <= 20; ++tick) {
             const float normalized = static_cast<float>(tick) / 20.0f;
             const float x = center + normalized * 102.0f;
-            const float y = 124.0f + normalized * normalized * 20.0f;
+            const float y = 132.0f + normalized * normalized * 20.0f;
             const bool major = tick % 5 == 0;
             const float length = major ? 8.0f : 4.0f;
             beginPath();
@@ -290,18 +290,19 @@ class FuturePedalMockup final : public UI
             strokeWidth(tick == 0 ? 3.0f : (major ? 2.0f : 1.0f));
             stroke();
         }
-        caption(center - 105, 157, "-50", 8);
-        caption(center + 105, 157, "+50", 8);
-        caption(center, 161, "CENTS", 7);
+        caption(center - 105, 165, "-50", 8);
+        caption(center + 105, 165, "+50", 8);
+        caption(center, 169, "CENTS", 7);
 
-        caption(center - 55, 186, "IN E", 10);
-        caption(center - 19, 186, "→", 13);
+        caption(center - 45, 184, "E", 24);
+        caption(center - 13, 186, "→", 13);
         fontFace(NANOVG_DEJAVU_SANS_TTF);
-        fontSize(25);
+        fontSize(24);
         textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
         fillColor(Color(95, 205, 255));
-        text(center + 23, 183, "B", nullptr);
-        caption(center + 23, 201, "OUT", 6);
+        text(center + 22, 184, "B", nullptr);
+        caption(center - 45, 201, "IN", 7);
+        caption(center + 22, 201, "OUT", 7);
     }
 
     const Pedal pedal;
