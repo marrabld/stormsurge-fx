@@ -23,7 +23,7 @@ namespace
 {
 constexpr float Width = 520, RiptideWidth = 500, Height = 680;
 constexpr std::array<float, 4> KnobX{155, 365, 155, 365};
-constexpr std::array<float, 4> KnobY{205, 205, 355, 355};
+constexpr std::array<float, 4> WhitecapKnobY{205, 205, 355, 355};
 enum class Pedal { Whitecap, Riptide };
 Pedal selectedPedal = Pedal::Whitecap;
 
@@ -67,11 +67,11 @@ class FuturePedalMockup final : public UI
         MouseEvent event;
         event.button = 1;
         event.press = true;
-        event.pos = windowPoint(KnobX[0], KnobY[0]);
+        event.pos = windowPoint(KnobX[0], knobY(0));
         if (!onMouse(event))
             return false;
         MotionEvent motion;
-        motion.pos = windowPoint(KnobX[0], KnobY[0] - 20);
+        motion.pos = windowPoint(KnobX[0], knobY(0) - 20);
         if (!onMotion(motion) || values[0] <= 0.5f)
             return false;
         event.press = false;
@@ -104,12 +104,12 @@ class FuturePedalMockup final : public UI
         caption(controlX(260), 77, pedal == Pedal::Whitecap ? "WHITECAP" : "RIPTIDE", 34);
         caption(controlX(260), 105,
                 pedal == Pedal::Whitecap ? "CHORUS / VIBRATO CONCEPT" : "PITCH-SHIFT CONCEPT", 10);
+        if (pedal == Pedal::Riptide)
+            drawPitchReadout();
         for (unsigned i = 0; i < values.size(); ++i)
             drawKnob(i);
         if (pedal == Pedal::Whitecap)
             drawModeToggle();
-        else
-            drawPitchReadout();
         drawImage(enabled ? ledOn : ledOff, controlX(245), 485, 30, 30);
         drawImage(footMaterial, controlX(218), 518, 84, 84);
         caption(controlX(260), 615, enabled ? "LOCAL VISUAL STATE: ON" : "LOCAL VISUAL STATE: OFF",
@@ -129,7 +129,7 @@ class FuturePedalMockup final : public UI
         dragging = -1;
         const auto point = pedalPoint(event.pos);
         for (unsigned i = 0; i < values.size(); ++i) {
-            if (distanceSquared(point, controlX(KnobX[i]), KnobY[i]) <= 42 * 42) {
+            if (distanceSquared(point, controlX(KnobX[i]), knobY(i)) <= 42 * 42) {
                 dragging = static_cast<int>(i);
                 lastY = point.getY();
                 return true;
@@ -166,7 +166,7 @@ class FuturePedalMockup final : public UI
     {
         const auto point = pedalPoint(event.pos);
         for (unsigned i = 0; i < values.size(); ++i) {
-            if (distanceSquared(point, controlX(KnobX[i]), KnobY[i]) <= 42 * 42) {
+            if (distanceSquared(point, controlX(KnobX[i]), knobY(i)) <= 42 * 42) {
                 const float step = event.mod & kModifierShift ? 0.002f : 0.02f;
                 values[i] = std::clamp(values[i] + static_cast<float>(event.delta.getY()) * step,
                                        0.0f, 1.0f);
@@ -181,6 +181,13 @@ class FuturePedalMockup final : public UI
     float canvasWidth() const { return widthFor(pedal); }
 
     float controlX(float x) const { return x + (canvasWidth() - Width) * 0.5f; }
+
+    float knobY(unsigned index) const
+    {
+        if (pedal == Pedal::Riptide)
+            return index < 2 ? 270.0f : 410.0f;
+        return WhitecapKnobY[index];
+    }
 
     float drawingScale() const
     {
@@ -241,7 +248,7 @@ class FuturePedalMockup final : public UI
         static constexpr const char *whitecapLabels[]{"RATE", "DEPTH", "MIX", "WIDTH"};
         static constexpr const char *riptideLabels[]{"RISE", "FALL", "GLIDE", "BLEND"};
         const auto &labels = pedal == Pedal::Whitecap ? whitecapLabels : riptideLabels;
-        const float x = controlX(KnobX[index]), y = KnobY[index];
+        const float x = controlX(KnobX[index]), y = knobY(index);
         caption(x, y - 59, labels[index], 15);
         drawImage(knobMaterial, x - 42, y - 42, 84, 84);
         const float angle = (-135 + values[index] * 270) * 3.14159265f / 180;
@@ -267,11 +274,34 @@ class FuturePedalMockup final : public UI
 
     void drawPitchReadout()
     {
-        caption(controlX(260), 419, "SHIFTED NOTE / STATIC EXAMPLE", 8);
-        caption(controlX(217), 450, "IN E", 10);
-        caption(controlX(260), 450, "→", 16);
-        caption(controlX(292), 448, "B", 30);
-        caption(controlX(292), 474, "OUTPUT", 7);
+        const float center = controlX(260);
+        caption(center, 119, "SHIFTED OUTPUT / STATIC EXAMPLE", 8);
+
+        for (int tick = -20; tick <= 20; ++tick) {
+            const float normalized = static_cast<float>(tick) / 20.0f;
+            const float x = center + normalized * 102.0f;
+            const float y = 124.0f + normalized * normalized * 20.0f;
+            const bool major = tick % 5 == 0;
+            const float length = major ? 8.0f : 4.0f;
+            beginPath();
+            moveTo(x, y);
+            lineTo(x, y + length);
+            strokeColor(tick == 0 ? Color(235, 72, 62) : Color(210, 216, 211));
+            strokeWidth(tick == 0 ? 3.0f : (major ? 2.0f : 1.0f));
+            stroke();
+        }
+        caption(center - 105, 157, "-50", 8);
+        caption(center + 105, 157, "+50", 8);
+        caption(center, 161, "CENTS", 7);
+
+        caption(center - 55, 186, "IN E", 10);
+        caption(center - 19, 186, "→", 13);
+        beginPath();
+        rect(center + 4, 170, 39, 36);
+        fillColor(Color(5, 17, 20));
+        fill();
+        caption(center + 23, 184, "B", 24);
+        caption(center + 23, 201, "OUT", 6);
     }
 
     const Pedal pedal;
