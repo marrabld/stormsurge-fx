@@ -15,6 +15,10 @@
 #define DISTRHO_PLUGIN_NAME "Whitecap"
 #define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/whitecap"
 #define DISTRHO_PLUGIN_UNIQUE_ID UtW0
+#elif defined(STORMSURGE_SQUALL)
+#define DISTRHO_PLUGIN_NAME "Squall"
+#define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/squall"
+#define DISTRHO_PLUGIN_UNIQUE_ID UtS0
 #elif defined(STORMSURGE_MAELSTROM)
 // Separate identity from Undertow Preview: existing projects must never acquire
 // an overdrive, and saved Maelstrom settings must not disturb them.
@@ -44,6 +48,8 @@
 #define DISTRHO_UI_DEFAULT_WIDTH 520
 #if defined(STORMSURGE_PREVIEW)
 #define DISTRHO_UI_DEFAULT_HEIGHT 900
+#elif defined(STORMSURGE_SQUALL)
+#define DISTRHO_UI_DEFAULT_HEIGHT 700
 #elif defined(STORMSURGE_MAELSTROM)
 // Matches the shorter enclosure approved in issue #26.
 #define DISTRHO_UI_DEFAULT_HEIGHT 680

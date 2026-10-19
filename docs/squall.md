@@ -1,9 +1,10 @@
 # Squall DSP core
 
-Squall is a proposed vocal effect tracked in [design issue #48](https://github.com/marrabld/stormsurge-fx/issues/48)
-and [DSP issue #52](https://github.com/marrabld/stormsurge-fx/issues/52). This first
-step is a host-independent DSP core only. It has no plugin identity, UI, audio
-device, host or filesystem integration.
+Squall is a proposed vocal effect tracked in [design issue #48](https://github.com/marrabld/stormsurge-fx/issues/48),
+[DSP issue #52](https://github.com/marrabld/stormsurge-fx/issues/52) and
+[VST3 preview issue #54](https://github.com/marrabld/stormsurge-fx/issues/54). Its
+DSP core is host-independent. The VST3 preview adds a separate plugin identity and
+simple editor for private listening to recorded vocals.
 
 ## Agreed direction
 
@@ -17,7 +18,8 @@ device, host or filesystem integration.
 - No pitch shifting or compression is included in this first pass. Compression may
   bring breaths and harsh vocal noise forward, so it needs evidence from listening.
 - The maintainer chose a VST3 effect for recorded vocals as the first listening
-  target. A plugin integration issue follows after this core is reviewed and merged.
+  target. The preview targets Linux and Windows only; it does not add standalone
+  audio-device support or a macOS plugin.
 
 ## Provisional DSP starting points
 
@@ -37,6 +39,35 @@ The core accepts planar mono or stereo float buffers. A mono signal remains mono
 stereo input is processed per channel with modestly decorrelated reverb. Parameter
 and bypass transitions ramp over 20 ms. `prepare()` allocates the reverb buffers
 off the audio callback.
+
+## VST3 listening preview
+
+Build the Linux VST3 bundle with:
+
+```sh
+cmake --preset linux-debug
+cmake --build --preset linux-debug --target Squall-vst3
+```
+
+The bundle is at `build/linux-debug/bin/Squall.vst3`. The project does not install
+it. Add it to a VST3 directory Bitwig scans and rescan plugins to audition it.
+Build and loader tests do not prove playback or establish that the provisional
+settings sound good. The maintainer's private vocal listening check is outstanding.
+The plugin advertises stereo I/O; although the DSP core also accepts mono buffers,
+Bitwig's handling of a mono vocal track with this stereo VST3 bus still needs checking.
+The short reverb tail and offline-render tail behavior also need a host listening check.
+
+The editor harness uses the same layout without opening an audio device:
+
+```sh
+build/linux-debug/squall_gui
+build/linux-debug/squall_gui --small
+STORMSURGE_CAPTURE=/tmp/squall-vst3-editor.ppm build/linux-debug/squall_gui --snapshot
+```
+
+![Squall VST3 editor harness at its default Clean setting](images/squall-vst3-editor.png)
+
+This is a no-audio harness capture, not a Bitwig screenshot or listening result.
 
 ## Checks
 

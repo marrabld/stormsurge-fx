@@ -28,6 +28,7 @@ if(APPLE)
     set(preview_formats vst3 au)
     set(maelstrom_formats vst3 au)
     set(whitecap_formats "")
+    set(squall_formats "")
 else()
     set(foundation_formats vst3 jack)
     set(preview_formats vst3 jack)
@@ -35,6 +36,7 @@ else()
     # monitoring gate, so a standalone app would open a device with no consent UI.
     set(maelstrom_formats vst3)
     set(whitecap_formats vst3)
+    set(squall_formats vst3)
 endif()
 
 # JACK-only standalone: never silently open a fallback native audio device.
@@ -89,6 +91,18 @@ if(whitecap_formats)
     target_compile_definitions(Whitecap PUBLIC STORMSURGE_WHITECAP)
     target_include_directories(Whitecap-ui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 endif()
+
+# Squall's first integration slice is a recorded-vocal VST3 preview only.
+if(squall_formats)
+    dpf_add_plugin(Squall
+        TARGETS ${squall_formats}
+        UI_TYPE opengl
+        FILES_DSP src/SquallPlugin.cpp src/Squall.cpp
+        FILES_UI src/SquallEditor.cpp)
+    target_include_directories(Squall PUBLIC src)
+    target_compile_definitions(Squall PUBLIC STORMSURGE_SQUALL)
+    target_include_directories(Squall-ui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+endif()
 # DPF's bundled self-test includes its POSIX thread helper, unavailable to MSVC.
 # Our headless processor tests still run on both platforms.
 if(NOT WIN32)
@@ -96,6 +110,9 @@ if(NOT WIN32)
     target_compile_definitions(UndertowPreview PUBLIC DPF_RUNTIME_TESTING)
     if(TARGET Whitecap)
         target_compile_definitions(Whitecap PUBLIC DPF_RUNTIME_TESTING)
+    endif()
+    if(TARGET Squall)
+        target_compile_definitions(Squall PUBLIC DPF_RUNTIME_TESTING)
     endif()
 endif()
 
@@ -123,6 +140,10 @@ configure_file(assets/runtime/MAELSTROM-NOTICE.md
 if(TARGET Whitecap)
     configure_file(assets/runtime/FUTURE-PEDALS-NOTICE.md
         "${CMAKE_BINARY_DIR}/bin/notices/Whitecap-artwork.md" COPYONLY)
+endif()
+if(TARGET Squall)
+    configure_file(assets/runtime/SQUALL-NOTICE.md
+        "${CMAKE_BINARY_DIR}/bin/notices/Squall-artwork.md" COPYONLY)
 endif()
 configure_file(external/dpf/LICENSE "${CMAKE_BINARY_DIR}/bin/notices/DPF-LICENSE.txt" COPYONLY)
 configure_file(external/dpf/dgl/src/pugl-upstream/COPYING "${CMAKE_BINARY_DIR}/bin/notices/Pugl-COPYING.txt" COPYONLY)
@@ -175,6 +196,9 @@ if(BUILD_TESTING)
         if(TARGET Whitecap)
             add_dependencies(vst3_loader_tests Whitecap-vst3)
         endif()
+        if(TARGET Squall)
+            add_dependencies(vst3_loader_tests Squall-vst3)
+        endif()
         if(WIN32)
             set(preview_module "${CMAKE_BINARY_DIR}/bin/UndertowPreview.vst3/Contents/x86_64-win/UndertowPreview.vst3")
         else()
@@ -191,6 +215,17 @@ if(BUILD_TESTING)
             endif()
             add_test(NAME whitecap_vst3_loader
                 COMMAND vst3_loader_tests "${whitecap_module}" "Whitecap" 0.1.0)
+        endif()
+        if(TARGET Squall)
+            if(WIN32)
+                set(squall_module
+                    "${CMAKE_BINARY_DIR}/bin/Squall.vst3/Contents/x86_64-win/Squall.vst3")
+            else()
+                set(squall_module
+                    "${CMAKE_BINARY_DIR}/bin/Squall.vst3/Contents/x86_64-linux/Squall.so")
+            endif()
+            add_test(NAME squall_vst3_loader
+                COMMAND vst3_loader_tests "${squall_module}" "Squall" 0.1.0)
         endif()
         if(WIN32)
             set(maelstrom_module
@@ -231,6 +266,15 @@ if(BUILD_TESTING)
         target_link_libraries(maelstrom_plugin_tests PRIVATE ${CMAKE_DL_LIBS})
     endif()
     add_test(NAME maelstrom_plugin COMMAND maelstrom_plugin_tests vst3)
+    add_executable(squall_plugin_tests tests/SquallPluginTests.cpp
+        src/SquallPlugin.cpp src/Squall.cpp
+        external/dpf/distrho/src/DistrhoPlugin.cpp)
+    target_include_directories(squall_plugin_tests PRIVATE src external/dpf/distrho)
+    target_compile_definitions(squall_plugin_tests PRIVATE STORMSURGE_SQUALL)
+    if(NOT WIN32)
+        target_link_libraries(squall_plugin_tests PRIVATE ${CMAKE_DL_LIBS})
+    endif()
+    add_test(NAME squall_plugin COMMAND squall_plugin_tests vst3)
     add_executable(preview_tests tests/PreviewTests.cpp src/PreviewPlugin.cpp src/DarkDelay.cpp src/DarkReverb.cpp
         external/dpf/distrho/src/DistrhoPlugin.cpp)
     target_include_directories(preview_tests PRIVATE src external/dpf/distrho)
@@ -270,6 +314,14 @@ if(BUILD_TESTING)
         target_compile_definitions(whitecap_gui PRIVATE STORMSURGE_WHITECAP STORMSURGE_GUI_HARNESS)
         target_link_libraries(whitecap_gui PRIVATE dgl-opengl)
     endif()
+    if(TARGET Squall)
+        add_executable(squall_gui tests/SquallGuiSmoke.cpp src/SquallEditor.cpp
+            external/dpf/distrho/src/DistrhoUI.cpp)
+        target_include_directories(squall_gui PRIVATE src external/dpf/distrho
+            "${CMAKE_CURRENT_BINARY_DIR}/generated")
+        target_compile_definitions(squall_gui PRIVATE STORMSURGE_SQUALL STORMSURGE_GUI_HARNESS)
+        target_link_libraries(squall_gui PRIVATE dgl-opengl)
+    endif()
     # Display-only prototype, not a plugin/standalone processor or release payload.
     configure_file(assets/runtime/MAELSTROM-NOTICE.md
         "${CMAKE_CURRENT_BINARY_DIR}/mockup-notices/Maelstrom-artwork.md" COPYONLY)
@@ -303,6 +355,9 @@ if(BUILD_TESTING)
         if(TARGET whitecap_gui)
             target_sources(whitecap_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         endif()
+        if(TARGET squall_gui)
+            target_sources(squall_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
+        endif()
         target_sources(maelstrom_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         target_sources(future_pedal_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         target_sources(squall_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
@@ -312,6 +367,9 @@ if(BUILD_TESTING)
         target_link_libraries(preview_gui PRIVATE ${CMAKE_DL_LIBS})
         if(TARGET whitecap_gui)
             target_link_libraries(whitecap_gui PRIVATE ${CMAKE_DL_LIBS})
+        endif()
+        if(TARGET squall_gui)
+            target_link_libraries(squall_gui PRIVATE ${CMAKE_DL_LIBS})
         endif()
         target_link_libraries(maelstrom_mockup PRIVATE ${CMAKE_DL_LIBS})
         target_link_libraries(future_pedal_mockup PRIVATE ${CMAKE_DL_LIBS})
