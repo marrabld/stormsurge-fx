@@ -12,9 +12,10 @@ stated so they can be judged by ear later.
 
 ## Scope
 
-StormSurge FX is a GPL-3.0-only guitar effects suite for Bitwig and standalone use.
-Undertow, a dark stereo delay, is the first effect; more follow. Linux first,
-Windows builds and experimental macOS plugin support under issue #19.
+StormSurge FX is a GPL-3.0-only effects project for Bitwig and standalone use.
+Undertow, Maelstrom, Whitecap and Squall are separate effects; see `README.md` and
+`ROADMAP.md` for current status. Linux first, Windows builds and experimental macOS
+plugin support under issue #19.
 
 ### What is authorised
 
@@ -26,12 +27,16 @@ Windows builds and experimental macOS plugin support under issue #19.
 | Experimental macOS VST3/AUv2 builds, issue #19 | **Authorised** |
 | Cross-platform preview assets and draft release notes, issue #21 | **Authorised** |
 | Display-only Maelstrom UI mockup brought forward, issue #26 | **Authorised** |
+| Whitecap DSP and Linux/Windows VST3 preview, issues #44/#46 | **Implemented** |
+| Squall DSP and Linux/Windows VST3 preview, issues #52/#54 | **Implemented** |
 | Merging a PR | **Not** authorised; open a PR and wait |
 | Publishing a release or tagging | **Not** authorised |
 | Installing a plugin anywhere | **Not** authorised |
 | Closing issues | **Not** authorised without approval |
 
 The repository is already **public**. It was created with the maintainer's approval.
+Implemented does not mean musically approved: Whitecap and Squall still need private
+listening, and Maelstrom needs listening through an amp modeller. See their docs.
 
 ### Current state
 
@@ -39,6 +44,10 @@ PR #8 brought the foundation and handoff into `main`. Do not repeat that merge.
 PR #9 added the tested independent-stereo core. `PreviewPlugin.cpp` and
 `PreviewEditor.cpp` connect it as **Undertow Preview**, with a separate `UtP0` identity
 and build target. Keep `UndertowFoundation`/`UtF0` pass-through for old test projects.
+
+Maelstrom, Whitecap and Squall each have separate identities and parameter schemas;
+do not cross their state or DSP into Undertow. Their current listening caveats are
+in `docs/maelstrom.md`, `docs/whitecap.md` and `docs/squall.md`.
 
 Preview's parameter order/symbols are in `PreviewParameters.hpp`; append, do not
 reorder. Issue #11 adds switchable Ping-pong; #13 adds tempo sync; #16 adds optional
