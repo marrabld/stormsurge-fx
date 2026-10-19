@@ -1,16 +1,21 @@
 # StormSurge FX
 
-Linux-first, GPL-3.0-only guitar effects for Bitwig and standalone use. StormSurge
-now has Undertow, a dark stereo delay, and Maelstrom, a tightening overdrive for
-feeding an external amp modeller.
+Linux-first, GPL-3.0-only effects for Bitwig and standalone use. StormSurge has
+four separate pedals at different stages: Undertow, Maelstrom, Whitecap and Squall.
+The DAW is the pedalboard; there is no combined rack or chain host.
 
 Named after the maintainer's planned song, **StormSurge**. The first musical
 milestone is to use Undertow on that track.
 
 | Undertow Preview | Maelstrom |
 | --- | --- |
-| <img src="docs/images/undertow-preview.png" alt="Undertow Preview with its Sync toggle, delay controls, optional reverb and effect LED" width="100%"> | <img src="docs/images/maelstrom-mockup.png" alt="Maelstrom interface mockup with Drive, Tight, Bite, Level, Smooth/Grit toggle and effect LED" width="100%"> |
-| Dark stereo delay with ping-pong, tempo sync and optional wet-path reverb. | Tightening overdrive interface. The image is a display-only mockup, not a capture of the audio plugin. |
+| <img src="docs/images/undertow-preview.png" alt="Undertow Preview with Sync toggle, delay controls, optional reverb and effect LED" width="100%"> | <img src="docs/images/maelstrom-mockup.png" alt="Maelstrom pedal interface" width="100%"> |
+| Dark stereo delay with ping-pong, tempo sync and optional wet-path reverb. | Tightening overdrive for use before an amp modeller. |
+
+| Whitecap | Squall |
+| --- | --- |
+| <img src="docs/images/whitecap-vst3-editor.png" alt="Whitecap chorus and vibrato controls" width="100%"> | <img src="docs/images/squall-vst3-editor.png" alt="Squall Clean and Heavy vocal effect controls" width="100%"> |
+| Gentle chorus and vibrato. | Clean or controlled Heavy vocal treatment. |
 
 ## Status
 
@@ -21,6 +26,25 @@ existing delay projects. See [listening instructions](docs/preview.md). Foundati
 remains a separate pass-through plugin for old test projects.
 This is a separate project from [Omazone](https://github.com/marrabld/omazone),
 not a port of its offline mastering chain.
+
+Maelstrom, Whitecap and Squall are separate VST3 effects with their own controls
+and saved settings. Whitecap and Squall are listening previews: their starting
+sounds still need private musical review. Maelstrom's processing and interface are
+implemented, but its sound needs listening through an amp-model setup. See the
+[pedal status](#pedal-status) and each pedal's design page.
+
+## Pedal status
+
+| Pedal | Role | Current status |
+| --- | --- | --- |
+| [Undertow](docs/preview.md) | Dark stereo guitar delay | Bitwig listening has confirmed core playback, ping-pong, sync and reverb basics. Tail reporting, broader host checks and standalone device usability remain limited or unverified. |
+| [Maelstrom](docs/maelstrom.md) | Tightening overdrive before an amp modeller | Separate plugin and DSP are implemented. Listening through NAM or another amp modeller is still needed; numerical tests do not establish sound quality. |
+| [Whitecap](docs/whitecap.md) | Chorus and vibrato | Linux/Windows VST3 preview and DSP are implemented. Its settings are provisional pending listening in a song. |
+| [Squall](docs/squall.md) | Clean/Heavy recorded-vocal effect | Linux/Windows VST3 preview and DSP are implemented. Settings are provisional; vocal sound, mono-track handling and reverb-tail behavior need host listening. |
+
+These plugins are separate effects, not a finished pedalboard product. Builds and
+loader tests do not prove playback in every host. Private recordings stay out of
+the repository.
 
 ## First effect: Undertow
 
@@ -41,7 +65,7 @@ The standalone application still needs device selection and input/output meterin
 The plugin uses its host's audio devices and transport. Host tail reporting remains
 inaccurate, so exports may need explicit trailing silence.
 
-## Second effect: Maelstrom
+## Maelstrom
 
 Maelstrom is a separate overdrive pedal for shaping guitar before an external amp
 modeller such as NAM. Tight reduces bass before clipping, Drive controls the amount
@@ -49,10 +73,8 @@ of overdrive, Bite shapes the clipped signal's high end, and Level sets the outp
 Its optional Grit mode gives a firmer clipping character; Smooth remains the default.
 Amp and cabinet modelling, impulse responses and noise gates stay outside StormSurge.
 
-The sound and controls are ready for further listening through the maintainer's
-amp-model setup. Numerical tests and a successful build do not establish that it
-sounds right, and this README image shows the display-only interface mockup rather
-than audio-plugin playback. See [Maelstrom's design and listening plan](docs/maelstrom.md).
+See [Maelstrom's design and listening plan](docs/maelstrom.md). Its interface image
+is not evidence of audio playback.
 
 ## Platforms and formats
 

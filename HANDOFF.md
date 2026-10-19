@@ -14,10 +14,11 @@ community beta testing; this is separate work, not a port of it.
 
 ## Goal
 
-GPL-3.0-only guitar effects for Bitwig and standalone use. Linux first, Windows
-planned, no macOS commitment. Named after a planned song, **StormSurge**; the first
-musical milestone is to use Undertow on that track. The first effect is **Undertow**,
-a dark delay. Longer term: a small pedalboard of effects worth playing through, not a
+GPL-3.0-only effects for Bitwig and standalone use. Linux first, with Windows
+support and experimental macOS plugin support. Named after a planned song,
+**StormSurge**; the first musical milestone was to use Undertow on that track.
+Undertow remains the first effect. The project now also has Maelstrom, Whitecap and
+Squall. The longer-term goal is a small set of effects worth playing through, not a
 commercial suite or a reproduction of any existing product.
 
 ## Musical direction
@@ -60,108 +61,26 @@ engineering starting points separately from remaining integration proposals.
 
 ## Where things stand
 
-PR #8 brought the foundation and guides into `main`; that merge is complete.
-PR #9 added the basic delay core; merged PR #10 connected separate **Undertow Preview**
-VST3/JACK targets and working controls. Merged PR #12 adds a Normal/Ping-pong switch,
-with left-first alternating new repeats and unchanged dry routing. Merged PR #14 adds
-tempo sync with nine note values, held/fallback/internal tempo and up to eight-second
-synced intervals. Merged PR #17 adds optional long dark reverb after the wet delay, with
-Space/Darkness/Amount controls. It defaults off and is a listening experiment, not
-the complete proposed artist-reference chain. Foundation remains pass-through. Native device usability and
-accurate host tails remain work.
+PR #8 consolidated the initial foundation. Do not repeat that work. The current
+pedal state is:
 
-| PR | Branch | State | Contents |
-| --- | --- | --- | --- |
-| #6 | `docs/undertow-work-plan` | Merged into `main` | Planning docs, issues #1–#5 |
-| #7 | `feat/undertow-foundation` | Merged into `docs/undertow-work-plan` | Pass-through VST3 + JACK standalone, procedural pedal GUI |
-| #8 | `docs/consolidate-project-state` | Merged into `main` | Foundation stack and agent/handoff guides |
-| #9 | `feat/3-dark-delay-core` | Merged into `main` | Tested reusable basic dark delay |
-| #10 | `feat/4-playable-delay` | Merged into `main` | Audible Preview controls, automation/state and monitor safety |
-| #12 | `feat/11-stereo-ping-pong` | Merged into `main` | Normal/Ping-pong switch and compatibility/safety tests |
-| #14 | `feat/13-tempo-sync` | Merged into `main` | Nine synced divisions and explicit tempo source/hold/fallback |
-| #17 | `feat/16-dark-reverb` | Merged into `main` | Optional wet-path long dark reverb |
-| #18 | `feat/15-timing-controls-worn-finish` | Merged into `main` | Compact timing menus and worn, realistic pedal graphics |
+| Pedal | Implemented | Listening / validation still needed |
+| --- | --- | --- |
+| Undertow | Delay, ping-pong, tempo sync, optional wet reverb; Linux/Windows VST3, experimental macOS VST3/AUv2, and JACK-only standalone. Preview `v0.4.0-preview.1` has been published with approval. | Broader host/platform checks, final-package/export behavior, accurate host tail reporting, and standalone device usability. See [preview guide](docs/preview.md), [roadmap](ROADMAP.md), and [Mac notes](docs/macos.md). |
+| Maelstrom | Host-independent overdrive DSP and separate plugin/UI work are implemented; mockup is display-only. | Listen through NAM or another amp modeller before judging its provisional tone. See [design and listening plan](docs/maelstrom.md). |
+| Whitecap | Host-independent chorus/vibrato DSP and Linux/Windows VST3 listening preview. | Private listening in a song; refine only if that reveals a need. See [Whitecap notes](docs/whitecap.md). |
+| Squall | Host-independent vocal DSP and Linux/Windows VST3 listening preview; installed locally at the maintainer's request. | Listen on recorded vocals; check mono-track handling and reverb-tail behavior. DSP settings remain provisional. See [Squall notes](docs/squall.md). |
 
-The foundation builds and passes automated tests on Linux and Windows, including
-sanitizers. The VST3 passed pluginval at strictness 5, with DPF teardown warnings
-documented but unresolved. The maintainer confirmed Foundation scan/load, clean
-recorded-guitar playback and saved-project reopening in Bitwig Studio Producer
-6.1.3 on Omarchy, then audible basic Preview repeats, knob changes, bypass spillover
-and non-default saved-setting reopening for PR #10. Linux, Windows and sanitizer CI
-passed for that PR and PR #12. The maintainer also confirmed Ping-pong alternation,
-Normal/bypass behaviour and mode reopening. Sync had a successful first check for
-PR #14, not an exhaustive all-division/stop/export result. The maintainer likes the
-delay sound. After PR #17 the maintainer praised the reverb sound and confirmed
-bypass spillover/new clean notes and saved-setting reopening. Linux, Windows and
-sanitizer CI passed. For #15 they clarified the knobs are fine; only the small
-note/time/sync header needs usability work. They also approved a banged-up pedal
-finish. They found the first expanded button grid too busy and the procedural
-wear unconvincing, so the revised PR uses a Sync switch and paired Note/Feel menus
-over the prepared enclosure texture. They love the revised layout and texture,
-and requested more realistic knobs. This same PR now adds original rendered
-silver-metal faces, ridged sides and shadows, with fixed lighting and live value
-markers. Further feedback requested subtle grime, a realistic metal effect
-footswitch and a physical Sync lever toggle. Those refinements stay in the same PR,
-with control behaviour unchanged. Local hardware concepts are references only,
-not embedded artwork.
-None of this proves Windows playback or
-standalone hardware usability.
+There is no open PR at the time this handoff was updated. GitHub has open issues
+for both active listening/design questions and work already implemented; do not
+assume an open issue means the code is missing. Do not close issues without the
+maintainer's approval. No further pedal should be started until its role and scope
+are chosen; Riptide and Ebbtide remain concepts, not committed implementations.
 
-## Suggested order
-
-### Current Maelstrom work
-
-The maintainer requested starting issue #23 after approving a gritty tightening
-overdrive for melodic-death rhythm into NAM or another amp modeller. Drive, Tight,
-Bite and Level plus effect bypass are agreed. The maintainer approved Drive 10%,
-Tight/Bite 50%, Level initially 0 dB with silence to +12 dB available, unity bypass
-excluding Level, and mono/independent-stereo routing goals. Remaining engineering
-headroom, transition and lifecycle policies are proposals in
-[docs/maelstrom.md](docs/maelstrom.md).
-PR #28 records documentation/design, not implementation of #24. Issues #23–#27
-record the ordered work; use one feature branch/PR at a time. Keep Undertow unchanged.
-The DAW is the pedalboard, with amp/cab models and any gate outside StormSurge.
-
-The maintainer merged #28, then explicitly brought #26's visual mockup forward
-before #24/#25. `maelstrom_mockup` is a display-only development harness with local
-knob/footswitch state, not an audio processor or plugin. See
-[mockup instructions](docs/maelstrom-mockup.md). The new enclosure's personal
-Gemini/Nano Banana provenance and GPL reuse were explicitly confirmed; originals
-stay ignored/unchanged. The maintainer approved the merged mockup's appearance.
-
-Issue #24 then added `src/MaelstromOverdrive.cpp` plus the `maelstrom_overdrive`
-ctest: a standalone DSP core with no plugin/UI/device dependency. Three bugs were
-caught while testing and are worth remembering because they are easy to repeat.
-A one-pole lowpass must use `y += (1-p)*(x-y)`; using `y += p*(x-y)` is not a
-lowpass at all. Forming a highpass by subtracting a *doubly* filtered signal from
-the input adds a resonant bump, so each pole must form its own highpass. And a
-test's own Goertzel measurement needs a self-check against a known amplitude
-before any spectral assertion can be trusted. Tight/Bite cutoffs, clipping
-asymmetry and the oversampling factor are expected to move after listening.
-
-Undertow `v0.4.0-preview.1` was published with explicit maintainer approval from
-commit `1f43e8da860d8ab03a7632b34fbc8b7c8ee1486f`, after PR #22 merged and all nine
-main CI jobs passed. It has Linux/Windows/Mac plugin ZIPs, recursive corresponding
-source and checksums. Mac/Windows DAW playback and final-package listening/export
-checks remain unverified. That approval does not authorise future releases.
-
-### Undertow follow-ups
-
-1. PR #20 for Mac support is merged. Native Apple Silicon/Intel CI, AU rendering,
-   VST3 loading, GUI and ad-hoc archive checks passed; no real-Mac DAW claim yet.
-   Dom is the colleague tester; their Mac/OS/DAW and runtime result are pending.
-2. PR #22 implemented issue #21's optimized cross-platform plugin packaging and
-   matching recursive source/checksums; the experimental preview is now published.
-   Linux final-package listening/export checks and Windows playback remain
-   outstanding. Have Dom follow `docs/macos.md`. Mac bundles are ad-hoc signed,
-   not Developer ID signed or notarized. No plugins are installed by CI.
-3. Agree and implement remaining channel/device policies under issue #4.
-4. Resolve DPF's hardcoded zero VST3 tail report before claiming correct automatic
-   tail export. Test standalone input routing and playtest under issue #5.
-
-Still unknown from the maintainer: the audio interface model, whether they will play
-live, process recorded tracks, or both, and a permitted short dry guitar recording
-for testing.
+The maintainer confirmed Undertow playback, project reopening, ping-pong and basic
+sync/reverb behavior in Bitwig. This is not exhaustive export or cross-platform
+validation. Numerical tests and CI do not establish sound quality. Private audio
+must not be committed or uploaded publicly.
 
 ## Constraints to preserve
 

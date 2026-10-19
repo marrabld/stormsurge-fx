@@ -1,16 +1,15 @@
 # Roadmap
 
-This is a direction, not a release schedule. Undertow Preview now has the delay,
-Ping-pong, tempo sync, optional wet-path reverb and working pedal interface.
-The current task is a cross-platform experimental plugin preview, not an entire
-pedalboard or a finished standalone device workflow.
+This is a direction, not a release schedule. StormSurge now has four separate
+effects: Undertow, Maelstrom, Whitecap and Squall. Their implementation status
+and remaining listening work are summarized below. The DAW is the pedalboard;
+there is no combined rack or finished standalone device workflow.
 
 ## First work plan
 
-Work through one issue at a time. Release preparation is authorised under #21;
-publication/tagging and PR merging still require explicit approval. Preserve the
-approved choices in [design.md](docs/design.md) and keep unapproved device/host
-proposals separate. Do not merge automatically.
+Work through one issue at a time. Preserve approved choices and keep unapproved
+device/host proposals separate. PR merging, issue closure and future releases
+require the maintainer's explicit approval.
 
 | Order | Issue | Outcome | State |
 | --- | --- | --- | --- |
@@ -20,22 +19,22 @@ proposals separate. Do not merge automatically.
 | 4 | [Make it playable](https://github.com/marrabld/stormsurge-fx/issues/4) | Host integration, Ping-pong, Sync and safety | Preview works in tested Bitwig; accurate tail reporting and device policies remain |
 | 5 | [Playtest the preview](https://github.com/marrabld/stormsurge-fx/issues/5) | Listening, exports and usable packages | First Linux listening successful; final-package and other-host checks pending |
 
-PR #8 already consolidated the foundation into `main`; do not repeat that merge.
-PRs #10/#12/#14/#17 added audible controls, Ping-pong, Sync and reverb. PR #18
-refined the GUI; PR #20 added experimental Mac plugins. No feature issue is
-silently closed merely because its implementation merged.
+PR #8 already consolidated the original foundation into `main`; do not repeat it.
+Merged feature issues may remain open for maintainer sign-off or listening; an open
+issue does not necessarily mean implementation is missing.
 
-## Current: prepare the experimental preview
+## Current pedal status
 
-Issue #21 and PR #22 prepare optimized Linux x86_64 VST3, Windows x86_64 VST3 and
-Mac universal VST3/AUv2 archives, matching recursive source and checksums. They
-exclude Foundation and standalone from the initial advertised downloads.
+| Pedal | Implemented | Next useful validation |
+| --- | --- | --- |
+| [Undertow](docs/preview.md) | Delay, ping-pong, tempo sync, wet reverb; Linux/Windows VST3, experimental macOS VST3/AUv2, JACK-only standalone. Preview `v0.4.0-preview.1` is published with approval. | Broader host/platform checks, package/export tails, accurate tail reporting, and standalone device usability. |
+| [Maelstrom](docs/maelstrom.md) | DSP core and separate plugin work; its visual mockup is not an audio test. | Listen through NAM or another amp modeller and assess the provisional tone. |
+| [Whitecap](docs/whitecap.md) | DSP core and Linux/Windows VST3 preview. | Try it in a song; refine only in response to listening. |
+| [Squall](docs/squall.md) | DSP core and Linux/Windows VST3 preview. | Listen to recorded vocals; check mono-track behavior and reverb tails. Settings remain provisional. |
 
-CI/archive/loader checks are separate from listening. The maintainer needs a final
-Linux package check including automation, multiple instances, saved settings and
-an export with trailing silence. Windows DAW playback remains unverified; Dom's
-Mac test is pending. Mac bundles are ad-hoc signed, not Developer ID signed or
-notarized. Review [draft notes](release/NOTES.md) before any publication decision.
+Build, CI and loader checks do not prove musical quality or host playback. Keep
+private recordings out of the repository. Riptide and Ebbtide are concepts only;
+define distinct roles before authorizing implementation.
 
 ## 1. Agree on Undertow's sound
 
@@ -68,10 +67,11 @@ Implemented in `main`:
 - The shell builds and passes automated tests on Linux and Windows, including
   sanitizers, with DSP kept separate from hosts, interfaces and devices.
 
-The maintainer tested Bitwig Studio Producer 6.1.3 on Omarchy. Real standalone
-devices and Windows/Mac DAW playback still need testing. Release packages are now
-being prepared under #21. A successful build is not playback evidence; issue
-acceptance and closure remain the maintainer's decision.
+The maintainer tested Undertow in Bitwig Studio Producer 6.1.3 on Omarchy.
+Windows and Mac DAW playback, and real standalone device use, still need testing.
+The Undertow preview package is published; that does not authorize future releases.
+A successful build is not playback evidence, and issue acceptance/closure remains
+the maintainer's decision.
 
 The first standalone uses JACK-compatible routing and an initially muted monitor
 gate, not a finished in-app device selector. Prepared enclosure artwork is now
@@ -123,12 +123,12 @@ before adding more effects; approval to publish a preview is a separate decision
   hardware. No claim of zero monitoring latency.
 - Licence/notices, build instructions, limitations and a small listening example.
 
-## After the preview: validate Windows distribution
+## Further platform validation
 
-- Extend the early Windows build checks into distributable plugin/standalone bundles.
-- Validate real audio-device behaviour and installation on Windows; document
-  backend requirements and any unsigned-build warnings.
-- Test a Windows DAW rather than assuming cross-platform compilation proves use.
+- Windows plugin builds are available; test them in a Windows DAW rather than
+  assuming cross-platform compilation proves use.
+- Validate real standalone audio-device behavior and installation on Windows;
+  document backend requirements and unsigned-build warnings where relevant.
 - Keep parameter/state compatibility with earlier Undertow projects.
 
 Avoid Linux-only assumptions from day one even if Windows binaries arrive later.
