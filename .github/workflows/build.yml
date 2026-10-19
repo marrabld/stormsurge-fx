@@ -32,6 +32,8 @@ jobs:
           xvfb-run -a build/linux-debug/maelstrom_mockup --small
           xvfb-run -a build/linux-debug/whitecap_gui
           xvfb-run -a build/linux-debug/whitecap_gui --small
+          xvfb-run -a build/linux-debug/squall_mockup
+          xvfb-run -a build/linux-debug/squall_mockup --small
           xvfb-run -a build/linux-debug/bin/UndertowPreview selftest
       - uses: actions/upload-artifact@v4
         with:

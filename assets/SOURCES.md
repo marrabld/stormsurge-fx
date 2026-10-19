@@ -73,6 +73,18 @@ are used by the display-only mockups and Whitecap's VST3 preview editor. No furt
 DSP or plugin work beyond the separately authorized Whitecap issues is implied by
 this visual concept task.
 
+## Squall concept artwork, issue #49
+
+On 2026-10-19 the maintainer supplied the Squall enclosure image from the system
+clipboard and approved its prepared derivative for public inclusion in the
+display-only mockup. The original remains unchanged and gitignored at
+`ui/textures/squall-enclosure-v01.png`. Its SHA256, preparation steps and limits
+are recorded in [`runtime/SQUALL-NOTICE.md`](runtime/SQUALL-NOTICE.md). The
+mockup embeds only `runtime/squall-enclosure.png`; it does not use the original
+at build time. The generator, exact model revision and generation date have not
+been independently confirmed, and no exclusive copyright or third-party clearance
+is claimed.
+
 ## Undertow pedal concept
 
 - File: `concepts/undertow-pedal-v01.jpeg`

@@ -278,12 +278,20 @@ if(BUILD_TESTING)
     target_link_libraries(maelstrom_mockup PRIVATE dgl-opengl)
     configure_file(assets/runtime/FUTURE-PEDALS-NOTICE.md
         "${CMAKE_CURRENT_BINARY_DIR}/concept-mockup-notices/Future-pedals-artwork.md" COPYONLY)
+    configure_file(assets/runtime/SQUALL-NOTICE.md
+        "${CMAKE_CURRENT_BINARY_DIR}/concept-mockup-notices/Squall-artwork.md" COPYONLY)
     add_executable(future_pedal_mockup tests/FuturePedalMockup.cpp
         external/dpf/distrho/src/DistrhoUI.cpp)
     target_include_directories(future_pedal_mockup PRIVATE src external/dpf/distrho
         "${CMAKE_CURRENT_BINARY_DIR}/generated")
     target_compile_definitions(future_pedal_mockup PRIVATE STORMSURGE_GUI_HARNESS)
     target_link_libraries(future_pedal_mockup PRIVATE dgl-opengl)
+    add_executable(squall_mockup tests/SquallMockup.cpp
+        external/dpf/distrho/src/DistrhoUI.cpp)
+    target_include_directories(squall_mockup PRIVATE src external/dpf/distrho
+        "${CMAKE_CURRENT_BINARY_DIR}/generated")
+    target_compile_definitions(squall_mockup PRIVATE STORMSURGE_GUI_HARNESS)
+    target_link_libraries(squall_mockup PRIVATE dgl-opengl)
     if(APPLE)
         # DPF adds this Cocoa scale helper to plugin UI libraries, but these
         # no-audio harnesses compile DistrhoUI.cpp directly instead.
@@ -294,6 +302,7 @@ if(BUILD_TESTING)
         endif()
         target_sources(maelstrom_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         target_sources(future_pedal_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
+        target_sources(squall_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
     endif()
     if(NOT WIN32)
         target_link_libraries(foundation_gui PRIVATE ${CMAKE_DL_LIBS})
@@ -303,6 +312,7 @@ if(BUILD_TESTING)
         endif()
         target_link_libraries(maelstrom_mockup PRIVATE ${CMAKE_DL_LIBS})
         target_link_libraries(future_pedal_mockup PRIVATE ${CMAKE_DL_LIBS})
+        target_link_libraries(squall_mockup PRIVATE ${CMAKE_DL_LIBS})
     endif()
     # GUI smoke is intentionally explicit, since it needs a display/OpenGL context.
     # `UndertowFoundation selftest` uses generated data and never opens audio devices.
