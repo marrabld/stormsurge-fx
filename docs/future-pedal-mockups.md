@@ -27,8 +27,9 @@ build/linux-debug/future_pedal_mockup riptide --view
 
 The mockups need a display and OpenGL context. Without `--view`, each mode checks
 that its artwork loads, exercises local knob/footswitch behavior, checks geometry,
-renders 30 frames and exits. `--small` repeats at the 390x510 minimum size. All
-state is local to the mockup; it is not saved.
+renders 30 frames and exits. `--small` repeats at the minimum size: 390x510 for
+Whitecap and 390x530 for the slightly narrower Riptide face. All state is local to
+the mockup; it is not saved.
 
 See [artwork provenance](../assets/runtime/FUTURE-PEDALS-NOTICE.md). The prepared
 images appear in this concept harness and Whitecap's VST3 editor, not in Undertow or
