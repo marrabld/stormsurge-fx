@@ -60,9 +60,9 @@ inline float denormalizedWhitecap(std::uint32_t index, float position) noexcept
 
 inline constexpr double WhitecapUiWidth = 520;
 inline constexpr double WhitecapHeight = 700;
-inline constexpr double WhitecapModeY = 530;
+inline constexpr double WhitecapModeY = 522;
 inline constexpr double WhitecapFootY = 625;
-inline constexpr double WhitecapLedY = 580;
+inline constexpr double WhitecapLedY = 568;
 
 struct WhitecapKnobPosition {
     std::uint32_t parameter;
