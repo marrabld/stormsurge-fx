@@ -21,20 +21,26 @@ using namespace stormsurge;
 
 namespace
 {
-constexpr float Width = 520, Height = 680;
+constexpr float Width = 520, RiptideWidth = 500, Height = 680;
 constexpr std::array<float, 4> KnobX{155, 365, 155, 365};
-constexpr std::array<float, 4> KnobY{205, 205, 355, 355};
+constexpr std::array<float, 4> WhitecapKnobY{205, 205, 355, 355};
 enum class Pedal { Whitecap, Riptide };
 Pedal selectedPedal = Pedal::Whitecap;
+
+float widthFor(Pedal pedal)
+{
+    return pedal == Pedal::Riptide ? RiptideWidth : Width;
+}
 
 class FuturePedalMockup final : public UI
 {
   public:
     explicit FuturePedalMockup(Pedal type)
-        : UI(520, 680), pedal(type), lightText(type == Pedal::Riptide)
+        : UI(static_cast<uint32_t>(widthFor(type)), 680), pedal(type),
+          lightText(type == Pedal::Riptide)
     {
         loadSharedResources();
-        setGeometryConstraints(390, 510, true);
+        setGeometryConstraints(390, pedal == Pedal::Riptide ? 530 : 510, true);
         if (pedal == Pedal::Whitecap)
             enclosure =
                 createImageFromMemory(whitecapEnclosurePng, sizeof(whitecapEnclosurePng), 0);
@@ -61,11 +67,11 @@ class FuturePedalMockup final : public UI
         MouseEvent event;
         event.button = 1;
         event.press = true;
-        event.pos = windowPoint(KnobX[0], KnobY[0]);
+        event.pos = windowPoint(KnobX[0], knobY(0));
         if (!onMouse(event))
             return false;
         MotionEvent motion;
-        motion.pos = windowPoint(KnobX[0], KnobY[0] - 20);
+        motion.pos = windowPoint(KnobX[0], knobY(0) - 20);
         if (!onMotion(motion) || values[0] <= 0.5f)
             return false;
         event.press = false;
@@ -90,23 +96,25 @@ class FuturePedalMockup final : public UI
     {
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
         const float factor = drawingScale();
-        translate((getWidth() - Width * factor) * 0.5f, (getHeight() - Height * factor) * 0.5f);
+        translate((getWidth() - canvasWidth() * factor) * 0.5f,
+                  (getHeight() - Height * factor) * 0.5f);
         scale(factor, factor);
         drawEnclosure();
-        caption(260, 39, "STORMSURGE FX", 13);
-        caption(260, 77, pedal == Pedal::Whitecap ? "WHITECAP" : "RIPTIDE", 34);
-        caption(260, 105,
+        caption(controlX(260), 39, "STORMSURGE FX", 13);
+        caption(controlX(260), 77, pedal == Pedal::Whitecap ? "WHITECAP" : "RIPTIDE", 34);
+        caption(controlX(260), 105,
                 pedal == Pedal::Whitecap ? "CHORUS / VIBRATO CONCEPT" : "PITCH-SHIFT CONCEPT", 10);
+        if (pedal == Pedal::Riptide)
+            drawPitchReadout();
         for (unsigned i = 0; i < values.size(); ++i)
             drawKnob(i);
         if (pedal == Pedal::Whitecap)
             drawModeToggle();
-        else
-            caption(260, 448, "UP / DOWN PITCH MOVEMENT", 11);
-        drawImage(enabled ? ledOn : ledOff, 245, 485, 30, 30);
-        drawImage(footMaterial, 218, 518, 84, 84);
-        caption(260, 615, enabled ? "LOCAL VISUAL STATE: ON" : "LOCAL VISUAL STATE: OFF", 10);
-        caption(260, 642, "CONCEPT MOCKUP / NO AUDIO / CONTROLS PROVISIONAL", 9);
+        drawImage(enabled ? ledOn : ledOff, controlX(245), 485, 30, 30);
+        drawImage(footMaterial, controlX(218), 518, 84, 84);
+        caption(controlX(260), 615, enabled ? "LOCAL VISUAL STATE: ON" : "LOCAL VISUAL STATE: OFF",
+                10);
+        caption(controlX(260), 642, "CONCEPT MOCKUP / NO AUDIO / CONTROLS PROVISIONAL", 9);
     }
 
     bool onMouse(const MouseEvent &event) override
@@ -121,19 +129,19 @@ class FuturePedalMockup final : public UI
         dragging = -1;
         const auto point = pedalPoint(event.pos);
         for (unsigned i = 0; i < values.size(); ++i) {
-            if (distanceSquared(point, KnobX[i], KnobY[i]) <= 42 * 42) {
+            if (distanceSquared(point, controlX(KnobX[i]), knobY(i)) <= 42 * 42) {
                 dragging = static_cast<int>(i);
                 lastY = point.getY();
                 return true;
             }
         }
-        if (distanceSquared(point, 260, 560) <= 42 * 42) {
+        if (distanceSquared(point, controlX(260), 560) <= 42 * 42) {
             enabled = !enabled;
             repaint();
             return true;
         }
-        if (pedal == Pedal::Whitecap && point.getX() >= 224 && point.getX() <= 296 &&
-            point.getY() >= 418 && point.getY() <= 477) {
+        if (pedal == Pedal::Whitecap && point.getX() >= controlX(224) &&
+            point.getX() <= controlX(296) && point.getY() >= 418 && point.getY() <= 477) {
             vibrato = !vibrato;
             repaint();
             return true;
@@ -158,7 +166,7 @@ class FuturePedalMockup final : public UI
     {
         const auto point = pedalPoint(event.pos);
         for (unsigned i = 0; i < values.size(); ++i) {
-            if (distanceSquared(point, KnobX[i], KnobY[i]) <= 42 * 42) {
+            if (distanceSquared(point, controlX(KnobX[i]), knobY(i)) <= 42 * 42) {
                 const float step = event.mod & kModifierShift ? 0.002f : 0.02f;
                 values[i] = std::clamp(values[i] + static_cast<float>(event.delta.getY()) * step,
                                        0.0f, 1.0f);
@@ -170,19 +178,33 @@ class FuturePedalMockup final : public UI
     }
 
   private:
-    float drawingScale() const { return std::min(getWidth() / Width, getHeight() / Height); }
+    float canvasWidth() const { return widthFor(pedal); }
+
+    float controlX(float x) const { return x + (canvasWidth() - Width) * 0.5f; }
+
+    float knobY(unsigned index) const
+    {
+        if (pedal == Pedal::Riptide)
+            return index < 2 ? 270.0f : 410.0f;
+        return WhitecapKnobY[index];
+    }
+
+    float drawingScale() const
+    {
+        return std::min(getWidth() / canvasWidth(), getHeight() / Height);
+    }
 
     Point<double> pedalPoint(const Point<double> &point) const
     {
         const float factor = drawingScale();
-        return {(point.getX() - (getWidth() - Width * factor) * 0.5) / factor,
+        return {(point.getX() - (getWidth() - canvasWidth() * factor) * 0.5) / factor,
                 (point.getY() - (getHeight() - Height * factor) * 0.5) / factor};
     }
 
     Point<double> windowPoint(float x, float y) const
     {
         const float factor = drawingScale();
-        return {x * factor + (getWidth() - Width * factor) * 0.5,
+        return {controlX(x) * factor + (getWidth() - canvasWidth() * factor) * 0.5,
                 y * factor + (getHeight() - Height * factor) * 0.5};
     }
 
@@ -215,8 +237,10 @@ class FuturePedalMockup final : public UI
         const auto size = enclosure.getSize();
         const float imageWidth = static_cast<float>(size.getWidth());
         const float imageHeight = static_cast<float>(size.getHeight());
-        const float targetWidth = Height * imageWidth / imageHeight;
-        drawImage(enclosure, (Width - targetWidth) * 0.5f, 0, targetWidth, Height);
+        const float targetWidth = std::min(Height * imageWidth / imageHeight, canvasWidth());
+        const float targetHeight = targetWidth * imageHeight / imageWidth;
+        drawImage(enclosure, (canvasWidth() - targetWidth) * 0.5f, (Height - targetHeight) * 0.5f,
+                  targetWidth, targetHeight);
     }
 
     void drawKnob(unsigned index)
@@ -224,7 +248,7 @@ class FuturePedalMockup final : public UI
         static constexpr const char *whitecapLabels[]{"RATE", "DEPTH", "MIX", "WIDTH"};
         static constexpr const char *riptideLabels[]{"RISE", "FALL", "GLIDE", "BLEND"};
         const auto &labels = pedal == Pedal::Whitecap ? whitecapLabels : riptideLabels;
-        const float x = KnobX[index], y = KnobY[index];
+        const float x = controlX(KnobX[index]), y = knobY(index);
         caption(x, y - 59, labels[index], 15);
         drawImage(knobMaterial, x - 42, y - 42, 84, 84);
         const float angle = (-135 + values[index] * 270) * 3.14159265f / 180;
@@ -242,10 +266,43 @@ class FuturePedalMockup final : public UI
 
     void drawModeToggle()
     {
-        caption(194, 448, "CHORUS", 10);
-        caption(326, 448, "VIBRATO", 10);
+        caption(controlX(194), 448, "CHORUS", 10);
+        caption(controlX(326), 448, "VIBRATO", 10);
         const auto &material = vibrato ? toggleRight : toggleLeft;
-        drawImage(material, vibrato ? 235 : 224, 418, 72, 59);
+        drawImage(material, controlX(vibrato ? 235 : 224), 418, 72, 59);
+    }
+
+    void drawPitchReadout()
+    {
+        const float center = controlX(260);
+        caption(center, 119, "SHIFTED OUTPUT / STATIC EXAMPLE", 8);
+
+        for (int tick = -20; tick <= 20; ++tick) {
+            const float normalized = static_cast<float>(tick) / 20.0f;
+            const float x = center + normalized * 102.0f;
+            const float y = 132.0f + normalized * normalized * 20.0f;
+            const bool major = tick % 5 == 0;
+            const float length = major ? 8.0f : 4.0f;
+            beginPath();
+            moveTo(x, y);
+            lineTo(x, y + length);
+            strokeColor(tick == 0 ? Color(235, 72, 62) : Color(210, 216, 211));
+            strokeWidth(tick == 0 ? 3.0f : (major ? 2.0f : 1.0f));
+            stroke();
+        }
+        caption(center - 105, 165, "-50", 8);
+        caption(center + 105, 165, "+50", 8);
+        caption(center, 169, "CENTS", 7);
+
+        caption(center - 45, 184, "E", 24);
+        caption(center - 13, 186, "→", 13);
+        fontFace(NANOVG_DEJAVU_SANS_TTF);
+        fontSize(24);
+        textAlign(ALIGN_CENTER | ALIGN_MIDDLE);
+        fillColor(Color(95, 205, 255));
+        text(center + 22, 184, "B", nullptr);
+        caption(center - 45, 201, "IN", 7);
+        caption(center + 22, 201, "OUT", 7);
     }
 
     const Pedal pedal;
@@ -294,8 +351,10 @@ int main(int argc, char **argv)
                       nullptr);
     editor.setWindowTitle(selectedPedal == Pedal::Whitecap ? "Whitecap concept / no audio"
                                                            : "Riptide concept / no audio");
+    const uint32_t minimumWidth = 390;
+    const uint32_t minimumHeight = selectedPedal == Pedal::Riptide ? 530 : 510;
     if (minimumSize)
-        mockup->setSize(390, 510);
+        mockup->setSize(minimumWidth, minimumHeight);
     editor.setWindowVisible(true);
     editor.focus();
     if (!mockup->exerciseControls()) {
@@ -305,8 +364,9 @@ int main(int argc, char **argv)
     uint width = 0, height = 0;
     bool aspect = false;
     editor.getGeometryConstraints(width, height, aspect);
-    if (width != 390 || height != 510 || !aspect ||
-        (minimumSize && (editor.getWidth() != 390 || editor.getHeight() != 510))) {
+    if (width != minimumWidth || height != minimumHeight || !aspect ||
+        (minimumSize &&
+         (editor.getWidth() != minimumWidth || editor.getHeight() != minimumHeight))) {
         std::fprintf(stderr, "FAIL: concept mockup geometry\n");
         return 1;
     }
