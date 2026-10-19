@@ -11,9 +11,10 @@ behavior.
 
 The Whitecap toggle and four knob labels are visual proposals, not a decision to
 combine chorus and vibrato or to include a stereo-width control. Riptide's Rise,
-Fall, Glide and Blend labels are also placeholders; pitch range, control gesture,
-return behavior and note-tracking goals remain open. See the design discussions in
-[issue #38](https://github.com/marrabld/stormsurge-fx/issues/38) and
+Fall, Glide and Blend labels remain placeholders. Its tuner-style `IN E → OUT B`
+display is a static example only, not a tuner or live note tracking. Pitch range,
+control gesture, and note-tracking behavior remain open. See the design discussions
+in [issue #38](https://github.com/marrabld/stormsurge-fx/issues/38) and
 [issue #39](https://github.com/marrabld/stormsurge-fx/issues/39).
 
 ## Build and view

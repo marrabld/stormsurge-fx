@@ -109,7 +109,7 @@ class FuturePedalMockup final : public UI
         if (pedal == Pedal::Whitecap)
             drawModeToggle();
         else
-            caption(controlX(260), 448, "UP / DOWN PITCH MOVEMENT", 11);
+            drawPitchReadout();
         drawImage(enabled ? ledOn : ledOff, controlX(245), 485, 30, 30);
         drawImage(footMaterial, controlX(218), 518, 84, 84);
         caption(controlX(260), 615, enabled ? "LOCAL VISUAL STATE: ON" : "LOCAL VISUAL STATE: OFF",
@@ -263,6 +263,15 @@ class FuturePedalMockup final : public UI
         caption(controlX(326), 448, "VIBRATO", 10);
         const auto &material = vibrato ? toggleRight : toggleLeft;
         drawImage(material, controlX(vibrato ? 235 : 224), 418, 72, 59);
+    }
+
+    void drawPitchReadout()
+    {
+        caption(controlX(260), 419, "SHIFTED NOTE / STATIC EXAMPLE", 8);
+        caption(controlX(217), 450, "IN E", 10);
+        caption(controlX(260), 450, "→", 16);
+        caption(controlX(292), 448, "B", 30);
+        caption(controlX(292), 474, "OUTPUT", 7);
     }
 
     const Pedal pedal;
