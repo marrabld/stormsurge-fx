@@ -195,6 +195,23 @@ if(BUILD_TESTING)
         add_executable(vst3_loader_tests tests/Vst3ModuleTests.cpp)
         target_include_directories(vst3_loader_tests PRIVATE external/dpf/distrho/src)
         target_link_libraries(vst3_loader_tests PRIVATE ${CMAKE_DL_LIBS})
+        if(NOT WIN32)
+            # This headless probe instantiates and processes the actual Linux bundles;
+            # it opens no device and stays out of sanitizer runs that load plugins.
+            add_executable(vst3_processing_tests tests/Vst3ProcessingTests.cpp)
+            target_include_directories(vst3_processing_tests PRIVATE external/dpf/distrho/src)
+            target_link_libraries(vst3_processing_tests PRIVATE ${CMAKE_DL_LIBS})
+            add_dependencies(vst3_processing_tests UndertowPreview-vst3)
+            if(TARGET Maelstrom)
+                add_dependencies(vst3_processing_tests Maelstrom-vst3)
+            endif()
+            if(TARGET Whitecap)
+                add_dependencies(vst3_processing_tests Whitecap-vst3)
+            endif()
+            if(TARGET Squall)
+                add_dependencies(vst3_processing_tests Squall-vst3)
+            endif()
+        endif()
         add_dependencies(vst3_loader_tests UndertowPreview-vst3)
         if(TARGET Whitecap)
             add_dependencies(vst3_loader_tests Whitecap-vst3)
@@ -208,6 +225,23 @@ if(BUILD_TESTING)
             set(preview_module "${CMAKE_BINARY_DIR}/bin/UndertowPreview.vst3/Contents/x86_64-linux/UndertowPreview.so")
         endif()
         add_test(NAME preview_vst3_loader COMMAND vst3_loader_tests "${preview_module}" "Undertow Preview" 0.4.0)
+        if(NOT WIN32)
+            add_test(NAME preview_vst3_process
+                COMMAND vst3_processing_tests "${preview_module}")
+            add_test(NAME maelstrom_vst3_process
+                COMMAND vst3_processing_tests
+                    "${CMAKE_BINARY_DIR}/bin/Maelstrom.vst3/Contents/x86_64-linux/Maelstrom.so")
+            if(TARGET Whitecap)
+                add_test(NAME whitecap_vst3_process
+                    COMMAND vst3_processing_tests
+                        "${CMAKE_BINARY_DIR}/bin/Whitecap.vst3/Contents/x86_64-linux/Whitecap.so")
+            endif()
+            if(TARGET Squall)
+                add_test(NAME squall_vst3_process
+                    COMMAND vst3_processing_tests
+                        "${CMAKE_BINARY_DIR}/bin/Squall.vst3/Contents/x86_64-linux/Squall.so")
+            endif()
+        endif()
         if(TARGET Whitecap)
             if(WIN32)
                 set(whitecap_module
