@@ -196,20 +196,28 @@ if(BUILD_TESTING)
         target_include_directories(vst3_loader_tests PRIVATE external/dpf/distrho/src)
         target_link_libraries(vst3_loader_tests PRIVATE ${CMAKE_DL_LIBS})
         if(NOT WIN32)
-            # This headless probe instantiates and processes the actual Linux bundles;
-            # it opens no device and stays out of sanitizer runs that load plugins.
+            find_package(X11 REQUIRED)
+            # These probes instantiate actual Linux bundles and stay out of sanitizer
+            # runs. The optional editor --view path is manual; neither opens audio devices.
             add_executable(vst3_processing_tests tests/Vst3ProcessingTests.cpp)
             target_include_directories(vst3_processing_tests PRIVATE external/dpf/distrho/src)
             target_link_libraries(vst3_processing_tests PRIVATE ${CMAKE_DL_LIBS})
             add_dependencies(vst3_processing_tests UndertowPreview-vst3)
+            add_executable(vst3_editor_tests tests/Vst3EditorTests.cpp)
+            target_include_directories(vst3_editor_tests PRIVATE external/dpf/distrho/src)
+            target_link_libraries(vst3_editor_tests PRIVATE ${CMAKE_DL_LIBS} X11::X11)
+            add_dependencies(vst3_editor_tests UndertowPreview-vst3)
             if(TARGET Maelstrom)
                 add_dependencies(vst3_processing_tests Maelstrom-vst3)
+                add_dependencies(vst3_editor_tests Maelstrom-vst3)
             endif()
             if(TARGET Whitecap)
                 add_dependencies(vst3_processing_tests Whitecap-vst3)
+                add_dependencies(vst3_editor_tests Whitecap-vst3)
             endif()
             if(TARGET Squall)
                 add_dependencies(vst3_processing_tests Squall-vst3)
+                add_dependencies(vst3_editor_tests Squall-vst3)
             endif()
         endif()
         add_dependencies(vst3_loader_tests UndertowPreview-vst3)
@@ -231,14 +239,25 @@ if(BUILD_TESTING)
             add_test(NAME maelstrom_vst3_process
                 COMMAND vst3_processing_tests
                     "${CMAKE_BINARY_DIR}/bin/Maelstrom.vst3/Contents/x86_64-linux/Maelstrom.so")
+            add_test(NAME preview_vst3_editor
+                COMMAND vst3_editor_tests "${preview_module}")
+            add_test(NAME maelstrom_vst3_editor
+                COMMAND vst3_editor_tests
+                    "${CMAKE_BINARY_DIR}/bin/Maelstrom.vst3/Contents/x86_64-linux/Maelstrom.so")
             if(TARGET Whitecap)
                 add_test(NAME whitecap_vst3_process
                     COMMAND vst3_processing_tests
+                        "${CMAKE_BINARY_DIR}/bin/Whitecap.vst3/Contents/x86_64-linux/Whitecap.so")
+                add_test(NAME whitecap_vst3_editor
+                    COMMAND vst3_editor_tests
                         "${CMAKE_BINARY_DIR}/bin/Whitecap.vst3/Contents/x86_64-linux/Whitecap.so")
             endif()
             if(TARGET Squall)
                 add_test(NAME squall_vst3_process
                     COMMAND vst3_processing_tests
+                        "${CMAKE_BINARY_DIR}/bin/Squall.vst3/Contents/x86_64-linux/Squall.so")
+                add_test(NAME squall_vst3_editor
+                    COMMAND vst3_editor_tests
                         "${CMAKE_BINARY_DIR}/bin/Squall.vst3/Contents/x86_64-linux/Squall.so")
             endif()
         endif()
