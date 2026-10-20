@@ -1,0 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Generated from the prepared draft texture. See assets/runtime/PEDAL-BOARD-NOTICE.md.
+#pragma once
+
+namespace stormsurge
+{
+inline constexpr unsigned char pedalBoardTextureJpeg[]{@board_texture_bytes@};
+}

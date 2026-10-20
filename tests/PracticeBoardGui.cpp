@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "src/DistrhoUIInternal.hpp"
 #include "OpenGL.hpp"
+#include "PracticeBoardArtwork.hpp"
 
 #include <algorithm>
 #include <array>
@@ -44,6 +45,8 @@ class PracticeBoard final : public UI
                   {"SQUALL", "VOCAL EFFECT", Color(49, 64, 79), Color(222, 227, 228)}}}
     {
         loadSharedResources();
+        boardTexture = createImageFromMemory(stormsurge::pedalBoardTextureJpeg,
+                                             sizeof(stormsurge::pedalBoardTextureJpeg), 0);
         setGeometryConstraints(850, 500, false);
         if (const char *path = std::getenv("STORMSURGE_CAPTURE"))
             getWindow().renderToPicture(path);
@@ -51,7 +54,7 @@ class PracticeBoard final : public UI
 
     bool exerciseControls()
     {
-        if (pedals[0].enabled == false || pedals[3].enabled == false)
+        if (!boardTexture.isValid() || pedals[0].enabled == false || pedals[3].enabled == false)
             return false;
         MouseEvent event;
         event.button = 1;
@@ -93,6 +96,12 @@ class PracticeBoard final : public UI
         rect(0, 0, CanvasWidth, CanvasHeight);
         fillColor(Color(17, 24, 27));
         fill();
+        if (boardTexture.isValid()) {
+            beginPath();
+            rect(0, 0, CanvasWidth, CanvasHeight);
+            fillPaint(imagePattern(0, 0, CanvasWidth, CanvasHeight, 0, boardTexture, 0.16f));
+            fill();
+        }
         drawHeader();
         drawBoardRail();
         for (unsigned i = 0; i < pedals.size(); ++i)
@@ -323,6 +332,7 @@ class PracticeBoard final : public UI
     }
 
     std::array<PedalState, 4> pedals;
+    NanoImage boardTexture;
     int dragging = -1;
     int dropTarget = -1;
 };

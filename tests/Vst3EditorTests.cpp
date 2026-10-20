@@ -5,18 +5,27 @@
 #include "travesty/host.h"
 #include "travesty/message.h"
 #include "travesty/view.h"
+#include "PracticeBoardArtwork.hpp"
+
+#define STB_IMAGE_STATIC
+#define STB_IMAGE_IMPLEMENTATION
+#include "../external/dpf/dgl/src/nanovg/stb_image.h"
 
 #include <dlfcn.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#include <X11/Xutil.h>
+#include <X11/keysym.h>
 
 #include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <map>
+#include <memory>
 #include <poll.h>
 #include <stdexcept>
 #include <string>
@@ -506,6 +515,304 @@ class Module
     bool (*exit)() = nullptr;
 };
 
+class HostEditor
+{
+  public:
+    HostEditor(Module &module, HostApplication &host) : module(module)
+    {
+        auto *factory = v3_cpp_obj(module.factory);
+        v3_plugin_factory_3 **factory3 = nullptr;
+        require(v3_cpp_obj_query_interface(module.factory, v3_plugin_factory_3_iid, &factory3) ==
+                        V3_OK &&
+                    factory3 != nullptr,
+                "VST3 factory has no host-context interface");
+        const auto setHostResult =
+            v3_cpp_obj(factory3)->set_host_context(factory3, &host.unknownPointer);
+        v3_cpp_obj_unref(factory3);
+        require(setHostResult == V3_OK, "VST3 factory rejected the host context");
+
+        require(factory->get_class_info(module.factory, 0, &info) == V3_OK,
+                "Could not read the VST3 processor class");
+        require(factory->create_instance(module.factory, info.class_id, v3_component_iid,
+                                         reinterpret_cast<void **>(&component)) == V3_OK &&
+                    component != nullptr,
+                "Could not create VST3 component");
+        require(v3_cpp_obj_initialize(component, &host.unknownPointer) == V3_OK,
+                "Could not initialize VST3 component");
+        componentInitialized = true;
+
+        v3_tuid controllerClass{};
+        require(v3_cpp_obj(component)->get_controller_class_id(component, controllerClass) == V3_OK,
+                "VST3 component did not identify its edit controller");
+        require(factory->create_instance(module.factory, controllerClass, v3_edit_controller_iid,
+                                         reinterpret_cast<void **>(&controller)) == V3_OK &&
+                    controller != nullptr,
+                "Could not create VST3 edit controller");
+        require(v3_cpp_obj_initialize(controller, &host.unknownPointer) == V3_OK,
+                "Could not initialize VST3 edit controller");
+        controllerInitialized = true;
+        require(v3_cpp_obj(controller)
+                        ->set_component_handler(controller, &componentHandler.interfacePointer) ==
+                    V3_OK,
+                "Could not install the VST3 component handler");
+
+        view = v3_cpp_obj(controller)->create_view(controller, "editor");
+        require(view != nullptr, "VST3 did not provide its existing editor view");
+        require(v3_cpp_obj(view)->is_platform_type_supported(view, V3_VIEW_PLATFORM_TYPE_X11) ==
+                    V3_OK,
+                "VST3 editor does not support Linux X11 embedding");
+        require(v3_cpp_obj(view)->get_size(view, &bounds) == V3_OK && bounds.right > bounds.left &&
+                    bounds.bottom > bounds.top,
+                "VST3 editor reported invalid dimensions");
+    }
+
+    ~HostEditor()
+    {
+        if (attached)
+            v3_cpp_obj(view)->removed(view);
+        if (view != nullptr)
+            v3_cpp_obj_unref(view);
+        if (controllerInitialized)
+            v3_cpp_obj_terminate(controller);
+        if (controller != nullptr)
+            v3_cpp_obj_unref(controller);
+        if (componentInitialized)
+            v3_cpp_obj_terminate(component);
+        if (component != nullptr)
+            v3_cpp_obj_unref(component);
+        frame.reset();
+        if (display != nullptr && child != 0)
+            XDestroyWindow(display, child);
+    }
+
+    void attach(Display *display, Window parent, HostRunLoop &runLoop, int x, int y)
+    {
+        this->display = display;
+        const auto width = static_cast<unsigned>(bounds.right - bounds.left);
+        const auto height = static_cast<unsigned>(bounds.bottom - bounds.top);
+        child = XCreateSimpleWindow(display, parent, x, y, width, height, 0,
+                                    BlackPixel(display, DefaultScreen(display)),
+                                    BlackPixel(display, DefaultScreen(display)));
+        XMapWindow(display, child);
+        XSync(display, False);
+        frame = std::make_unique<HostFrame>(runLoop, display, child);
+        require(v3_cpp_obj(view)->set_frame(view, &frame->interfacePointer) == V3_OK,
+                "VST3 editor rejected the host frame");
+        require(v3_cpp_obj(view)->attached(view, reinterpret_cast<void *>(child),
+                                           V3_VIEW_PLATFORM_TYPE_X11) == V3_OK,
+                "Could not attach VST3 editor to the board");
+        attached = true;
+    }
+
+    const char *name() const { return info.name; }
+    int width() const { return bounds.right - bounds.left; }
+    int height() const { return bounds.bottom - bounds.top; }
+    Window window() const { return child; }
+
+  private:
+    Module &module;
+    v3_class_info info{};
+    v3_component **component = nullptr;
+    v3_edit_controller **controller = nullptr;
+    v3_plugin_view **view = nullptr;
+    HostComponentHandler componentHandler;
+    std::unique_ptr<HostFrame> frame;
+    Display *display = nullptr;
+    Window child = 0;
+    v3_view_rect bounds{};
+    bool componentInitialized = false;
+    bool controllerInitialized = false;
+    bool attached = false;
+};
+
+void runBoard(const std::vector<const char *> &paths, HostApplication &host, bool smoke)
+{
+    require(paths.size() == 4, "Supply four StormSurge VST3 module paths");
+    std::vector<std::unique_ptr<Module>> modules;
+    std::vector<std::unique_ptr<HostEditor>> editors;
+    modules.reserve(paths.size());
+    editors.reserve(paths.size());
+    for (const char *path : paths)
+        modules.push_back(std::make_unique<Module>(path));
+    for (auto &module : modules)
+        editors.push_back(std::make_unique<HostEditor>(*module, host));
+
+    constexpr int panelWidth = 540;
+    constexpr int editorTop = 46;
+    const int height =
+        editorTop +
+        std::max_element(editors.begin(), editors.end(),
+                         [](const auto &a, const auto &b) { return a->height() < b->height(); })
+            ->get()
+            ->height() +
+        8;
+    constexpr int width = 1180;
+    Display *display = XOpenDisplay(nullptr);
+    require(display != nullptr, "Could not open the X11 display");
+    const int screen = DefaultScreen(display);
+    const Window parent = XCreateSimpleWindow(
+        display, RootWindow(display, screen), 20, 20, static_cast<unsigned>(width),
+        static_cast<unsigned>(height), 0, BlackPixel(display, screen), BlackPixel(display, screen));
+    XStoreName(display, parent, "StormSurge practice board, VST3 editor host");
+    XSelectInput(display, parent,
+                 ExposureMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask |
+                     StructureNotifyMask);
+    XGrabButton(display, Button4, AnyModifier, parent, False, ButtonPressMask, GrabModeAsync,
+                GrabModeAsync, None, None);
+    XGrabButton(display, Button5, AnyModifier, parent, False, ButtonPressMask, GrabModeAsync,
+                GrabModeAsync, None, None);
+    const Atom closeAtom = XInternAtom(display, "WM_DELETE_WINDOW", False);
+    XSetWMProtocols(display, parent, const_cast<Atom *>(&closeAtom), 1);
+
+    int textureWidth = 0, textureHeight = 0, textureChannels = 0;
+    auto *texture =
+        stbi_load_from_memory(stormsurge::pedalBoardTextureJpeg,
+                              static_cast<int>(sizeof(stormsurge::pedalBoardTextureJpeg)),
+                              &textureWidth, &textureHeight, &textureChannels, 3);
+    require(texture != nullptr && textureWidth > 0 && textureHeight > 0,
+            "Could not decode the prepared pedalboard texture");
+    Visual *const visual = DefaultVisual(display, screen);
+    XImage *textureImage =
+        XCreateImage(display, visual, static_cast<unsigned>(DefaultDepth(display, screen)), ZPixmap,
+                     0, nullptr, width, static_cast<unsigned>(height), 32, 0);
+    require(textureImage != nullptr, "Could not create the pedalboard texture image");
+    textureImage->data = static_cast<char *>(
+        std::calloc(static_cast<std::size_t>(textureImage->bytes_per_line), height));
+    require(textureImage->data != nullptr, "Could not allocate the pedalboard texture");
+    const auto channelPixel = [](unsigned char channel, unsigned long mask) {
+        if (mask == 0)
+            return 0UL;
+        unsigned shift = 0;
+        while (((mask >> shift) & 1UL) == 0)
+            ++shift;
+        const unsigned long maximum = mask >> shift;
+        return ((static_cast<unsigned long>(channel) * maximum / 255UL) << shift) & mask;
+    };
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const int sourceX = x * textureWidth / width;
+            const int sourceY = y * textureHeight / height;
+            const auto *pixel =
+                texture + (static_cast<std::size_t>(sourceY) * textureWidth + sourceX) * 3;
+            const unsigned long value =
+                channelPixel(static_cast<unsigned char>(pixel[0] * 0.62f), visual->red_mask) |
+                channelPixel(static_cast<unsigned char>(pixel[1] * 0.62f), visual->green_mask) |
+                channelPixel(static_cast<unsigned char>(pixel[2] * 0.62f), visual->blue_mask);
+            XPutPixel(textureImage, x, y, value);
+        }
+    }
+    stbi_image_free(texture);
+    const Pixmap texturePixmap =
+        XCreatePixmap(display, parent, width, static_cast<unsigned>(height),
+                      static_cast<unsigned>(DefaultDepth(display, screen)));
+    GC textureGc = XCreateGC(display, texturePixmap, 0, nullptr);
+    XPutImage(display, texturePixmap, textureGc, textureImage, 0, 0, 0, 0, width,
+              static_cast<unsigned>(height));
+    XFreeGC(display, textureGc);
+    XDestroyImage(textureImage);
+    XSetWindowBackgroundPixmap(display, parent, texturePixmap);
+    XMapWindow(display, parent);
+    XClearWindow(display, parent);
+    XSync(display, False);
+
+    HostRunLoop runLoop;
+    for (std::size_t i = 0; i < editors.size(); ++i)
+        editors[i]->attach(
+            display, parent, runLoop,
+            static_cast<int>(i) * panelWidth + (panelWidth - editors[i]->width()) / 2, editorTop);
+
+    std::vector<HostEditor *> order;
+    for (auto &editor : editors)
+        order.push_back(editor.get());
+    int dragIndex = -1;
+    int scrollOffset = 0;
+    const int maxScroll = panelWidth * static_cast<int>(order.size()) - width;
+    auto positionEditors = [&] {
+        for (std::size_t i = 0; i < order.size(); ++i)
+            XMoveWindow(display, order[i]->window(),
+                        static_cast<int>(i) * panelWidth - scrollOffset +
+                            (panelWidth - order[i]->width()) / 2,
+                        editorTop);
+    };
+    auto drawHeaders = [&] {
+        XSetForeground(display, DefaultGC(display, screen), BlackPixel(display, screen));
+        for (std::size_t i = 0; i < order.size(); ++i) {
+            const std::string title = std::string(order[i]->name()) + "  |  drag here to reorder";
+            const int x = static_cast<int>(i) * panelWidth - scrollOffset;
+            XFillRectangle(display, parent, DefaultGC(display, screen), x + 8, 6, panelWidth - 16,
+                           editorTop - 10);
+            XSetForeground(display, DefaultGC(display, screen), WhitePixel(display, screen));
+            XDrawString(display, parent, DefaultGC(display, screen), x + 18, 27, title.c_str(),
+                        static_cast<int>(title.size()));
+            XSetForeground(display, DefaultGC(display, screen), BlackPixel(display, screen));
+        }
+        XSetForeground(display, DefaultGC(display, screen), WhitePixel(display, screen));
+        XDrawString(display, parent, DefaultGC(display, screen), width - 82, 27, "<", 1);
+        XDrawString(display, parent, DefaultGC(display, screen), width - 48, 27, ">", 1);
+    };
+    auto scrollBoard = [&](int amount) {
+        scrollOffset = std::clamp(scrollOffset + amount, 0, maxScroll);
+        positionEditors();
+        XClearWindow(display, parent);
+        drawHeaders();
+    };
+
+    std::printf(
+        "Attached four real StormSurge VST3 editor views. Drag the top strips to reorder; "
+        "click < or > or use the mouse wheel to scroll. This mode opens no audio device.\n");
+    std::fflush(stdout);
+    bool keepOpen = true;
+    const auto smokeDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (keepOpen) {
+        if (smoke && std::chrono::steady_clock::now() >= smokeDeadline)
+            break;
+        while (XPending(display) != 0) {
+            XEvent event{};
+            XNextEvent(display, &event);
+            if (event.type == ClientMessage &&
+                static_cast<Atom>(event.xclient.data.l[0]) == closeAtom) {
+                keepOpen = false;
+            } else if (event.type == Expose && event.xexpose.window == parent &&
+                       event.xexpose.count == 0) {
+                drawHeaders();
+            } else if (event.type == ButtonPress && event.xbutton.window == parent &&
+                       event.xbutton.button == Button1 && event.xbutton.y < editorTop) {
+                if (event.xbutton.x >= width - 96)
+                    scrollBoard(event.xbutton.x < width - 58 ? -180 : 180);
+                else
+                    dragIndex = (event.xbutton.x + scrollOffset) / panelWidth;
+            } else if (event.type == ButtonPress && event.xbutton.window == parent &&
+                       (event.xbutton.button == Button4 || event.xbutton.button == Button5)) {
+                scrollBoard(event.xbutton.button == Button4 ? -180 : 180);
+            } else if (event.type == ButtonRelease && dragIndex >= 0 &&
+                       event.xbutton.window == parent) {
+                const int destination = std::clamp((event.xbutton.x + scrollOffset) / panelWidth, 0,
+                                                   static_cast<int>(order.size()) - 1);
+                HostEditor *moved = order[static_cast<std::size_t>(dragIndex)];
+                order.erase(order.begin() + dragIndex);
+                order.insert(order.begin() + destination, moved);
+                positionEditors();
+                dragIndex = -1;
+                XClearWindow(display, parent);
+                drawHeaders();
+            } else if (event.type == KeyPress) {
+                const KeySym key = XLookupKeysym(&event.xkey, 0);
+                if (key == XK_Left || key == XK_Right) {
+                    scrollBoard(key == XK_Left ? -180 : 180);
+                }
+            }
+        }
+        runLoop.dispatch();
+        pollfd descriptor{ConnectionNumber(display), POLLIN, 0};
+        poll(&descriptor, 1, 5);
+    }
+
+    editors.clear();
+    XDestroyWindow(display, parent);
+    XFreePixmap(display, texturePixmap);
+    XCloseDisplay(display);
+}
+
 void verifyEditor(Module &module, HostApplication &host, bool show)
 {
     auto *factory = v3_cpp_obj(module.factory);
@@ -617,6 +924,15 @@ void verifyEditor(Module &module, HostApplication &host, bool show)
 int main(int argc, char **argv)
 {
     try {
+        if (argc > 1 &&
+            (std::strcmp(argv[1], "--board") == 0 || std::strcmp(argv[1], "--board-smoke") == 0)) {
+            const bool smoke = std::strcmp(argv[1], "--board-smoke") == 0;
+            require(argc == 6, "Usage: vst3_editor_tests --board[-smoke] <Undertow> <Maelstrom> "
+                               "<Whitecap> <Squall>");
+            HostApplication host;
+            runBoard({argv[2], argv[3], argv[4], argv[5]}, host, smoke);
+            return 0;
+        }
         const bool show = argc == 3 && std::strcmp(argv[2], "--view") == 0;
         require((argc == 2 || show), "Usage: vst3_editor_tests <module> [--view]");
         HostApplication host;

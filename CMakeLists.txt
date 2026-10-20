@@ -204,7 +204,8 @@ if(BUILD_TESTING)
             target_link_libraries(vst3_processing_tests PRIVATE ${CMAKE_DL_LIBS})
             add_dependencies(vst3_processing_tests UndertowPreview-vst3)
             add_executable(vst3_editor_tests tests/Vst3EditorTests.cpp)
-            target_include_directories(vst3_editor_tests PRIVATE external/dpf/distrho/src)
+            target_include_directories(vst3_editor_tests PRIVATE external/dpf/distrho/src
+                "${CMAKE_CURRENT_BINARY_DIR}/generated")
             target_link_libraries(vst3_editor_tests PRIVATE ${CMAKE_DL_LIBS} X11::X11)
             add_dependencies(vst3_editor_tests UndertowPreview-vst3)
             if(TARGET Maelstrom)
@@ -397,9 +398,13 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_BINARY_DIR}/generated")
     target_compile_definitions(future_pedal_mockup PRIVATE STORMSURGE_GUI_HARNESS)
     target_link_libraries(future_pedal_mockup PRIVATE dgl-opengl)
+    include(cmake/PracticeBoardArtwork.cmake)
+    configure_file(assets/runtime/PEDAL-BOARD-NOTICE.md
+        "${CMAKE_CURRENT_BINARY_DIR}/practice-board-notices/Pedal-board-artwork.md" COPYONLY)
     add_executable(practice_board_gui tests/PracticeBoardGui.cpp
         external/dpf/distrho/src/DistrhoUI.cpp)
-    target_include_directories(practice_board_gui PRIVATE src external/dpf/distrho)
+    target_include_directories(practice_board_gui PRIVATE src external/dpf/distrho
+        "${CMAKE_CURRENT_BINARY_DIR}/generated")
     target_compile_definitions(practice_board_gui PRIVATE STORMSURGE_GUI_HARNESS)
     target_link_libraries(practice_board_gui PRIVATE dgl-opengl)
     add_executable(squall_mockup tests/SquallMockup.cpp
