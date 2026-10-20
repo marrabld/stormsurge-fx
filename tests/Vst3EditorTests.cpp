@@ -5,6 +5,8 @@
 #include "travesty/host.h"
 #include "travesty/message.h"
 #include "travesty/view.h"
+#include "travesty/audio_processor.h"
+#include "travesty/bstream.h"
 #include "PracticeBoardArtwork.hpp"
 
 #define STB_IMAGE_STATIC
@@ -16,9 +18,11 @@
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
+#include <jack/jack.h>
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -362,9 +366,228 @@ struct HostFrame : v3_plugin_frame_cpp {
     }
 };
 
+struct HostParameterState {
+    static constexpr std::size_t Capacity = 64;
+    std::array<std::atomic<double>, Capacity> values{};
+    std::array<std::atomic<bool>, Capacity> dirty{};
+    std::atomic<bool> bypassed{false};
+    v3_param_id bypassId = 0;
+    bool hasBypass = false;
+
+    void set(v3_param_id id, double value)
+    {
+        if (id >= Capacity)
+            return;
+        values[id].store(value, std::memory_order_relaxed);
+        dirty[id].store(true, std::memory_order_release);
+        if (hasBypass && id == bypassId)
+            bypassed.store(value >= 0.5, std::memory_order_release);
+    }
+};
+
+struct HostValueQueue {
+    v3_funknown unknown{};
+    v3_param_value_queue queue{};
+    v3_param_id id = 0;
+    int32_t points = 0;
+    int32_t offset = 0;
+    double value = 0.0;
+
+    static v3_param_id V3_API getId(void *self)
+    {
+        return reinterpret_cast<HostValueQueue *>(*static_cast<v3_param_value_queue **>(self))->id;
+    }
+    static int32_t V3_API getPointCount(void *self)
+    {
+        return reinterpret_cast<HostValueQueue *>(*static_cast<v3_param_value_queue **>(self))
+            ->points;
+    }
+    static v3_result V3_API getPoint(void *self, int32_t index, int32_t *sampleOffset,
+                                     double *pointValue)
+    {
+        auto &item =
+            *reinterpret_cast<HostValueQueue *>(*static_cast<v3_param_value_queue **>(self));
+        if (index != 0 || item.points == 0)
+            return V3_INVALID_ARG;
+        *sampleOffset = item.offset;
+        *pointValue = item.value;
+        return V3_OK;
+    }
+    static v3_result V3_API addPoint(void *self, int32_t sampleOffset, double pointValue,
+                                     int32_t *index)
+    {
+        auto &item =
+            *reinterpret_cast<HostValueQueue *>(*static_cast<v3_param_value_queue **>(self));
+        item.offset = sampleOffset;
+        item.value = pointValue;
+        item.points = 1;
+        *index = 0;
+        return V3_OK;
+    }
+
+    HostValueQueue()
+    {
+        queue.get_param_id = getId;
+        queue.get_point_count = getPointCount;
+        queue.get_point = getPoint;
+        queue.add_point = addPoint;
+    }
+};
+
+struct HostParameterChanges {
+    v3_funknown unknown{};
+    v3_param_changes changes{};
+    std::array<HostValueQueue, HostParameterState::Capacity> queues{};
+    std::array<v3_param_value_queue *, HostParameterState::Capacity> interfaces{};
+    int32_t count = 0;
+
+    HostParameterChanges()
+    {
+        changes.get_param_count = getCount;
+        changes.get_param_data = getData;
+        changes.add_param_data = addData;
+        for (std::size_t i = 0; i < queues.size(); ++i)
+            interfaces[i] = reinterpret_cast<v3_param_value_queue *>(&queues[i]);
+    }
+    void collect(HostParameterState &state)
+    {
+        count = 0;
+        for (std::size_t id = 0; id < queues.size(); ++id) {
+            if (!state.dirty[id].exchange(false, std::memory_order_acq_rel))
+                continue;
+            auto &queue = queues[static_cast<std::size_t>(count++)];
+            queue.id = static_cast<v3_param_id>(id);
+            queue.offset = 0;
+            queue.value = state.values[id].load(std::memory_order_relaxed);
+            queue.points = 1;
+        }
+    }
+    v3_param_changes *interface() { return reinterpret_cast<v3_param_changes *>(this); }
+
+  private:
+    static int32_t V3_API getCount(void *self)
+    {
+        return reinterpret_cast<HostParameterChanges *>(*static_cast<v3_param_changes **>(self))
+            ->count;
+    }
+    static v3_param_value_queue **V3_API getData(void *self, int32_t index)
+    {
+        auto &changes =
+            *reinterpret_cast<HostParameterChanges *>(*static_cast<v3_param_changes **>(self));
+        if (index < 0 || index >= changes.count)
+            return nullptr;
+        return &changes.interfaces[static_cast<std::size_t>(index)];
+    }
+    static v3_param_value_queue **V3_API addData(void *self, const v3_param_id *id, int32_t *index)
+    {
+        auto &changes =
+            *reinterpret_cast<HostParameterChanges *>(*static_cast<v3_param_changes **>(self));
+        for (int32_t i = 0; i < changes.count; ++i) {
+            if (changes.queues[static_cast<std::size_t>(i)].id == *id) {
+                *index = i;
+                return getData(self, i);
+            }
+        }
+        if (changes.count == static_cast<int32_t>(changes.queues.size()))
+            return nullptr;
+        const int32_t added = changes.count++;
+        changes.queues[static_cast<std::size_t>(added)].id = *id;
+        *index = added;
+        return getData(self, added);
+    }
+};
+
+struct HostMemoryStream : v3_bstream_cpp {
+    v3_bstream *interfacePointer = reinterpret_cast<v3_bstream *>(this);
+    std::vector<std::uint8_t> bytes;
+    std::int64_t position = 0;
+
+    HostMemoryStream()
+    {
+        query_interface = query;
+        ref = addRef;
+        unref = release;
+        stream.read = read;
+        stream.write = write;
+        stream.seek = seek;
+        stream.tell = tell;
+    }
+    static HostMemoryStream &from(void *self)
+    {
+        return *reinterpret_cast<HostMemoryStream *>(*static_cast<v3_bstream **>(self));
+    }
+    static v3_result V3_API query(void *self, const v3_tuid iid, void **object)
+    {
+        if (std::memcmp(iid, v3_funknown_iid, sizeof(v3_tuid)) != 0 &&
+            std::memcmp(iid, v3_bstream_iid, sizeof(v3_tuid)) != 0) {
+            *object = nullptr;
+            return V3_NO_INTERFACE;
+        }
+        *object = *static_cast<v3_bstream **>(self);
+        addRef(self);
+        return V3_OK;
+    }
+    static uint32_t V3_API addRef(void *) { return 2; }
+    static uint32_t V3_API release(void *) { return 1; }
+    static v3_result V3_API read(void *self, void *buffer, int32_t count, int32_t *readCount)
+    {
+        auto &memory = from(self);
+        if (count < 0 || memory.position < 0)
+            return V3_INVALID_ARG;
+        const auto available = memory.position < static_cast<std::int64_t>(memory.bytes.size())
+                                   ? memory.bytes.size() - static_cast<std::size_t>(memory.position)
+                                   : 0;
+        const auto copied = std::min<std::size_t>(available, static_cast<std::size_t>(count));
+        if (copied != 0)
+            std::memcpy(buffer, memory.bytes.data() + memory.position, copied);
+        memory.position += static_cast<std::int64_t>(copied);
+        if (readCount != nullptr)
+            *readCount = static_cast<int32_t>(copied);
+        return V3_OK;
+    }
+    static v3_result V3_API write(void *self, void *buffer, int32_t count, int32_t *writtenCount)
+    {
+        auto &memory = from(self);
+        if (count < 0 || memory.position < 0 ||
+            memory.position + count > static_cast<std::int64_t>(memory.bytes.max_size()))
+            return V3_INVALID_ARG;
+        const auto end = static_cast<std::size_t>(memory.position + count);
+        if (end > memory.bytes.size())
+            memory.bytes.resize(end);
+        if (count != 0)
+            std::memcpy(memory.bytes.data() + memory.position, buffer,
+                        static_cast<std::size_t>(count));
+        memory.position += count;
+        if (writtenCount != nullptr)
+            *writtenCount = count;
+        return V3_OK;
+    }
+    static v3_result V3_API seek(void *self, int64_t offset, int32_t mode, int64_t *result)
+    {
+        auto &memory = from(self);
+        const int64_t base = mode == V3_SEEK_SET   ? 0
+                             : mode == V3_SEEK_CUR ? memory.position
+                             : mode == V3_SEEK_END ? static_cast<int64_t>(memory.bytes.size())
+                                                   : -1;
+        if (base < 0 || (offset < 0 && base < -offset) ||
+            (offset > 0 && base > std::numeric_limits<int64_t>::max() - offset))
+            return V3_INVALID_ARG;
+        memory.position = base + offset;
+        if (result != nullptr)
+            *result = memory.position;
+        return V3_OK;
+    }
+    static v3_result V3_API tell(void *self, int64_t *position)
+    {
+        *position = from(self).position;
+        return V3_OK;
+    }
+};
+
 struct HostComponentHandler : v3_component_handler_cpp {
     v3_component_handler *interfacePointer = reinterpret_cast<v3_component_handler *>(this);
     uint32_t references = 1;
+    HostParameterState *parameters = nullptr;
 
     HostComponentHandler()
     {
@@ -402,7 +625,13 @@ struct HostComponentHandler : v3_component_handler_cpp {
         return handler.references;
     }
     static v3_result V3_API beginEdit(void *, v3_param_id) { return V3_OK; }
-    static v3_result V3_API performEdit(void *, v3_param_id, double) { return V3_OK; }
+    static v3_result V3_API performEdit(void *self, v3_param_id id, double value)
+    {
+        auto *parameters = from(self).parameters;
+        if (parameters != nullptr)
+            parameters->set(id, value);
+        return V3_OK;
+    }
     static v3_result V3_API endEdit(void *, v3_param_id) { return V3_OK; }
     static v3_result V3_API restartComponent(void *, int32_t) { return V3_OK; }
 };
@@ -540,6 +769,10 @@ class HostEditor
         require(v3_cpp_obj_initialize(component, &host.unknownPointer) == V3_OK,
                 "Could not initialize VST3 component");
         componentInitialized = true;
+        require(v3_cpp_obj_query_interface(component, v3_audio_processor_iid, &processor) ==
+                        V3_OK &&
+                    processor != nullptr,
+                "VST3 component has no audio processor interface");
 
         v3_tuid controllerClass{};
         require(v3_cpp_obj(component)->get_controller_class_id(component, controllerClass) == V3_OK,
@@ -551,6 +784,33 @@ class HostEditor
         require(v3_cpp_obj_initialize(controller, &host.unknownPointer) == V3_OK,
                 "Could not initialize VST3 edit controller");
         controllerInitialized = true;
+        HostMemoryStream state;
+        v3_bstream *stateInterface = state.interfacePointer;
+        require(v3_cpp_obj(component)->get_state(component, &stateInterface) == V3_OK,
+                "Could not read VST3 processor state for its editor");
+        state.position = 0;
+        require(v3_cpp_obj(controller)->set_component_state(controller, &stateInterface) == V3_OK,
+                "Could not synchronize VST3 editor state with its processor");
+        componentHandler.parameters = &parameterState;
+        for (int32_t index = 0; index < v3_cpp_obj(controller)->get_parameter_count(controller);
+             ++index) {
+            v3_param_info parameter{};
+            if (v3_cpp_obj(controller)->get_parameter_info(controller, index, &parameter) ==
+                    V3_OK &&
+                ((parameter.flags & V3_PARAM_IS_BYPASS) != 0 ||
+                 parameterTitleIsBypass(parameter.title)) &&
+                parameter.param_id < HostParameterState::Capacity) {
+                parameterState.bypassId = parameter.param_id;
+                parameterState.hasBypass = true;
+                const double value = v3_cpp_obj(controller)
+                                         ->get_parameter_normalised(controller, parameter.param_id);
+                parameterState.set(parameter.param_id, value);
+                parameterState.dirty[parameter.param_id].store(false, std::memory_order_relaxed);
+                break;
+            }
+        }
+        require(parameterState.hasBypass,
+                "StormSurge VST3 does not expose a host-controllable bypass parameter");
         require(v3_cpp_obj(controller)
                         ->set_component_handler(controller, &componentHandler.interfacePointer) ==
                     V3_OK,
@@ -568,6 +828,7 @@ class HostEditor
 
     ~HostEditor()
     {
+        stopProcessing();
         if (attached)
             v3_cpp_obj(view)->removed(view);
         if (view != nullptr)
@@ -576,6 +837,8 @@ class HostEditor
             v3_cpp_obj_terminate(controller);
         if (controller != nullptr)
             v3_cpp_obj_unref(controller);
+        if (processor != nullptr)
+            v3_cpp_obj_unref(processor);
         if (componentInitialized)
             v3_cpp_obj_terminate(component);
         if (component != nullptr)
@@ -583,6 +846,87 @@ class HostEditor
         frame.reset();
         if (display != nullptr && child != 0)
             XDestroyWindow(display, child);
+    }
+
+    void prepare(double sampleRate, int32_t maxBlockSize)
+    {
+        if (processing)
+            stopProcessing();
+        require(v3_cpp_obj(component)->get_bus_count(component, V3_AUDIO, V3_INPUT) == 1 &&
+                    v3_cpp_obj(component)->get_bus_count(component, V3_AUDIO, V3_OUTPUT) == 1,
+                "Practice host requires one main audio input and output bus");
+        require(v3_cpp_obj(component)->activate_bus(component, V3_AUDIO, V3_INPUT, 0, true) ==
+                        V3_OK &&
+                    v3_cpp_obj(component)->activate_bus(component, V3_AUDIO, V3_OUTPUT, 0, true) ==
+                        V3_OK,
+                "Could not activate the VST3 audio buses");
+        v3_process_setup setup{};
+        setup.process_mode = V3_REALTIME;
+        setup.symbolic_sample_size = V3_SAMPLE_32;
+        setup.max_block_size = maxBlockSize;
+        setup.sample_rate = sampleRate;
+        require(v3_cpp_obj(processor)->setup_processing(processor, &setup) == V3_OK,
+                "VST3 rejected the JACK processing setup");
+        require(v3_cpp_obj(component)->set_active(component, true) == V3_OK,
+                "Could not activate the VST3 component");
+        active = true;
+        require(v3_cpp_obj(processor)->set_processing(processor, true) == V3_OK,
+                "Could not start VST3 processing");
+        processing = true;
+    }
+
+    void stopProcessing()
+    {
+        if (processing) {
+            v3_cpp_obj(processor)->set_processing(processor, false);
+            processing = false;
+        }
+        if (active) {
+            v3_cpp_obj(component)->set_active(component, false);
+            active = false;
+        }
+    }
+
+    bool process(const float *inputLeft, const float *inputRight, float *outputLeft,
+                 float *outputRight, int32_t frames)
+    {
+        if (!processing || frames <= 0 || frames > MaximumBlockSize)
+            return false;
+        std::array<float *, 2> inputChannels{const_cast<float *>(inputLeft),
+                                             const_cast<float *>(inputRight)};
+        std::array<float *, 2> outputChannels{outputLeft, outputRight};
+        v3_audio_bus_buffers inputBus{};
+        inputBus.num_channels = 2;
+        inputBus.channel_buffers_32 = inputChannels.data();
+        v3_audio_bus_buffers outputBus{};
+        outputBus.num_channels = 2;
+        outputBus.channel_buffers_32 = outputChannels.data();
+        HostParameterChanges inputChanges, outputChanges;
+        inputChanges.collect(parameterState);
+        v3_param_changes *inputInterface = inputChanges.interface();
+        v3_param_changes *outputInterface = outputChanges.interface();
+        v3_process_data data{};
+        data.process_mode = V3_REALTIME;
+        data.symbolic_sample_size = V3_SAMPLE_32;
+        data.nframes = frames;
+        data.num_input_buses = 1;
+        data.num_output_buses = 1;
+        data.inputs = &inputBus;
+        data.outputs = &outputBus;
+        data.input_params = &inputInterface;
+        data.output_params = &outputInterface;
+        return v3_cpp_obj(processor)->process(processor, &data) == V3_OK;
+    }
+
+    void toggleBypass()
+    {
+        if (!parameterState.hasBypass)
+            return;
+        const bool bypass = !parameterState.bypassed.load(std::memory_order_acquire);
+        const double value = bypass ? 1.0 : 0.0;
+        if (v3_cpp_obj(controller)
+                ->set_parameter_normalised(controller, parameterState.bypassId, value) == V3_OK)
+            parameterState.set(parameterState.bypassId, value);
     }
 
     void attach(Display *display, Window parent, HostRunLoop &runLoop, int x, int y)
@@ -608,26 +952,228 @@ class HostEditor
     int width() const { return bounds.right - bounds.left; }
     int height() const { return bounds.bottom - bounds.top; }
     Window window() const { return child; }
+    bool bypassed() const { return parameterState.bypassed.load(std::memory_order_acquire); }
 
   private:
+    static bool parameterTitleIsBypass(const v3_str_128 &title)
+    {
+        constexpr char bypass[] = "Bypass";
+        for (std::size_t i = 0; i < sizeof(bypass); ++i) {
+            if (title[i] != bypass[i])
+                return false;
+        }
+        return true;
+    }
+
+    static constexpr int32_t MaximumBlockSize = 2048;
     Module &module;
     v3_class_info info{};
     v3_component **component = nullptr;
+    v3_audio_processor **processor = nullptr;
     v3_edit_controller **controller = nullptr;
     v3_plugin_view **view = nullptr;
     HostComponentHandler componentHandler;
+    HostParameterState parameterState;
     std::unique_ptr<HostFrame> frame;
     Display *display = nullptr;
     Window child = 0;
     v3_view_rect bounds{};
     bool componentInitialized = false;
     bool controllerInitialized = false;
+    bool active = false;
+    bool processing = false;
     bool attached = false;
+};
+
+class JackAudioHost
+{
+  public:
+    static constexpr std::uint32_t MaximumFrames = 2048;
+
+    explicit JackAudioHost(const std::array<HostEditor *, 4> &editors) : editors(editors)
+    {
+        try {
+            jack_status_t status{};
+            client = jack_client_open("StormSurgePractice", JackNoStartServer, &status);
+            require(client != nullptr,
+                    "Could not connect to JACK. Start an existing JACK/PipeWire-JACK server; the "
+                    "practice host will not start a device or fall back to native audio.");
+            inputLeft = jack_port_register(client, "input_left", JACK_DEFAULT_AUDIO_TYPE,
+                                           JackPortIsInput, 0);
+            inputRight = jack_port_register(client, "input_right", JACK_DEFAULT_AUDIO_TYPE,
+                                            JackPortIsInput, 0);
+            outputLeft = jack_port_register(client, "output_left", JACK_DEFAULT_AUDIO_TYPE,
+                                            JackPortIsOutput, 0);
+            outputRight = jack_port_register(client, "output_right", JACK_DEFAULT_AUDIO_TYPE,
+                                             JackPortIsOutput, 0);
+            require(inputLeft != nullptr && inputRight != nullptr && outputLeft != nullptr &&
+                        outputRight != nullptr,
+                    "Could not register JACK stereo ports");
+            require(jack_set_process_callback(client, processCallback, this) == 0,
+                    "Could not install the JACK audio callback");
+            require(jack_set_sample_rate_callback(client, sampleRateCallback, this) == 0,
+                    "Could not install the JACK sample-rate callback");
+            jack_on_shutdown(client, shutdownCallback, this);
+
+            const double sampleRate = static_cast<double>(jack_get_sample_rate(client));
+            for (HostEditor *editor : editors)
+                editor->prepare(sampleRate, static_cast<int32_t>(MaximumFrames));
+            if (jack_activate(client) != 0)
+                throw std::runtime_error("Could not activate the JACK practice-host client");
+            active = true;
+        } catch (...) {
+            for (HostEditor *editor : editors)
+                editor->stopProcessing();
+            if (client != nullptr) {
+                jack_client_close(client);
+                client = nullptr;
+            }
+            throw;
+        }
+    }
+
+    ~JackAudioHost() { stop(); }
+
+    void stop()
+    {
+        if (client == nullptr)
+            return;
+        if (active)
+            jack_deactivate(client);
+        active = false;
+        for (HostEditor *editor : editors)
+            editor->stopProcessing();
+        jack_client_close(client);
+        client = nullptr;
+    }
+
+    void setOrder(const std::array<HostEditor *, 4> &order)
+    {
+        std::uint32_t packed = 0;
+        for (std::size_t position = 0; position < order.size(); ++position) {
+            const auto found = std::find(editors.begin(), editors.end(), order[position]);
+            const auto index = static_cast<std::uint32_t>(std::distance(editors.begin(), found));
+            packed |= index << (position * 2);
+        }
+        packedOrder.store(packed, std::memory_order_release);
+    }
+
+    bool liveInputEnabled() const { return liveInput.load(std::memory_order_acquire); }
+    void setLiveInputEnabled(bool enabled) { liveInput.store(enabled, std::memory_order_release); }
+    bool serverStopped() const { return serverIsStopped.load(std::memory_order_acquire); }
+
+    void reconfigureIfSampleRateChanged()
+    {
+        const std::uint32_t sampleRate = pendingSampleRate.exchange(0, std::memory_order_acq_rel);
+        if (sampleRate == 0 || client == nullptr)
+            return;
+        liveInput.store(false, std::memory_order_release);
+        jack_deactivate(client);
+        active = false;
+        for (HostEditor *editor : editors)
+            editor->stopProcessing();
+        for (HostEditor *editor : editors)
+            editor->prepare(static_cast<double>(sampleRate), static_cast<int32_t>(MaximumFrames));
+        if (jack_activate(client) == 0)
+            active = true;
+        else
+            serverIsStopped.store(true, std::memory_order_release);
+    }
+
+  private:
+    static int processCallback(jack_nframes_t frames, void *context)
+    {
+        return static_cast<JackAudioHost *>(context)->process(frames);
+    }
+
+    static int sampleRateCallback(jack_nframes_t sampleRate, void *context)
+    {
+        static_cast<JackAudioHost *>(context)->pendingSampleRate.store(sampleRate,
+                                                                       std::memory_order_release);
+        return 0;
+    }
+
+    static void shutdownCallback(void *context)
+    {
+        auto &host = *static_cast<JackAudioHost *>(context);
+        host.serverIsStopped.store(true, std::memory_order_release);
+        host.liveInput.store(false, std::memory_order_release);
+    }
+
+    int process(jack_nframes_t frameCount)
+    {
+        const auto *sourceLeft =
+            static_cast<const float *>(jack_port_get_buffer(inputLeft, frameCount));
+        const auto *sourceRight =
+            static_cast<const float *>(jack_port_get_buffer(inputRight, frameCount));
+        auto *destinationLeft = static_cast<float *>(jack_port_get_buffer(outputLeft, frameCount));
+        auto *destinationRight =
+            static_cast<float *>(jack_port_get_buffer(outputRight, frameCount));
+        if (sourceLeft == nullptr || sourceRight == nullptr || destinationLeft == nullptr ||
+            destinationRight == nullptr) {
+            return 0;
+        }
+
+        const bool inputEnabled = liveInput.load(std::memory_order_acquire);
+        const std::uint32_t order = packedOrder.load(std::memory_order_acquire);
+        for (jack_nframes_t offset = 0; offset < frameCount;) {
+            const auto count = static_cast<std::uint32_t>(
+                std::min<jack_nframes_t>(MaximumFrames, frameCount - offset));
+            float *currentLeft = leftBuffers[0].data();
+            float *currentRight = rightBuffers[0].data();
+            float *nextLeft = leftBuffers[1].data();
+            float *nextRight = rightBuffers[1].data();
+            if (inputEnabled) {
+                std::copy_n(sourceLeft + offset, count, currentLeft);
+                std::copy_n(sourceRight + offset, count, currentRight);
+            } else {
+                std::fill_n(currentLeft, count, 0.0f);
+                std::fill_n(currentRight, count, 0.0f);
+            }
+
+            bool valid = true;
+            for (std::size_t position = 0; position < editors.size(); ++position) {
+                const std::uint32_t index = (order >> (position * 2)) & 0x3u;
+                if (!editors[index]->process(currentLeft, currentRight, nextLeft, nextRight,
+                                             static_cast<int32_t>(count))) {
+                    valid = false;
+                    break;
+                }
+                std::swap(currentLeft, nextLeft);
+                std::swap(currentRight, nextRight);
+            }
+
+            if (valid && inputEnabled) {
+                std::copy_n(currentLeft, count, destinationLeft + offset);
+                std::copy_n(currentRight, count, destinationRight + offset);
+            } else {
+                std::fill_n(destinationLeft + offset, count, 0.0f);
+                std::fill_n(destinationRight + offset, count, 0.0f);
+            }
+            offset += count;
+        }
+        return 0;
+    }
+
+    std::array<HostEditor *, 4> editors;
+    std::atomic<std::uint32_t> packedOrder{0xE4u};
+    std::atomic<std::uint32_t> pendingSampleRate{0};
+    std::atomic<bool> liveInput{false};
+    std::atomic<bool> serverIsStopped{false};
+    std::array<std::array<float, MaximumFrames>, 2> leftBuffers{};
+    std::array<std::array<float, MaximumFrames>, 2> rightBuffers{};
+    jack_client_t *client = nullptr;
+    jack_port_t *inputLeft = nullptr;
+    jack_port_t *inputRight = nullptr;
+    jack_port_t *outputLeft = nullptr;
+    jack_port_t *outputRight = nullptr;
+    bool active = false;
 };
 
 void runBoard(const std::vector<const char *> &paths, HostApplication &host, bool smoke)
 {
     require(paths.size() == 4, "Supply four StormSurge VST3 module paths");
+    HostRunLoop runLoop;
     std::vector<std::unique_ptr<Module>> modules;
     std::vector<std::unique_ptr<HostEditor>> editors;
     modules.reserve(paths.size());
@@ -637,15 +1183,27 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
     for (auto &module : modules)
         editors.push_back(std::make_unique<HostEditor>(*module, host));
 
+    std::vector<HostEditor *> order;
+    for (auto &editor : editors)
+        order.push_back(editor.get());
+    std::array<HostEditor *, 4> initialOrder{};
+    std::copy(order.begin(), order.end(), initialOrder.begin());
+    std::unique_ptr<JackAudioHost> audio;
+    if (!smoke) {
+        audio = std::make_unique<JackAudioHost>(initialOrder);
+        audio->setOrder(initialOrder);
+    }
+
     constexpr int panelWidth = 540;
-    constexpr int editorTop = 46;
-    const int height =
+    constexpr int editorTop = 84;
+    const int bypassTop =
         editorTop +
         std::max_element(editors.begin(), editors.end(),
                          [](const auto &a, const auto &b) { return a->height() < b->height(); })
             ->get()
             ->height() +
-        8;
+        6;
+    const int height = bypassTop + 48;
     constexpr int width = 1180;
     Display *display = XOpenDisplay(nullptr);
     require(display != nullptr, "Could not open the X11 display");
@@ -715,15 +1273,11 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
     XClearWindow(display, parent);
     XSync(display, False);
 
-    HostRunLoop runLoop;
     for (std::size_t i = 0; i < editors.size(); ++i)
         editors[i]->attach(
             display, parent, runLoop,
             static_cast<int>(i) * panelWidth + (panelWidth - editors[i]->width()) / 2, editorTop);
 
-    std::vector<HostEditor *> order;
-    for (auto &editor : editors)
-        order.push_back(editor.get());
     int dragIndex = -1;
     int scrollOffset = 0;
     const int maxScroll = panelWidth * static_cast<int>(order.size()) - width;
@@ -736,19 +1290,60 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
     };
     auto drawHeaders = [&] {
         XSetForeground(display, DefaultGC(display, screen), BlackPixel(display, screen));
+        XFillRectangle(display, parent, DefaultGC(display, screen), 8, 6, 300, 30);
+        XSetForeground(display, DefaultGC(display, screen), WhitePixel(display, screen));
+        const char *inputStatus =
+            audio == nullptr
+                ? "LIVE INPUT: AUDIO OFF"
+                : (audio->serverStopped()
+                       ? "JACK STOPPED"
+                       : (audio->liveInputEnabled() ? "LIVE INPUT: ENABLED"
+                                                    : "LIVE INPUT: MUTED - CLICK TO ENABLE"));
+        XDrawString(display, parent, DefaultGC(display, screen), 18, 26, inputStatus,
+                    static_cast<int>(std::strlen(inputStatus)));
+        const char *routingHint = "JACK ports: connect input and TONE3000 in the audio graph";
+        XDrawString(display, parent, DefaultGC(display, screen), 330, 26, routingHint,
+                    static_cast<int>(std::strlen(routingHint)));
         for (std::size_t i = 0; i < order.size(); ++i) {
             const std::string title = std::string(order[i]->name()) + "  |  drag here to reorder";
             const int x = static_cast<int>(i) * panelWidth - scrollOffset;
-            XFillRectangle(display, parent, DefaultGC(display, screen), x + 8, 6, panelWidth - 16,
-                           editorTop - 10);
-            XSetForeground(display, DefaultGC(display, screen), WhitePixel(display, screen));
-            XDrawString(display, parent, DefaultGC(display, screen), x + 18, 27, title.c_str(),
-                        static_cast<int>(title.size()));
             XSetForeground(display, DefaultGC(display, screen), BlackPixel(display, screen));
+            XFillRectangle(display, parent, DefaultGC(display, screen), x + 8, 44, panelWidth - 16,
+                           32);
+            XSetForeground(display, DefaultGC(display, screen), WhitePixel(display, screen));
+            XDrawString(display, parent, DefaultGC(display, screen), x + 18, 65, title.c_str(),
+                        static_cast<int>(title.size()));
         }
+        XSetForeground(display, DefaultGC(display, screen), BlackPixel(display, screen));
+        XFillRectangle(display, parent, DefaultGC(display, screen), width - 96, 6, 88, 30);
         XSetForeground(display, DefaultGC(display, screen), WhitePixel(display, screen));
-        XDrawString(display, parent, DefaultGC(display, screen), width - 82, 27, "<", 1);
-        XDrawString(display, parent, DefaultGC(display, screen), width - 48, 27, ">", 1);
+        XDrawString(display, parent, DefaultGC(display, screen), width - 82, 26, "<", 1);
+        XDrawString(display, parent, DefaultGC(display, screen), width - 48, 26, ">", 1);
+        for (std::size_t i = 0; i < order.size(); ++i) {
+            const int x = static_cast<int>(i) * panelWidth - scrollOffset + 20;
+            XSetForeground(display, DefaultGC(display, screen), BlackPixel(display, screen));
+            XFillRectangle(display, parent, DefaultGC(display, screen), x, bypassTop,
+                           panelWidth - 40, 38);
+            XSetForeground(display, DefaultGC(display, screen), WhitePixel(display, screen));
+            const char *status = order[i]->bypassed() ? "FOOTSWITCH: BYPASS" : "FOOTSWITCH: ON";
+            XDrawString(display, parent, DefaultGC(display, screen), x + 12, bypassTop + 24, status,
+                        static_cast<int>(std::strlen(status)));
+        }
+    };
+    std::array<bool, 4> drawnBypassState{};
+    bool haveDrawnBypassState = false;
+    auto refreshBypassState = [&] {
+        bool changed = !haveDrawnBypassState;
+        for (std::size_t i = 0; i < order.size(); ++i) {
+            const bool bypassed = order[i]->bypassed();
+            changed = changed || drawnBypassState[i] != bypassed;
+            drawnBypassState[i] = bypassed;
+        }
+        haveDrawnBypassState = true;
+        if (changed) {
+            XClearWindow(display, parent);
+            drawHeaders();
+        }
     };
     auto scrollBoard = [&](int amount) {
         scrollOffset = std::clamp(scrollOffset + amount, 0, maxScroll);
@@ -758,14 +1353,20 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
     };
 
     std::printf(
-        "Attached four real StormSurge VST3 editor views. Drag the top strips to reorder; "
-        "click < or > or use the mouse wheel to scroll. This mode opens no audio device.\n");
+        "Attached four real StormSurge VST3 editors and opened JACK ports. Drag the middle "
+        "strips to reorder, click pedal footswitch strips to bypass, and explicitly enable live "
+        "input from the top-left control. JACK starts muted and is never auto-connected.\n");
     std::fflush(stdout);
     bool keepOpen = true;
     const auto smokeDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
     while (keepOpen) {
         if (smoke && std::chrono::steady_clock::now() >= smokeDeadline)
             break;
+        if (audio != nullptr) {
+            audio->reconfigureIfSampleRateChanged();
+            if (audio->serverStopped())
+                audio->setLiveInputEnabled(false);
+        }
         while (XPending(display) != 0) {
             XEvent event{};
             XNextEvent(display, &event);
@@ -776,11 +1377,28 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
                        event.xexpose.count == 0) {
                 drawHeaders();
             } else if (event.type == ButtonPress && event.xbutton.window == parent &&
-                       event.xbutton.button == Button1 && event.xbutton.y < editorTop) {
-                if (event.xbutton.x >= width - 96)
+                       event.xbutton.button == Button1) {
+                if (event.xbutton.y < 38 && event.xbutton.x < 308 && audio != nullptr) {
+                    audio->setLiveInputEnabled(!audio->liveInputEnabled());
+                    XClearWindow(display, parent);
+                    drawHeaders();
+                } else if (event.xbutton.y < 38 && event.xbutton.x >= width - 96) {
                     scrollBoard(event.xbutton.x < width - 58 ? -180 : 180);
-                else
+                } else if (event.xbutton.y >= 44 && event.xbutton.y < 78) {
                     dragIndex = (event.xbutton.x + scrollOffset) / panelWidth;
+                } else if (event.xbutton.y >= bypassTop && event.xbutton.y < bypassTop + 38) {
+                    const int index = (event.xbutton.x + scrollOffset) / panelWidth;
+                    if (index >= 0 && index < static_cast<int>(order.size())) {
+                        order[static_cast<std::size_t>(index)]->toggleBypass();
+                        if (audio != nullptr) {
+                            std::array<HostEditor *, 4> currentOrder{};
+                            std::copy(order.begin(), order.end(), currentOrder.begin());
+                            audio->setOrder(currentOrder);
+                        }
+                        XClearWindow(display, parent);
+                        drawHeaders();
+                    }
+                }
             } else if (event.type == ButtonPress && event.xbutton.window == parent &&
                        (event.xbutton.button == Button4 || event.xbutton.button == Button5)) {
                 scrollBoard(event.xbutton.button == Button4 ? -180 : 180);
@@ -792,6 +1410,11 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
                 order.erase(order.begin() + dragIndex);
                 order.insert(order.begin() + destination, moved);
                 positionEditors();
+                if (audio != nullptr) {
+                    std::array<HostEditor *, 4> currentOrder{};
+                    std::copy(order.begin(), order.end(), currentOrder.begin());
+                    audio->setOrder(currentOrder);
+                }
                 dragIndex = -1;
                 XClearWindow(display, parent);
                 drawHeaders();
@@ -803,10 +1426,13 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
             }
         }
         runLoop.dispatch();
+        refreshBypassState();
         pollfd descriptor{ConnectionNumber(display), POLLIN, 0};
         poll(&descriptor, 1, 5);
     }
 
+    if (audio != nullptr)
+        audio->stop();
     editors.clear();
     XDestroyWindow(display, parent);
     XFreePixmap(display, texturePixmap);

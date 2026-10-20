@@ -197,6 +197,8 @@ if(BUILD_TESTING)
         target_link_libraries(vst3_loader_tests PRIVATE ${CMAKE_DL_LIBS})
         if(NOT WIN32)
             find_package(X11 REQUIRED)
+            find_package(PkgConfig REQUIRED)
+            pkg_check_modules(JACK REQUIRED IMPORTED_TARGET jack)
             # These probes instantiate actual Linux bundles and stay out of sanitizer
             # runs. The optional editor --view path is manual; neither opens audio devices.
             add_executable(vst3_processing_tests tests/Vst3ProcessingTests.cpp)
@@ -206,7 +208,8 @@ if(BUILD_TESTING)
             add_executable(vst3_editor_tests tests/Vst3EditorTests.cpp)
             target_include_directories(vst3_editor_tests PRIVATE external/dpf/distrho/src
                 "${CMAKE_CURRENT_BINARY_DIR}/generated")
-            target_link_libraries(vst3_editor_tests PRIVATE ${CMAKE_DL_LIBS} X11::X11)
+            target_link_libraries(vst3_editor_tests PRIVATE ${CMAKE_DL_LIBS} X11::X11
+                PkgConfig::JACK)
             add_dependencies(vst3_editor_tests UndertowPreview-vst3)
             if(TARGET Maelstrom)
                 add_dependencies(vst3_processing_tests Maelstrom-vst3)

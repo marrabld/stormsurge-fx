@@ -5,13 +5,9 @@ Issue #61 tracks a Linux-first practice application for chaining StormSurge VST3
 effects, playing audio files, monitoring a live instrument only after an explicit
 action, and routing the chain into a separate amp simulator such as TONE3000.
 
-The current `practice_board_gui` target is only a **display and interaction prototype**.
-It shows the four existing VST3 pedals in a horizontal signal chain. Drag a pedal to
-reorder it; click its footswitch to toggle the local on/bypass indicator. No VST3 is
-loaded, no controls are connected to DSP, and it opens no audio device. The labels
-for file playback, live input and output routing are illustrative, not functional.
-It now uses a replaceable draft texture from the maintainer's local artwork, embedded
-as a prepared 1024x1024 image. See `assets/runtime/PEDAL-BOARD-NOTICE.md`.
+The `practice_board_gui` target remains a **display-only mockup**. It uses the
+replaceable draft texture from the maintainer's local artwork, embedded as a prepared
+1024x1024 image. See `assets/runtime/PEDAL-BOARD-NOTICE.md`.
 
 Build and inspect it on Linux:
 
@@ -25,10 +21,10 @@ The display harness checks its reorder, bypass and minimum-size interactions whe
 run without `--view`; `--small` checks the minimum window size. This does not verify
 audio routing or establish that the eventual host is ready for practice.
 
-The Linux VST3 editor probe can attach a real pedal editor to an X11 host window
-without starting an audio device. Its `--board` mode opens all four existing pedal
-editors in one horizontally scrollable window. Drag a title strip to reorder the
-editor windows. For example:
+The Linux VST3 editor host's `--board` mode opens all four real pedal editors and a
+JACK client in one horizontally scrollable X11 window. It processes audio through
+the pedals in the displayed order. Drag the middle strips to reorder; click a pedal's
+footswitch strip to toggle its real VST3 bypass parameter. For example:
 
 ```sh
 build/linux-debug/vst3_editor_tests --board \
@@ -38,13 +34,22 @@ build/linux-debug/vst3_editor_tests --board \
   build/linux-debug/bin/Squall.vst3/Contents/x86_64-linux/Squall.so
 ```
 
-Use the `<` and `>` buttons in the top strip or the mouse wheel to scroll the board. The `--board-smoke`
-variant opens the same editors, then closes automatically after two seconds for a
-manual display smoke check. This is the first real multi-editor board slice, not yet
-an audio host: reorder changes the editor layout only, and no pedal processes audio.
-The window requires a graphical X11 session. `--view` still opens one editor by itself.
+Start a JACK server (PipeWire's JACK compatibility is supported) before launching.
+The host registers `input_left`, `input_right`, `output_left`, and `output_right`;
+connect them with a patchbay such as qpwgraph. Connect an instrument/system source to
+the input ports, and connect the output ports to TONE3000's audio inputs. It never
+starts a device, makes connections, or enables live input automatically. The top-left
+button is an explicit live-input enable; startup, JACK restart and rate change all
+leave it muted. `<`/`>` or the mouse wheel scrolls the board. `--board-smoke` still
+only checks editor attachment and opens no JACK client; `--view` still opens one
+editor by itself.
 
-The host investigation has also added device-free tests that instantiate and process
-one stereo block through each current Linux StormSurge VST3 bundle. Those tests verify
-that the VST3 modules can run through DPF's existing interface; they do not yet connect
-plugins into a user-selectable chain or open an audio device.
+This is not yet a complete practice host: there is no audio-file playback, no board
+state saving, and it has only been smoke-tested on the current PipeWire/JACK setup.
+It does not establish reliable low-latency performance or compatibility with every
+JACK server, pedal version, or TONE3000 setup. Keep the live-input routing muted until
+you deliberately connect and enable it.
+
+Device-free tests also instantiate and process one stereo block through each current
+Linux StormSurge VST3 bundle. They do not verify the live JACK callback or audio-device
+behaviour.
