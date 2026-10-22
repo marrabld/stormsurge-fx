@@ -45,9 +45,12 @@ PR #9 added the tested independent-stereo core. `PreviewPlugin.cpp` and
 `PreviewEditor.cpp` connect it as **Undertow Preview**, with a separate `UtP0` identity
 and build target. Keep `UndertowFoundation`/`UtF0` pass-through for old test projects.
 
-Maelstrom, Whitecap and Squall each have separate identities and parameter schemas;
-do not cross their state or DSP into Undertow. Their current listening caveats are
-in `docs/maelstrom.md`, `docs/whitecap.md` and `docs/squall.md`.
+Maelstrom, Whitecap, Squall and Riptide each have separate identities and parameter
+schemas; do not cross their state or DSP into Undertow. Their current listening caveats
+are in `docs/maelstrom.md`, `docs/whitecap.md`, `docs/squall.md` and
+`docs/riptide.md`. Riptide is a plugin-only pitch-down pedal built on the prototype
+core in `src/Riptide.cpp`; it reports no fixed latency and has no standalone app
+because its bypass is not a monitor-consent gate.
 
 Preview's parameter order/symbols are in `PreviewParameters.hpp`; append, do not
 reorder. Issue #11 adds switchable Ping-pong; #13 adds tempo sync; #16 adds optional
@@ -116,6 +119,7 @@ ctest --preset linux-debug -R '^preview_'                # Preview integration a
 ctest --preset linux-debug -R '^tempo_sync$'             # timing math and extended buffers
 ctest --preset linux-debug -R '^dark_reverb_core$'       # reverb response and wet-insert contract
 ctest --preset linux-debug -R '^au_tempo_bridge$'        # raw AU callback policy without Apple dependencies
+ctest --preset linux-debug -R '^riptide_plugin$'         # Riptide DPF identity, state and processing
 ```
 
 Non-obvious test facts:
@@ -137,6 +141,12 @@ Non-obvious test facts:
   targets. It is plugin-only with no standalone app, because its bypass has no
   monitoring consent gate. It reports one sample of latency for oversampling.
   `src/ParameterSpec.hpp` holds the parameter metadata struct shared by plugins.
+- Riptide is the fifth plugin: identity `UtR0`, schema `riptide_schema`, three
+  parameters in `src/RiptideParameters.hpp` in the order Shift, Blend, Bypass. Shift
+  is quantised to whole semitones; defaults are an exact identity. It reports no
+  fixed latency and enables no `DISTRHO_PLUGIN_WANT_LATENCY`; the 1–41 ms read-head
+  window is part of the effect, not PDC. Its `Riptide-vst3`/`-au` targets must not
+  leak `STORMSURGE_RIPTIDE` into another plugin.
 - **`foundation_gui` is NOT a ctest test.** It builds with the project but is run by
   hand, because it needs a display/OpenGL context: `xvfb-run -a build/linux-debug/foundation_gui`.
   It renders 30 frames, asserts the 390x510 geometry constraint, opens no audio device.

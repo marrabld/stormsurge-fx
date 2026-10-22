@@ -29,7 +29,9 @@ for pedal in whitecap riptide; do
 done
 ```
 
-These images are embedded in the display-only concept mockup and Whitecap's VST3
-editor. They are not used by Undertow or Maelstrom and are not part of their plugin
-packages. Whitecap's chorus/vibrato sound values remain provisional in issue #38;
-Riptide's pitch-shift behavior remains undecided in issue #39.
+These images are embedded in the display-only concept mockup. Whitecap's prepared
+image is also embedded in Whitecap's VST3 editor. Riptide's prepared image is
+embedded in the Riptide VST3 editor under `RIPTIDE-NOTICE.md`. They are not used by
+Undertow or Maelstrom and are not part of their plugin packages. Whitecap's
+chorus/vibrato sound values remain provisional in issue #38; Riptide's pitch-shift
+behaviour is scoped in issues #39 and #65.

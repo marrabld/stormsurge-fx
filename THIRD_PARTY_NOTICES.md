@@ -32,6 +32,17 @@ The documentation screenshot depicts this same artwork and separately drawn
 controls. No dependency was added. The mockup and its texture are not included in
 Undertow's binary plugin archives.
 
+## Riptide artwork
+
+The Riptide VST3 editor and display-only concept mockup embed a separately prepared
+Gemini/Nano Banana enclosure. The maintainer confirmed personal-account generation
+from an assistant-supplied prompt, without third-party image references, and approved
+public use under GPL-3.0-only to the extent applicable rights exist. See
+[the Riptide notice](assets/runtime/RIPTIDE-NOTICE.md) for provenance, preparation
+and limitations. CMake copies it to `build/<preset>/bin/notices/Riptide-artwork.md`.
+Controls, labels and readouts are drawn separately from the texture; no image-decoding
+dependency was added.
+
 ## DPF and DGL
 
 The DISTRHO Plugin Framework is pinned as the `external/dpf` Git submodule at

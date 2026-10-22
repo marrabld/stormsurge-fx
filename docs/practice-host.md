@@ -21,8 +21,8 @@ The display harness checks its reorder, bypass and minimum-size interactions whe
 run without `--view`; `--small` checks the minimum window size. This does not verify
 audio routing or establish that the eventual host is ready for practice.
 
-The Linux VST3 editor host's `--board` mode opens all four real pedal editors and a
-JACK client in one horizontally scrollable X11 window. It processes audio through
+The Linux VST3 editor host's `--board` mode opens one to eight real pedal editors and
+a JACK client in one horizontally scrollable X11 window. It processes audio through
 the pedals in the displayed order. Drag the middle strips to reorder; click a pedal's
 footswitch strip to toggle its real VST3 bypass parameter. For example:
 
@@ -31,7 +31,8 @@ build/linux-debug/vst3_editor_tests --board \
   build/linux-debug/bin/UndertowPreview.vst3/Contents/x86_64-linux/UndertowPreview.so \
   build/linux-debug/bin/Maelstrom.vst3/Contents/x86_64-linux/Maelstrom.so \
   build/linux-debug/bin/Whitecap.vst3/Contents/x86_64-linux/Whitecap.so \
-  build/linux-debug/bin/Squall.vst3/Contents/x86_64-linux/Squall.so
+  build/linux-debug/bin/Squall.vst3/Contents/x86_64-linux/Squall.so \
+  build/linux-debug/bin/Riptide.vst3/Contents/x86_64-linux/Riptide.so
 ```
 
 Building the audio path needs JACK development files at configure time. If they are
