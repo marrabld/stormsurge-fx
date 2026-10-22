@@ -36,7 +36,7 @@ jobs:
           xvfb-run -a build/linux-debug/squall_gui --small
           xvfb-run -a build/linux-debug/riptide_gui
           xvfb-run -a build/linux-debug/riptide_gui --small
-          xvfb-run -a build/linux-debug/vst3_editor_tests --board-smoke \
+          xvfb-run -a -s "-screen 0 1600x1200x24" build/linux-debug/vst3_editor_tests --board-smoke \
             build/linux-debug/bin/UndertowPreview.vst3/Contents/x86_64-linux/UndertowPreview.so \
             build/linux-debug/bin/Maelstrom.vst3/Contents/x86_64-linux/Maelstrom.so \
             build/linux-debug/bin/Whitecap.vst3/Contents/x86_64-linux/Whitecap.so \
