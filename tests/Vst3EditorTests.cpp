@@ -18,7 +18,9 @@
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
+#if defined(STORMSURGE_HAVE_JACK)
 #include <jack/jack.h>
+#endif
 
 #include <algorithm>
 #include <array>
@@ -985,6 +987,7 @@ class HostEditor
     bool attached = false;
 };
 
+#if defined(STORMSURGE_HAVE_JACK)
 class JackAudioHost
 {
   public:
@@ -1169,6 +1172,22 @@ class JackAudioHost
     jack_port_t *outputRight = nullptr;
     bool active = false;
 };
+#else
+// No JACK development files at configure time. The board still attaches the real
+// editors for layout and bypass work, but the audio host is never constructed, so
+// the window truthfully reports "AUDIO OFF" instead of pretending JACK is running.
+class JackAudioHost
+{
+  public:
+    explicit JackAudioHost(const std::array<HostEditor *, 4> &) {}
+    void stop() {}
+    void setOrder(const std::array<HostEditor *, 4> &) {}
+    void setLiveInputEnabled(bool) {}
+    bool liveInputEnabled() const { return false; }
+    bool serverStopped() const { return true; }
+    void reconfigureIfSampleRateChanged() {}
+};
+#endif
 
 void runBoard(const std::vector<const char *> &paths, HostApplication &host, bool smoke)
 {
@@ -1189,10 +1208,17 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
     std::array<HostEditor *, 4> initialOrder{};
     std::copy(order.begin(), order.end(), initialOrder.begin());
     std::unique_ptr<JackAudioHost> audio;
+#if defined(STORMSURGE_HAVE_JACK)
     if (!smoke) {
         audio = std::make_unique<JackAudioHost>(initialOrder);
         audio->setOrder(initialOrder);
     }
+#else
+    if (!smoke)
+        std::fprintf(stderr,
+                     "Built without JACK development files; --board runs the editors without "
+                     "audio. Install the JACK pkg-config package and rebuild to enable it.\n");
+#endif
 
     constexpr int panelWidth = 540;
     constexpr int editorTop = 84;
@@ -1352,10 +1378,12 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
         drawHeaders();
     };
 
-    std::printf(
-        "Attached four real StormSurge VST3 editors and opened JACK ports. Drag the middle "
-        "strips to reorder, click pedal footswitch strips to bypass, and explicitly enable live "
-        "input from the top-left control. JACK starts muted and is never auto-connected.\n");
+    std::printf("Attached four real StormSurge VST3 editors. Drag the middle strips to reorder "
+                "and click pedal footswitch strips to bypass.%s\n",
+                audio != nullptr
+                    ? " Live input is off until you click the top-left control; JACK ports are "
+                      "never auto-connected and the client starts muted."
+                    : " Audio is off in this build because JACK support was not compiled in.");
     std::fflush(stdout);
     bool keepOpen = true;
     const auto smokeDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);

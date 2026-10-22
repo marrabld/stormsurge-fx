@@ -34,7 +34,9 @@ build/linux-debug/vst3_editor_tests --board \
   build/linux-debug/bin/Squall.vst3/Contents/x86_64-linux/Squall.so
 ```
 
-Start a JACK server (PipeWire's JACK compatibility is supported) before launching.
+Building the audio path needs JACK development files at configure time. If they are
+missing, the board still opens the editors but reports audio as off. Start a JACK
+server (PipeWire's JACK compatibility is supported) before launching.
 The host registers `input_left`, `input_right`, `output_left`, and `output_right`;
 connect them with a patchbay such as qpwgraph. Connect an instrument/system source to
 the input ports, and connect the output ports to TONE3000's audio inputs. It never
