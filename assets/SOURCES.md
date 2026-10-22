@@ -85,6 +85,16 @@ display-only mockup and Squall's VST3 preview editor embed only
 generator, exact model revision and generation date have not been independently
 confirmed, and no exclusive copyright or third-party clearance is claimed.
 
+## Practice-board texture draft, issue #61
+
+On 2026-10-20 the maintainer identified
+`ui/textures/pedal-board-texture-v01.jpeg` as a Nano Banana image generated through
+a personal Gmail account and approved its use as a replaceable practice-board draft,
+confirming there are no licensing issues with using it. The source remains unchanged
+and gitignored. `runtime/pedal-board-texture-v01.jpeg` is a 1024x1024, quality-82
+prepared copy embedded only in the practice-board GUI. Its hash and preparation are
+in [`runtime/PEDAL-BOARD-NOTICE.md`](runtime/PEDAL-BOARD-NOTICE.md).
+
 ## Undertow pedal concept
 
 - File: `concepts/undertow-pedal-v01.jpeg`

@@ -195,6 +195,43 @@ if(BUILD_TESTING)
         add_executable(vst3_loader_tests tests/Vst3ModuleTests.cpp)
         target_include_directories(vst3_loader_tests PRIVATE external/dpf/distrho/src)
         target_link_libraries(vst3_loader_tests PRIVATE ${CMAKE_DL_LIBS})
+        if(NOT WIN32)
+            find_package(X11 REQUIRED)
+            # JACK is only needed by the experimental practice-board audio path. Keep it
+            # optional so a plain plugin/editor build does not demand audio packages that
+            # CI and most contributors do not need.
+            find_package(PkgConfig QUIET)
+            if(PkgConfig_FOUND)
+                pkg_check_modules(JACK IMPORTED_TARGET jack)
+            endif()
+            # These probes instantiate actual Linux bundles and stay out of sanitizer
+            # runs. The optional editor --view path is manual; neither opens audio devices.
+            add_executable(vst3_processing_tests tests/Vst3ProcessingTests.cpp)
+            target_include_directories(vst3_processing_tests PRIVATE external/dpf/distrho/src)
+            target_link_libraries(vst3_processing_tests PRIVATE ${CMAKE_DL_LIBS})
+            add_dependencies(vst3_processing_tests UndertowPreview-vst3)
+            add_executable(vst3_editor_tests tests/Vst3EditorTests.cpp)
+            target_include_directories(vst3_editor_tests PRIVATE external/dpf/distrho/src
+                "${CMAKE_CURRENT_BINARY_DIR}/generated")
+            target_link_libraries(vst3_editor_tests PRIVATE ${CMAKE_DL_LIBS} X11::X11)
+            if(JACK_FOUND)
+                target_compile_definitions(vst3_editor_tests PRIVATE STORMSURGE_HAVE_JACK=1)
+                target_link_libraries(vst3_editor_tests PRIVATE PkgConfig::JACK)
+            endif()
+            add_dependencies(vst3_editor_tests UndertowPreview-vst3)
+            if(TARGET Maelstrom)
+                add_dependencies(vst3_processing_tests Maelstrom-vst3)
+                add_dependencies(vst3_editor_tests Maelstrom-vst3)
+            endif()
+            if(TARGET Whitecap)
+                add_dependencies(vst3_processing_tests Whitecap-vst3)
+                add_dependencies(vst3_editor_tests Whitecap-vst3)
+            endif()
+            if(TARGET Squall)
+                add_dependencies(vst3_processing_tests Squall-vst3)
+                add_dependencies(vst3_editor_tests Squall-vst3)
+            endif()
+        endif()
         add_dependencies(vst3_loader_tests UndertowPreview-vst3)
         if(TARGET Whitecap)
             add_dependencies(vst3_loader_tests Whitecap-vst3)
@@ -208,6 +245,34 @@ if(BUILD_TESTING)
             set(preview_module "${CMAKE_BINARY_DIR}/bin/UndertowPreview.vst3/Contents/x86_64-linux/UndertowPreview.so")
         endif()
         add_test(NAME preview_vst3_loader COMMAND vst3_loader_tests "${preview_module}" "Undertow Preview" 0.4.0)
+        if(NOT WIN32)
+            add_test(NAME preview_vst3_process
+                COMMAND vst3_processing_tests "${preview_module}")
+            add_test(NAME maelstrom_vst3_process
+                COMMAND vst3_processing_tests
+                    "${CMAKE_BINARY_DIR}/bin/Maelstrom.vst3/Contents/x86_64-linux/Maelstrom.so")
+            add_test(NAME preview_vst3_editor
+                COMMAND vst3_editor_tests "${preview_module}")
+            add_test(NAME maelstrom_vst3_editor
+                COMMAND vst3_editor_tests
+                    "${CMAKE_BINARY_DIR}/bin/Maelstrom.vst3/Contents/x86_64-linux/Maelstrom.so")
+            if(TARGET Whitecap)
+                add_test(NAME whitecap_vst3_process
+                    COMMAND vst3_processing_tests
+                        "${CMAKE_BINARY_DIR}/bin/Whitecap.vst3/Contents/x86_64-linux/Whitecap.so")
+                add_test(NAME whitecap_vst3_editor
+                    COMMAND vst3_editor_tests
+                        "${CMAKE_BINARY_DIR}/bin/Whitecap.vst3/Contents/x86_64-linux/Whitecap.so")
+            endif()
+            if(TARGET Squall)
+                add_test(NAME squall_vst3_process
+                    COMMAND vst3_processing_tests
+                        "${CMAKE_BINARY_DIR}/bin/Squall.vst3/Contents/x86_64-linux/Squall.so")
+                add_test(NAME squall_vst3_editor
+                    COMMAND vst3_editor_tests
+                        "${CMAKE_BINARY_DIR}/bin/Squall.vst3/Contents/x86_64-linux/Squall.so")
+            endif()
+        endif()
         if(TARGET Whitecap)
             if(WIN32)
                 set(whitecap_module
@@ -344,6 +409,15 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_BINARY_DIR}/generated")
     target_compile_definitions(future_pedal_mockup PRIVATE STORMSURGE_GUI_HARNESS)
     target_link_libraries(future_pedal_mockup PRIVATE dgl-opengl)
+    include(cmake/PracticeBoardArtwork.cmake)
+    configure_file(assets/runtime/PEDAL-BOARD-NOTICE.md
+        "${CMAKE_CURRENT_BINARY_DIR}/practice-board-notices/Pedal-board-artwork.md" COPYONLY)
+    add_executable(practice_board_gui tests/PracticeBoardGui.cpp
+        external/dpf/distrho/src/DistrhoUI.cpp)
+    target_include_directories(practice_board_gui PRIVATE src external/dpf/distrho
+        "${CMAKE_CURRENT_BINARY_DIR}/generated")
+    target_compile_definitions(practice_board_gui PRIVATE STORMSURGE_GUI_HARNESS)
+    target_link_libraries(practice_board_gui PRIVATE dgl-opengl)
     add_executable(squall_mockup tests/SquallMockup.cpp
         external/dpf/distrho/src/DistrhoUI.cpp)
     target_include_directories(squall_mockup PRIVATE src external/dpf/distrho
@@ -363,6 +437,7 @@ if(BUILD_TESTING)
         endif()
         target_sources(maelstrom_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         target_sources(future_pedal_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
+        target_sources(practice_board_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         target_sources(squall_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
     endif()
     if(NOT WIN32)
@@ -376,6 +451,7 @@ if(BUILD_TESTING)
         endif()
         target_link_libraries(maelstrom_mockup PRIVATE ${CMAKE_DL_LIBS})
         target_link_libraries(future_pedal_mockup PRIVATE ${CMAKE_DL_LIBS})
+        target_link_libraries(practice_board_gui PRIVATE ${CMAKE_DL_LIBS})
         target_link_libraries(squall_mockup PRIVATE ${CMAKE_DL_LIBS})
     endif()
     # GUI smoke is intentionally explicit, since it needs a display/OpenGL context.

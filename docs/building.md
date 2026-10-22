@@ -23,13 +23,17 @@ Install CMake, Ninja, Clang, pkg-config, OpenGL and X11 development libraries,
 including Xcursor, Xext and Xrandr. On Ubuntu 24.04 the CI setup uses:
 
 ```sh
-sudo apt-get install clang cmake ninja-build libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev xvfb
+sudo apt-get install clang cmake ninja-build libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev libjack-jackd2-dev xvfb
 ```
 
 On an existing Arch development system, the corresponding packages include
-`clang`, `cmake`, `ninja`, `pkgconf`, `libglvnd`, `libx11`, `libxcursor`, `libxext`
-and `libxrandr`. Read your package manager's proposed changes before installing.
-No dependency-install command is run by CMake.
+`clang`, `cmake`, `ninja`, `pkgconf`, `libglvnd`, `libx11`, `libxcursor`, `libxext`,
+`libxrandr` and `jack2`. Read your package manager's proposed changes before
+installing. No dependency-install command is run by CMake.
+
+JACK development files are optional for the plugins. They are only needed to build
+the experimental practice board's audio path (`vst3_editor_tests --board`); without
+them that mode still opens the real editors but reports audio as off.
 
 ```sh
 git clone --recurse-submodules https://github.com/marrabld/stormsurge-fx.git
