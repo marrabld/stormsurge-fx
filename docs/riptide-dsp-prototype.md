@@ -32,6 +32,32 @@ chord. Its spectral helper self-checks against a known amplitude. These are nume
 checks only; they are not listening tests, a complete artifact/latency assessment, or
 evidence of DAW/device behavior.
 
-There is no audition renderer or plugin integration yet. Any private guitar recording
-used for future listening should stay local unless the maintainer explicitly approves
+## Listening to the prototype
+
+`riptide_audition` renders a local WAV through the same core the tests use. It has no
+plugin, editor, audio device or network access. Build and run it on Linux:
+
+```sh
+cmake --build --preset linux-debug --target riptide_audition
+build/linux-debug/riptide_audition take.wav take-drop5.wav --shift -5
+build/linux-debug/riptide_audition take.wav take-octave.wav --shift -12 --blend 30
+```
+
+Input may be mono or stereo PCM 16/24/32-bit or float32. Output is always float32 at
+the input's rate and length. Shift is 0 to -12 semitones; blend is 0 to 100 percent of
+the shifted signal. A 100 percent blend at -5 semitones is the whole-guitar drop tune;
+a low blend at -12 is the blended lower layer. Write float32 so rendered peaks above
+full scale are preserved rather than clipped.
+
+The tool does not add a fixed latency, but the algorithm's moving read heads still
+span roughly 1–41 ms as described above. Rendering a file successfully is not a
+listening result: judge warble, attack smearing, chord handling and playing feel
+against the private passage chosen for issue #39. Keep that recording local.
+
+`ctest --preset linux-debug -R '^riptide_audition$'` checks file round-trips, malformed
+input, dry identity and the expected -5 semitone frequency. Those are numerical checks,
+not sound-quality evidence.
+
+There is still no Riptide plugin or editor integration. Any private guitar recording
+used for listening should stay local unless the maintainer explicitly approves
 sharing it.
