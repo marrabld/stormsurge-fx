@@ -73,11 +73,11 @@ pedal state is:
 | Riptide | Host-independent pitch-down DSP, Linux/Windows VST3 and experimental macOS VST3/AUv2, with Shift, Blend and Bypass. | Listen through an amp modeller and the practice board: drop tuning, chugs, chords, attack and low-layer blend. No live note tracking. See [Riptide notes](docs/riptide.md). |
 
 The maintainer judged the Riptide prototype good enough to build on after private
-listening; that is not final sound approval. Issue #65 tracks the plugin slice.
-There is no open PR at the time this handoff was updated. GitHub has open issues
-for both active listening/design questions and work already implemented; do not
-assume an open issue means the code is missing. Do not close issues without the
-maintainer's approval. Ebbtide remains a concept, not a committed implementation.
+listening; that is not final sound approval. Issue #65 tracks the plugin slice, and
+PR #66 is open for review. GitHub has open issues for both active listening/design
+questions and work already implemented; do not assume an open issue means the code
+is missing. Do not close issues without the maintainer's approval. Ebbtide remains
+a concept, not a committed implementation.
 
 The maintainer confirmed Undertow playback, project reopening, ping-pong and basic
 sync/reverb behavior in Bitwig. This is not exhaustive export or cross-platform

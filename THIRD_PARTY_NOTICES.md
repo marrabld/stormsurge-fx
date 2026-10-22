@@ -1,8 +1,9 @@
 # Third-party notices
 
 StormSurge FX's own source is GPL-3.0-only. Dependency licences remain their own.
-The project does not use JUCE. Preview embeds one prepared AI-generated enclosure
-texture; Foundation still uses procedural artwork only.
+The project does not use JUCE. Undertow Preview embeds one prepared AI-generated
+enclosure texture; Foundation still uses procedural artwork only. Maelstrom,
+Whitecap, Squall and Riptide have their own prepared-artwork notices.
 
 ## Undertow enclosure texture
 
