@@ -175,6 +175,13 @@ if(BUILD_TESTING)
     add_executable(riptide_tests tests/RiptideTests.cpp src/Riptide.cpp)
     target_include_directories(riptide_tests PRIVATE src)
     add_test(NAME riptide_core COMMAND riptide_tests)
+    add_executable(riptide_audition
+        tools/RiptideAudition.cpp tools/AuditionRender.cpp tools/WavFile.cpp src/Riptide.cpp)
+    target_include_directories(riptide_audition PRIVATE src tools)
+    add_executable(riptide_audition_tests tests/RiptideAuditionTests.cpp
+        tools/AuditionRender.cpp tools/WavFile.cpp src/Riptide.cpp)
+    target_include_directories(riptide_audition_tests PRIVATE src tools)
+    add_test(NAME riptide_audition COMMAND riptide_audition_tests)
     if(APPLE)
         add_executable(mac_au_tests tests/MacAuTests.cpp)
         target_include_directories(mac_au_tests PRIVATE src)
