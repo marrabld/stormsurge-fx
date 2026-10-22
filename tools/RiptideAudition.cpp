@@ -2,7 +2,7 @@
 #include "AuditionRender.hpp"
 #include "WavFile.hpp"
 
-#include <charconv>
+#include <cerrno>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -32,13 +32,15 @@ constexpr std::string_view Usage =
 
 double parseNumber(std::string_view text, const char *name)
 {
-    double value = 0.0;
-    const char *begin = text.data();
-    const char *end = begin + text.size();
-    const auto result = std::from_chars(begin, end, value);
-    if (result.ec != std::errc{} || result.ptr != end || !std::isfinite(value))
+    // Apple's libc++ still omits floating-point from_chars, so use strtod and
+    // require it to consume the whole argument. The program never changes locale.
+    const std::string copy(text);
+    char *end = nullptr;
+    errno = 0;
+    const double value = std::strtod(copy.c_str(), &end);
+    if (end != copy.c_str() + copy.size() || errno == ERANGE || !std::isfinite(value))
         throw std::invalid_argument(std::string("Could not read a finite number for ") + name +
-                                    ": '" + std::string(text) + "'");
+                                    ": '" + copy + "'");
     return value;
 }
 
