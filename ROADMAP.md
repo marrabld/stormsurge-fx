@@ -1,8 +1,8 @@
 # Roadmap
 
-This is a direction, not a release schedule. StormSurge now has four separate
-effects: Undertow, Maelstrom, Whitecap and Squall. Their implementation status
-and remaining listening work are summarized below. The DAW is the pedalboard;
+This is a direction, not a release schedule. StormSurge now has five separate
+effects: Undertow, Maelstrom, Whitecap, Squall and Riptide. Their implementation
+status and remaining listening work are summarized below. The DAW is the pedalboard;
 there is no combined rack or finished standalone device workflow.
 
 ## First work plan
@@ -31,10 +31,11 @@ issue does not necessarily mean implementation is missing.
 | [Maelstrom](docs/maelstrom.md) | DSP core and separate plugin work; its visual mockup is not an audio test. | Listen through NAM or another amp modeller and assess the provisional tone. |
 | [Whitecap](docs/whitecap.md) | DSP core and Linux/Windows VST3 preview. | Try it in a song; refine only in response to listening. |
 | [Squall](docs/squall.md) | DSP core and Linux/Windows VST3 preview. | Listen to recorded vocals; check mono-track behavior and reverb tails. Settings remain provisional. |
+| [Riptide](docs/riptide.md) | Pitch-down DSP core, Linux/Windows VST3 and experimental macOS VST3/AUv2. | Listen through an amp modeller and the practice board: drop tuning, chugs, chords, attack and low-layer blend. Settings remain provisional; no live note tracking. |
 
 Build, CI and loader checks do not prove musical quality or host playback. Keep
-private recordings out of the repository. Riptide and Ebbtide are concepts only;
-define distinct roles before authorizing implementation.
+private recordings out of the repository. Ebbtide is still a concept only; define
+its role before authorizing implementation.
 
 ## 1. Agree on Undertow's sound
 

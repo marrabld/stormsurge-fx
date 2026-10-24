@@ -55,6 +55,12 @@ build/linux-debug/bin/UndertowPreview
 build/linux-debug/bin/notices/
 ```
 
+Maelstrom, Whitecap, Squall and Riptide build as separate VST3 targets in the same
+tree (`Maelstrom.vst3/`, `Whitecap.vst3/`, `Squall.vst3/`, `Riptide.vst3/`). Their
+GUI harnesses are `maelstrom_mockup`, `whitecap_gui`, `squall_gui` and `riptide_gui`;
+none opens an audio device. Only Undertow has a standalone target. See
+[Riptide notes](riptide.md) for its controls and limits.
+
 `linux-release` builds optimized binaries. `linux-sanitized` enables address and
 undefined-behaviour sanitizers; start with its `foundation_tests` target.
 Ubuntu 24.04 is the initial CI build baseline, not a claim of universal Linux

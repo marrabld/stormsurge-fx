@@ -1,8 +1,9 @@
 # Third-party notices
 
 StormSurge FX's own source is GPL-3.0-only. Dependency licences remain their own.
-The project does not use JUCE. Preview embeds one prepared AI-generated enclosure
-texture; Foundation still uses procedural artwork only.
+The project does not use JUCE. Undertow Preview embeds one prepared AI-generated
+enclosure texture; Foundation still uses procedural artwork only. Maelstrom,
+Whitecap, Squall and Riptide have their own prepared-artwork notices.
 
 ## Undertow enclosure texture
 
@@ -31,6 +32,17 @@ preparation and limitations. CMake copies it to `build/<preset>/mockup-notices/`
 The documentation screenshot depicts this same artwork and separately drawn
 controls. No dependency was added. The mockup and its texture are not included in
 Undertow's binary plugin archives.
+
+## Riptide artwork
+
+The Riptide VST3 editor and display-only concept mockup embed a separately prepared
+Gemini/Nano Banana enclosure. The maintainer confirmed personal-account generation
+from an assistant-supplied prompt, without third-party image references, and approved
+public use under GPL-3.0-only to the extent applicable rights exist. See
+[the Riptide notice](assets/runtime/RIPTIDE-NOTICE.md) for provenance, preparation
+and limitations. CMake copies it to `build/<preset>/bin/notices/Riptide-artwork.md`.
+Controls, labels and readouts are drawn separately from the texture; no image-decoding
+dependency was added.
 
 ## DPF and DGL
 

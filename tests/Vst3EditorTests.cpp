@@ -987,14 +987,26 @@ class HostEditor
     bool attached = false;
 };
 
+constexpr std::size_t MaximumBoardPedals = 8;
+
+#if defined(STORMSURGE_HAVE_JACK)
+constexpr bool builtWithJack = true;
+#else
+constexpr bool builtWithJack = false;
+#endif
+
 #if defined(STORMSURGE_HAVE_JACK)
 class JackAudioHost
 {
   public:
     static constexpr std::uint32_t MaximumFrames = 2048;
 
-    explicit JackAudioHost(const std::array<HostEditor *, 4> &editors) : editors(editors)
+    explicit JackAudioHost(const std::vector<HostEditor *> &editors)
+        : editors(editors), editorCount(editors.size())
     {
+        require(editorCount >= 1 && editorCount <= MaximumBoardPedals,
+                "The practice host supports one to eight pedals");
+        packedOrder.store(identityOrder(editorCount), std::memory_order_relaxed);
         try {
             jack_status_t status{};
             client = jack_client_open("StormSurgePractice", JackNoStartServer, &status);
@@ -1050,13 +1062,17 @@ class JackAudioHost
         client = nullptr;
     }
 
-    void setOrder(const std::array<HostEditor *, 4> &order)
+    void setOrder(const std::vector<HostEditor *> &order)
     {
-        std::uint32_t packed = 0;
+        if (order.size() != editorCount)
+            return;
+        std::uint64_t packed = 0;
         for (std::size_t position = 0; position < order.size(); ++position) {
             const auto found = std::find(editors.begin(), editors.end(), order[position]);
-            const auto index = static_cast<std::uint32_t>(std::distance(editors.begin(), found));
-            packed |= index << (position * 2);
+            if (found == editors.end())
+                return;
+            const auto index = static_cast<std::uint64_t>(std::distance(editors.begin(), found));
+            packed |= index << (position * 4);
         }
         packedOrder.store(packed, std::memory_order_release);
     }
@@ -1084,6 +1100,14 @@ class JackAudioHost
     }
 
   private:
+    static std::uint64_t identityOrder(std::size_t count) noexcept
+    {
+        std::uint64_t packed = 0;
+        for (std::size_t position = 0; position < count; ++position)
+            packed |= static_cast<std::uint64_t>(position) << (position * 4);
+        return packed;
+    }
+
     static int processCallback(jack_nframes_t frames, void *context)
     {
         return static_cast<JackAudioHost *>(context)->process(frames);
@@ -1118,7 +1142,7 @@ class JackAudioHost
         }
 
         const bool inputEnabled = liveInput.load(std::memory_order_acquire);
-        const std::uint32_t order = packedOrder.load(std::memory_order_acquire);
+        const std::uint64_t order = packedOrder.load(std::memory_order_acquire);
         for (jack_nframes_t offset = 0; offset < frameCount;) {
             const auto count = static_cast<std::uint32_t>(
                 std::min<jack_nframes_t>(MaximumFrames, frameCount - offset));
@@ -1135,9 +1159,11 @@ class JackAudioHost
             }
 
             bool valid = true;
-            for (std::size_t position = 0; position < editors.size(); ++position) {
-                const std::uint32_t index = (order >> (position * 2)) & 0x3u;
-                if (!editors[index]->process(currentLeft, currentRight, nextLeft, nextRight,
+            for (std::size_t position = 0; position < editorCount; ++position) {
+                const std::uint32_t index =
+                    static_cast<std::uint32_t>((order >> (position * 4)) & 0xFu);
+                if (index >= editors.size() ||
+                    !editors[index]->process(currentLeft, currentRight, nextLeft, nextRight,
                                              static_cast<int32_t>(count))) {
                     valid = false;
                     break;
@@ -1158,8 +1184,10 @@ class JackAudioHost
         return 0;
     }
 
-    std::array<HostEditor *, 4> editors;
-    std::atomic<std::uint32_t> packedOrder{0xE4u};
+    std::vector<HostEditor *> editors;
+    std::size_t editorCount = 0;
+    static_assert(std::atomic<std::uint64_t>::is_always_lock_free);
+    std::atomic<std::uint64_t> packedOrder{0};
     std::atomic<std::uint32_t> pendingSampleRate{0};
     std::atomic<bool> liveInput{false};
     std::atomic<bool> serverIsStopped{false};
@@ -1179,9 +1207,9 @@ class JackAudioHost
 class JackAudioHost
 {
   public:
-    explicit JackAudioHost(const std::array<HostEditor *, 4> &) {}
+    explicit JackAudioHost(const std::vector<HostEditor *> &) {}
     void stop() {}
-    void setOrder(const std::array<HostEditor *, 4> &) {}
+    void setOrder(const std::vector<HostEditor *> &) {}
     void setLiveInputEnabled(bool) {}
     bool liveInputEnabled() const { return false; }
     bool serverStopped() const { return true; }
@@ -1191,7 +1219,8 @@ class JackAudioHost
 
 void runBoard(const std::vector<const char *> &paths, HostApplication &host, bool smoke)
 {
-    require(paths.size() == 4, "Supply four StormSurge VST3 module paths");
+    require(!paths.empty() && paths.size() <= MaximumBoardPedals,
+            "Supply one to eight StormSurge VST3 module paths");
     HostRunLoop runLoop;
     std::vector<std::unique_ptr<Module>> modules;
     std::vector<std::unique_ptr<HostEditor>> editors;
@@ -1205,13 +1234,11 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
     std::vector<HostEditor *> order;
     for (auto &editor : editors)
         order.push_back(editor.get());
-    std::array<HostEditor *, 4> initialOrder{};
-    std::copy(order.begin(), order.end(), initialOrder.begin());
     std::unique_ptr<JackAudioHost> audio;
 #if defined(STORMSURGE_HAVE_JACK)
     if (!smoke) {
-        audio = std::make_unique<JackAudioHost>(initialOrder);
-        audio->setOrder(initialOrder);
+        audio = std::make_unique<JackAudioHost>(order);
+        audio->setOrder(order);
     }
 #else
     if (!smoke)
@@ -1306,7 +1333,7 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
 
     int dragIndex = -1;
     int scrollOffset = 0;
-    const int maxScroll = panelWidth * static_cast<int>(order.size()) - width;
+    const int maxScroll = std::max(0, panelWidth * static_cast<int>(order.size()) - width);
     auto positionEditors = [&] {
         for (std::size_t i = 0; i < order.size(); ++i)
             XMoveWindow(display, order[i]->window(),
@@ -1356,7 +1383,7 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
                         static_cast<int>(std::strlen(status)));
         }
     };
-    std::array<bool, 4> drawnBypassState{};
+    std::vector<bool> drawnBypassState(order.size(), false);
     bool haveDrawnBypassState = false;
     auto refreshBypassState = [&] {
         bool changed = !haveDrawnBypassState;
@@ -1378,12 +1405,14 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
         drawHeaders();
     };
 
-    std::printf("Attached four real StormSurge VST3 editors. Drag the middle strips to reorder "
+    std::printf("Attached %zu real StormSurge VST3 editors. Drag the middle strips to reorder "
                 "and click pedal footswitch strips to bypass.%s\n",
-                audio != nullptr
-                    ? " Live input is off until you click the top-left control; JACK ports are "
-                      "never auto-connected and the client starts muted."
-                    : " Audio is off in this build because JACK support was not compiled in.");
+                order.size(),
+                !builtWithJack
+                    ? " Audio is off in this build because JACK support was not compiled in."
+                : smoke ? " Smoke test only: no JACK client was opened."
+                        : " Live input is off until you click the top-left control; JACK ports "
+                          "are never auto-connected and the client starts muted.");
     std::fflush(stdout);
     bool keepOpen = true;
     const auto smokeDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
@@ -1418,11 +1447,8 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
                     const int index = (event.xbutton.x + scrollOffset) / panelWidth;
                     if (index >= 0 && index < static_cast<int>(order.size())) {
                         order[static_cast<std::size_t>(index)]->toggleBypass();
-                        if (audio != nullptr) {
-                            std::array<HostEditor *, 4> currentOrder{};
-                            std::copy(order.begin(), order.end(), currentOrder.begin());
-                            audio->setOrder(currentOrder);
-                        }
+                        if (audio != nullptr)
+                            audio->setOrder(order);
                         XClearWindow(display, parent);
                         drawHeaders();
                     }
@@ -1438,11 +1464,9 @@ void runBoard(const std::vector<const char *> &paths, HostApplication &host, boo
                 order.erase(order.begin() + dragIndex);
                 order.insert(order.begin() + destination, moved);
                 positionEditors();
-                if (audio != nullptr) {
-                    std::array<HostEditor *, 4> currentOrder{};
-                    std::copy(order.begin(), order.end(), currentOrder.begin());
-                    audio->setOrder(currentOrder);
-                }
+                if (audio != nullptr)
+                    audio->setOrder(order);
+                haveDrawnBypassState = false;
                 dragIndex = -1;
                 XClearWindow(display, parent);
                 drawHeaders();
@@ -1581,10 +1605,11 @@ int main(int argc, char **argv)
         if (argc > 1 &&
             (std::strcmp(argv[1], "--board") == 0 || std::strcmp(argv[1], "--board-smoke") == 0)) {
             const bool smoke = std::strcmp(argv[1], "--board-smoke") == 0;
-            require(argc == 6, "Usage: vst3_editor_tests --board[-smoke] <Undertow> <Maelstrom> "
-                               "<Whitecap> <Squall>");
+            require(argc >= 3 && argc <= 2 + static_cast<int>(MaximumBoardPedals),
+                    "Usage: vst3_editor_tests --board[-smoke] <module> [<module> ...] "
+                    "(one to eight StormSurge VST3 pedals)");
             HostApplication host;
-            runBoard({argv[2], argv[3], argv[4], argv[5]}, host, smoke);
+            runBoard(std::vector<const char *>(argv + 2, argv + argc), host, smoke);
             return 0;
         }
         const bool show = argc == 3 && std::strcmp(argv[2], "--view") == 0;

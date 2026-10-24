@@ -19,6 +19,13 @@
 #define DISTRHO_PLUGIN_NAME "Squall"
 #define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/squall"
 #define DISTRHO_PLUGIN_UNIQUE_ID UtS0
+#elif defined(STORMSURGE_RIPTIDE)
+#define DISTRHO_PLUGIN_NAME "Riptide"
+#define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/riptide"
+#define DISTRHO_PLUGIN_UNIQUE_ID UtR0
+#ifdef __APPLE__
+#define DISTRHO_PLUGIN_CLAP_ID "org.stormsurgefx.riptide.au"
+#endif
 #elif defined(STORMSURGE_MAELSTROM)
 // Separate identity from Undertow Preview: existing projects must never acquire
 // an overdrive, and saved Maelstrom settings must not disturb them.
@@ -45,7 +52,12 @@
 #define DISTRHO_PLUGIN_WANT_STATE 1
 #define DISTRHO_UI_USE_NANOVG 1
 #define DISTRHO_UI_USER_RESIZABLE 1
+#if defined(STORMSURGE_RIPTIDE)
+// The prepared Riptide enclosure is 1040x1416, so 500x680 keeps its aspect.
+#define DISTRHO_UI_DEFAULT_WIDTH 500
+#else
 #define DISTRHO_UI_DEFAULT_WIDTH 520
+#endif
 #if defined(STORMSURGE_PREVIEW)
 #define DISTRHO_UI_DEFAULT_HEIGHT 900
 #elif defined(STORMSURGE_SQUALL)

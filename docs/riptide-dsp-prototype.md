@@ -1,10 +1,11 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 # Riptide DSP core prototype
 
-This is an experimental, host-independent pitch-down core for issue #58. It is not
-connected to a plugin or audio device, and has not been approved as a musical result.
-Its controls are pitch shift (0 to -12 semitones) and shifted-signal blend. It handles
-planar mono or stereo audio.
+This is an experimental, host-independent pitch-down core for issue #58. The
+offline audition renderer and the Riptide VST3 plugin share this core; see
+[the Riptide plugin notes](riptide.md). It has not been approved as a final
+musical result. Its controls are pitch shift (0 to -12 semitones) and
+shifted-signal blend. It handles planar mono or stereo audio.
 
 ## Current algorithm and tradeoff
 
@@ -18,8 +19,9 @@ not establish acceptable playing feel or sound quality.
 At 48 kHz, the read heads look back from 48 samples (1 ms) up to 1,968 samples (41 ms).
 At 44.1 kHz the range is 44 to 1,808 samples (about 1–41 ms). The read position moves
 within that range; this is **not** a fixed plugin latency or a claim about perceived
-latency. The substantial delay span is an important live-playing tradeoff and must be
-judged by the maintainer before plugin integration.
+latency. The substantial delay span is an important live-playing tradeoff; the
+maintainer judged the prototype good enough to build on for issue #65, but that is
+not final listening approval.
 
 ## Checks
 
@@ -58,6 +60,6 @@ against the private passage chosen for issue #39. Keep that recording local.
 input, dry identity and the expected -5 semitone frequency. Those are numerical checks,
 not sound-quality evidence.
 
-There is still no Riptide plugin or editor integration. Any private guitar recording
-used for listening should stay local unless the maintainer explicitly approves
-sharing it.
+The Riptide VST3 plugin and editor now exist and share this core; the offline tool
+stays useful for checking settings without a host. Any private guitar recording used
+for listening should stay local unless the maintainer explicitly approves sharing it.

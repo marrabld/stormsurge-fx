@@ -19,8 +19,8 @@ milestone is to use Undertow on that track.
 
 | Riptide |
 | --- |
-| <img src="docs/images/riptide-mockup.png" alt="Riptide pitch-shift concept mockup with a static illustrative note display" width="100%"> |
-| Pitch-down concept. Its host-independent DSP is an early prototype; the pictured tuner-style readout is static, not live pitch tracking. |
+| <img src="docs/images/riptide-vst3-editor.png" alt="Riptide pitch-down editor with Shift, Blend and Bypass controls" width="100%"> |
+| Pitch-down pedal. Shift, Blend and Bypass are wired to the prototype DSP; the readout shows Shift, not live pitch. |
 
 ## Status
 
@@ -32,14 +32,14 @@ remains a separate pass-through plugin for old test projects.
 This is a separate project from [Omazone](https://github.com/marrabld/omazone),
 not a port of its offline mastering chain.
 
-Maelstrom, Whitecap and Squall are separate VST3 effects with their own controls
-and saved settings. Whitecap and Squall are listening previews: their starting
-sounds still need private musical review. Maelstrom's processing and interface are
-implemented, but its sound needs listening through an amp-model setup. See the
+Maelstrom, Whitecap, Squall and Riptide are separate VST3 effects with their own
+controls and saved settings. Whitecap and Squall are listening previews: their
+starting sounds still need private musical review. Maelstrom's processing and
+interface are implemented, but its sound needs listening through an amp-model setup.
+Riptide's plugin and editor are implemented around its pitch-down prototype; its
+drop-tune sound, chord handling and playing feel still need listening, especially
+through an amp modeller and the practice board. See the
 [pedal status](#pedal-status) and each pedal's design page.
-
-Riptide is at an earlier stage: its host-independent pitch-down DSP is a prototype,
-not a plugin or playable pedal. Its sound and playing feel still need listening review.
 
 ## Pedal status
 
@@ -49,7 +49,7 @@ not a plugin or playable pedal. Its sound and playing feel still need listening 
 | [Maelstrom](docs/maelstrom.md) | Tightening overdrive before an amp modeller | Separate plugin and DSP are implemented. Listening through NAM or another amp modeller is still needed; numerical tests do not establish sound quality. |
 | [Whitecap](docs/whitecap.md) | Chorus and vibrato | Linux/Windows VST3 preview and DSP are implemented. Its settings are provisional pending listening in a song. |
 | [Squall](docs/squall.md) | Clean/Heavy recorded-vocal effect | Linux/Windows VST3 preview and DSP are implemented. Settings are provisional; vocal sound, mono-track handling and reverb-tail behavior need host listening. |
-| Riptide | Guitar pitch-down and blended lower layer | Host-independent DSP prototype for shifts down to 12 semitones. No plugin, device integration or live note display; sound and playing feel are unreviewed. See [prototype notes](docs/riptide-dsp-prototype.md). |
+| [Riptide](docs/riptide.md) | Guitar pitch-down and blended lower layer | Linux/Windows VST3 and experimental macOS VST3/AUv2 are implemented with Shift, Blend and Bypass. The prototype was judged good enough to build on, but sound, chord handling and playing feel still need listening in context. No live note tracking. |
 
 These plugins are separate effects, not a finished pedalboard product. Builds and
 loader tests do not prove playback in every host. Private recordings stay out of
@@ -133,6 +133,8 @@ cmake --preset linux-debug && cmake --build --preset linux-debug
 ./build/linux-debug/preview_gui --view
 # Maelstrom's display-only visual mockup, not the audio plugin:
 ./build/linux-debug/maelstrom_mockup --view
+# Riptide plugin editor, no audio device:
+./build/linux-debug/riptide_gui --view
 # Legacy pass-through editor:
 ./build/linux-debug/foundation_gui --view
 ```

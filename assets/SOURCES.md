@@ -69,9 +69,11 @@ third-party image references, and approved prepared derivatives for public use
 under GPL-3.0-only to the extent applicable rights exist. The clipboard originals
 remain unchanged and gitignored. Their hashes, preparation steps and limits are in
 [`runtime/FUTURE-PEDALS-NOTICE.md`](runtime/FUTURE-PEDALS-NOTICE.md). The derivatives
-are used by the display-only mockups and Whitecap's VST3 preview editor. No further
-DSP or plugin work beyond the separately authorized Whitecap issues is implied by
-this visual concept task.
+are used by the display-only mockups and the Whitecap VST3 preview editor. Riptide's
+VST3 editor uses the same prepared derivative under
+[`runtime/RIPTIDE-NOTICE.md`](runtime/RIPTIDE-NOTICE.md), added for issue #65. The
+original visual-concept task did not itself authorise DSP work; the Riptide plugin
+slice is covered separately by issue #65.
 
 ## Squall concept artwork, issue #49
 
