@@ -71,8 +71,9 @@ reproduce his exact rig or recording. The initial scope is deliberately small:
 - Alternating stereo ping-pong and tempo sync for the first playable preview.
 
 The standalone application still needs device selection and input/output metering.
-The plugin uses its host's audio devices and transport. Host tail reporting remains
-inaccurate, so exports may need explicit trailing silence.
+The plugin uses its host's audio devices and transport. VST3 tail reporting is an
+estimate capped at 10 minutes; hosts may not refresh it after later edits, so
+unusually long or late-changed tails may still need explicit trailing silence.
 
 ## Maelstrom
 
@@ -157,8 +158,9 @@ delay DSP, playable integration and preview validation. `docs/design.md` separat
 approved basic-delay behaviour from remaining integration proposals.
 
 The tested basic core from issue #3 is connected in a first integration slice of
-issue #4. Ping-pong is tracked by issue #11 and tempo sync by #13. Host tail reporting
-and standalone usability remain work.
+issue #4. Ping-pong is tracked by issue #11 and tempo sync by #13. VST3 tail
+reporting is implemented as a parameter-aware estimate; host refresh, AU tails and
+standalone usability remain work.
 The optional reverb experiment is tracked separately in issue #16, not an exact
 reproduction of the listening reference or the whole proposed multi-effect chain.
 Publishing a release is not authorised. Listening reports are welcome.

@@ -289,10 +289,11 @@ Python's standard library only to regenerate the original knob/footswitch
 materials. Neither is needed to build. The GUI harness checks all three textures.
 
 Preview VST3 uses a generated wrapper under `build/<preset>/preview-adapter/` to
-preserve raw host tempo validity instead of DPF's synthetic 120 BPM. The checksum-
-guarded transformation in `cmake/PreviewVst3Tempo.cmake` must be reviewed on DPF
-updates. It edits neither the dependency checkout nor Foundation. Keep the module
-and `.cpp.in` wrapper in source distributions; see `THIRD_PARTY_NOTICES.md`.
+preserve raw host tempo validity instead of DPF's synthetic 120 BPM, and to report
+the parameter-aware tail estimate. The checksum-guarded transformations in
+`cmake/PreviewVst3Tempo.cmake` must be reviewed on DPF updates. They edit neither
+the dependency checkout nor Foundation. Keep the module and `.cpp.in` wrapper in
+source distributions; see `THIRD_PARTY_NOTICES.md`.
 
 `ctest` exercises the actual DPF processor through a headless exporter harness
 at five rates and eight block sizes, including zero frames, separate/in-place

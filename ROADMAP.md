@@ -16,7 +16,7 @@ require the maintainer's explicit approval.
 | 1 | [Define the sound and controls](https://github.com/marrabld/stormsurge-fx/issues/1) | Agreed delay sound and headroom policy | Core choices approved; issue sign-off remains the maintainer's |
 | 2 | [Choose framework and prove builds](https://github.com/marrabld/stormsurge-fx/issues/2) | GPL-compatible foundation and build targets | Implemented, with Linux/Windows and now Mac CI; not universal playback verification |
 | 3 | [Build the basic dark delay](https://github.com/marrabld/stormsurge-fx/issues/3) | Reusable, numerically tested DSP | Implemented in merged PR #9 |
-| 4 | [Make it playable](https://github.com/marrabld/stormsurge-fx/issues/4) | Host integration, Ping-pong, Sync and safety | Preview works in tested Bitwig; accurate tail reporting and device policies remain |
+| 4 | [Make it playable](https://github.com/marrabld/stormsurge-fx/issues/4) | Host integration, Ping-pong, Sync and safety | Preview works in tested Bitwig; VST3 tail estimate added, while host refresh, AU tails and device policies remain |
 | 5 | [Playtest the preview](https://github.com/marrabld/stormsurge-fx/issues/5) | Listening, exports and usable packages | First Linux listening successful; final-package and other-host checks pending |
 
 PR #8 already consolidated the original foundation into `main`; do not repeat it.
@@ -27,7 +27,7 @@ issue does not necessarily mean implementation is missing.
 
 | Pedal | Implemented | Next useful validation |
 | --- | --- | --- |
-| [Undertow](docs/preview.md) | Delay, ping-pong, tempo sync, wet reverb; Linux/Windows VST3, experimental macOS VST3/AUv2, JACK-only standalone. Preview `v0.4.0-preview.1` is published with approval. | Broader host/platform checks, package/export tails, accurate tail reporting, and standalone device usability. |
+| [Undertow](docs/preview.md) | Delay, ping-pong, tempo sync, wet reverb; Linux/Windows VST3, experimental macOS VST3/AUv2, JACK-only standalone. Preview `v0.4.0-preview.1` is published with approval. | Broader host/platform checks, export/tail-refresh checks, AU tail reporting, and standalone device usability. |
 | [Maelstrom](docs/maelstrom.md) | DSP core and separate plugin work; its visual mockup is not an audio test. | Listen through NAM or another amp modeller and assess the provisional tone. |
 | [Whitecap](docs/whitecap.md) | DSP core and Linux/Windows VST3 preview. | Try it in a song; refine only in response to listening. |
 | [Squall](docs/squall.md) | DSP core and Linux/Windows VST3 preview. | Listen to recorded vocals; check mono-track behavior and reverb tails. Settings remain provisional. |

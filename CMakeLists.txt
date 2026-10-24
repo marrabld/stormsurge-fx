@@ -289,7 +289,7 @@ if(BUILD_TESTING)
         add_test(NAME preview_vst3_loader COMMAND vst3_loader_tests "${preview_module}" "Undertow Preview" 0.4.0)
         if(NOT WIN32)
             add_test(NAME preview_vst3_process
-                COMMAND vst3_processing_tests "${preview_module}")
+                COMMAND vst3_processing_tests "${preview_module}" 1)
             add_test(NAME maelstrom_vst3_process
                 COMMAND vst3_processing_tests
                     "${CMAKE_BINARY_DIR}/bin/Maelstrom.vst3/Contents/x86_64-linux/Maelstrom.so")

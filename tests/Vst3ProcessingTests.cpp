@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <stdexcept>
 #include <string>
@@ -213,6 +214,12 @@ class Processor
             v3_cpp_obj_unref(component);
     }
 
+    std::uint32_t tailSamples() const
+    {
+        require(processor != nullptr, "VST3 processor is not available for tail queries");
+        return v3_cpp_obj(processor)->get_tail_samples(processor);
+    }
+
     void process(float *left, float *right, std::uint32_t frames)
     {
         std::array<float *, 2> inputChannels{left, right};
@@ -257,7 +264,10 @@ class Processor
 int main(int argc, char **argv)
 {
     try {
-        require(argc == 2, "Supply the Linux VST3 module path");
+        require(argc == 2 || argc == 3,
+                "Supply the Linux VST3 module path and optional minimum tail samples");
+        const long minimumTail = argc == 3 ? std::strtol(argv[2], nullptr, 10) : -1;
+        require(argc == 2 || minimumTail >= 0, "Minimum tail must be a non-negative number");
         constexpr std::uint32_t frames = 256;
         Module module(argv[1]);
         Processor effect(module, 48000.0, frames);
@@ -270,6 +280,9 @@ int main(int argc, char **argv)
         for (std::uint32_t i = 0; i < frames; ++i)
             require(std::isfinite(left[i]) && std::isfinite(right[i]),
                     "VST3 emitted a non-finite sample");
+        if (minimumTail >= 0)
+            require(effect.tailSamples() >= static_cast<std::uint32_t>(minimumTail),
+                    "VST3 adapter reported less tail than required");
     } catch (const std::exception &error) {
         std::fprintf(stderr, "FAIL: %s\n", error.what());
         return 1;

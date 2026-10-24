@@ -2,6 +2,8 @@
 #include "DarkDelay.hpp"
 #include "DarkReverb.hpp"
 #include "PreviewParameters.hpp"
+#include "PreviewTail.hpp"
+#include "PreviewTailBridge.hpp"
 #include "PreviewTempoBridge.hpp"
 #include "TempoSync.hpp"
 #include "DistrhoPluginUtils.hpp"
@@ -629,6 +631,80 @@ static void reverbIntegration(PluginExporter &plugin)
             "Effect bypass did not preserve clean new guitar");
 }
 
+static void tailReporting(PluginExporter &plugin)
+{
+    auto set = [&](std::uint32_t id, float value) {
+        plugin.setParameterValue(previewHostIndex(id, standalone), value);
+    };
+    plugin.setSampleRate(48000, true);
+    prepare(plugin);
+    set(Time, 400);
+    set(Feedback, 35);
+    set(Mix, 20);
+    set(Bypass, 0);
+    set(Sync, 0);
+    set(ReverbSpace, 6);
+    set(ReverbAmount, 0);
+
+    // 0.4 s at 35 % feedback reaches -60 dB after seven repeats.
+    require(previewTailSamples(plugin.getInstancePointer()) == 134400,
+            "Default VST3 tail did not follow the decay formula");
+    set(Feedback, 0);
+    require(previewTailSamples(plugin.getInstancePointer()) == 19200,
+            "Zero-feedback tail should be one delay interval");
+
+    set(Feedback, 90);
+    set(Time, 2000);
+    require(previewTailSamples(plugin.getInstancePointer()) == 6336000,
+            "Long feedback tail was not reported");
+
+    set(Time, 400);
+    set(Feedback, 35);
+    set(Mix, 0);
+    require(previewTailSamples(plugin.getInstancePointer()) == 0,
+            "Fully dry settings must report no wet tail");
+    set(Mix, 20);
+    set(Bypass, 1);
+    require(previewTailSamples(plugin.getInstancePointer()) == 0,
+            "Bypass must not report a wet tail");
+    set(Bypass, 0);
+
+    set(ReverbSpace, 12);
+    set(ReverbAmount, 50);
+    require(previewTailSamples(plugin.getInstancePointer()) == 710400,
+            "Reverb decay was not added to the delay tail");
+    set(ReverbAmount, 0);
+
+    struct Context {
+        std::uint32_t state;
+        double bpm;
+    } context{1, 120};
+    set(Sync, 1);
+    set(Feedback, 0);
+    supplyPreviewTempo(plugin.getInstancePointer(), &context, 1);
+    require(previewTailSamples(plugin.getInstancePointer()) == 24000,
+            "Sync tail did not use the effective tempo target");
+
+    set(Sync, 0);
+    set(Feedback, 35);
+    set(Time, 400);
+    plugin.setSampleRate(96000, true);
+    require(previewTailSamples(plugin.getInstancePointer()) == 268800,
+            "Tail samples did not follow the sample rate");
+    plugin.setSampleRate(48000, true);
+
+    PreviewTailSettings capped{10000, 0.9, 1, false, 12, 1};
+    require(previewTailSeconds(capped) == PreviewTailCapSeconds, "Tail cap was not applied");
+    require(previewTailSamples(48000, capped) == 28800000,
+            "Capped tail did not convert to samples");
+    require(previewTailSamples(0, capped) == 0, "Invalid sample rate produced a tail");
+    require(previewTailSeconds({0.4, 0.35, -1, false, 6, 0}) == 0,
+            "Negative mix produced a wet tail");
+    require(
+        previewTailSeconds({std::numeric_limits<double>::quiet_NaN(), 0.35, 0.2, false, 6, 0}) == 0,
+        "Invalid delay time produced a tail");
+}
+
 int main(int argc, char **argv)
 {
     try {
@@ -655,6 +731,7 @@ int main(int argc, char **argv)
         bypassAndAutomation(plugin);
         syncIntegration(plugin);
         reverbIntegration(plugin);
+        tailReporting(plugin);
         if (standalone) {
             for (bool sync : {false, true}) {
                 monitorSafety(plugin, false, sync);
