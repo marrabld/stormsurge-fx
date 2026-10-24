@@ -66,7 +66,7 @@ pedal state is:
 
 | Pedal | Implemented | Listening / validation still needed |
 | --- | --- | --- |
-| Undertow | Delay, ping-pong, tempo sync, optional wet reverb; Linux/Windows VST3, experimental macOS VST3/AUv2, and JACK-only standalone. Preview `v0.4.0-preview.1` has been published with approval. | Broader host/platform checks, final-package/export behavior, accurate host tail reporting, and standalone device usability. See [preview guide](docs/preview.md), [roadmap](ROADMAP.md), and [Mac notes](docs/macos.md). |
+| Undertow | Delay, ping-pong, tempo sync, optional wet reverb; Linux/Windows VST3, experimental macOS VST3/AUv2, and JACK-only standalone. Preview `v0.4.0-preview.1` has been published with approval. | Broader host/platform checks, final-package/export behavior, host tail refresh, and standalone device usability. See [preview guide](docs/preview.md), [roadmap](ROADMAP.md), and [Mac notes](docs/macos.md). |
 | Maelstrom | Host-independent overdrive DSP and separate plugin/UI work are implemented; mockup is display-only. | Listen through NAM or another amp modeller before judging its provisional tone. See [design and listening plan](docs/maelstrom.md). |
 | Whitecap | Host-independent chorus/vibrato DSP and Linux/Windows VST3 listening preview. | Private listening in a song; refine only if that reveals a need. See [Whitecap notes](docs/whitecap.md). |
 | Squall | Host-independent vocal DSP and Linux/Windows VST3 listening preview; installed locally at the maintainer's request. | Listen on recorded vocals; check mono-track handling and reverb-tail behavior. DSP settings remain provisional. See [Squall notes](docs/squall.md). |

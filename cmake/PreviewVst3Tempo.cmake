@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Build-only adapter change. Never edit the pinned submodule or Foundation target.
+# Build-only adapter changes: raw host tempo and tail reporting. Never edit the
+# pinned submodule or Foundation target.
 set(STORMSURGE_DISTRHO "${CMAKE_CURRENT_SOURCE_DIR}/external/dpf/distrho")
 set(adapter "${STORMSURGE_DISTRHO}/src/DistrhoPluginVST3.cpp")
 set(original_wrapper "${STORMSURGE_DISTRHO}/DistrhoPluginMain.cpp")
@@ -14,7 +15,7 @@ file(READ "${adapter}" adapter_source)
 string(REPLACE "\r\n" "\n" adapter_source "${adapter_source}")
 string(SHA256 adapter_hash "${adapter_source}")
 if(NOT adapter_hash STREQUAL "462facea5ac0816be7fdd119e242932256bf1a9eb585aea28ba8bcc26388299a")
-    message(FATAL_ERROR "Review Preview's raw-tempo bridge against the updated DPF adapter")
+    message(FATAL_ERROR "Review Preview's adapter bridges against the updated DPF adapter")
 endif()
 set(needle [=[        if (! fPlugin.isActive())
             fPlugin.activate();]=])
@@ -29,6 +30,21 @@ set(replacement [=[        stormsurge::supplyPreviewTempo(fPlugin.getInstancePoi
             fPlugin.activate();]=])
 string(REPLACE "\r\n" "\n" replacement "${replacement}")
 string(REPLACE "${needle}" "${replacement}" adapter_source "${adapter_source}")
+set(tail_needle [=[    uint32_t getTailSamples() const noexcept
+    {
+        return 0;
+    }]=])
+string(REPLACE "\r\n" "\n" tail_needle "${tail_needle}")
+string(FIND "${adapter_source}" "${tail_needle}" tail_position)
+if(tail_position LESS 0)
+    message(FATAL_ERROR "Cannot locate Preview's VST3 tail insertion point")
+endif()
+set(tail_replacement [=[    uint32_t getTailSamples() const noexcept
+    {
+        return stormsurge::previewTailSamples(fPlugin.getInstancePointer());
+    }]=])
+string(REPLACE "\r\n" "\n" tail_replacement "${tail_replacement}")
+string(REPLACE "${tail_needle}" "${tail_replacement}" adapter_source "${adapter_source}")
 set(STORMSURGE_PREVIEW_ADAPTER "${CMAKE_CURRENT_BINARY_DIR}/preview-adapter")
 file(MAKE_DIRECTORY "${STORMSURGE_PREVIEW_ADAPTER}")
 file(WRITE "${STORMSURGE_PREVIEW_ADAPTER}/DistrhoPluginVST3.cpp" "${adapter_source}")

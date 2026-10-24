@@ -208,12 +208,19 @@ its own listening checks. Remaining manual checks:
 - Reopen an older MS project, then save/reopen with Sync and a non-default division.
 - Automate Time, Feedback and Mix gently, then test faster changes at low volume.
 - Try multiple instances and a short offline export with explicit trailing silence.
+- Try one export without extra trailing silence and compare it with the padded one,
+  so the host's actual tail handling is checked rather than assumed.
 
-**Automatic host tail reporting is not implemented.** At the pinned DPF revision,
-VST3 `getTailSamples()` returns zero. A stable feedback tail can be much longer than
-one delay interval, especially with long reverb. Do not assume an export ending at the last note captures it;
-extend the render region with silence, audition the result, and keep this limitation
-open under issue #4. Host suspension behaviour also needs real-host testing.
+**VST3 tail reporting is estimated, not a guarantee.** Our generated Preview VST3
+adapter now reports a finite tail derived from the current delay time or sync target,
+Feedback, Mix, bypass and the reverb settings. Feedback decay is calculated to
+-60 dB, reverb Space is added when Reverb Amount is above zero, and the result is
+capped at 10 minutes. Bypassed or fully dry settings report zero. This is an
+estimate: the host may query it once and may not resize an export after later
+parameter changes. A stable feedback tail can still be much longer than one delay
+interval, especially with long reverb. Keep extending important exports with
+trailing silence and audition the result. AU tail reporting and host suspension
+behaviour still need real-host testing.
 
 ## Standalone
 

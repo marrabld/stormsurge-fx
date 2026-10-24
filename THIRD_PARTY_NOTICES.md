@@ -61,8 +61,10 @@ file disables optional browser definitions affected by an upstream CMake boolean
 handling issue at this revision.
 
 Preview VST3 compiles a generated copy of the adapter with a per-instance raw-tempo
-bridge inserted before processing. DPF's original BBT conversion substitutes 120 BPM
-when host tempo is missing, which cannot implement the approved hold/fallback policy.
+bridge inserted before processing and a parameter-aware tail estimate returned to
+the host. DPF's original BBT conversion substitutes 120 BPM when host tempo is
+missing, which cannot implement the approved hold/fallback policy; the pinned
+adapter also hardcodes zero tail samples.
 The reproducible modification and wrapper are in
 [`cmake/PreviewVst3Tempo.cmake`](cmake/PreviewVst3Tempo.cmake) and
 [`cmake/PreviewVst3Main.cpp.in`](cmake/PreviewVst3Main.cpp.in). The module verifies the

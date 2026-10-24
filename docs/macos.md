@@ -56,10 +56,12 @@ native mono or mono-to-stereo plugin layout is not implemented yet.
 6. Try automation and a second instance. Record glitches or unexpected level changes.
 7. Export a short passage with generous trailing silence and listen to the result.
 
-VST3 automatic tail reporting is still inaccurate. Do not assume export stopping
-at the last note captures the ambience. Mac AU tail/host suspension behaviour also
-needs real-host testing. This preview does not add a limiter or automatic volume
-compensation. Stable feedback can still build up level on sustained material.
+VST3 tail reporting now estimates decay to -60 dB from the current delay and reverb
+settings, capped at 10 minutes, but a host may not refresh it after parameter
+changes. Do not assume export stopping at the last note captures the ambience; add
+trailing silence and audition. AU tail reporting and Mac host suspension behaviour
+still need real-host testing. This preview does not add a limiter or automatic
+volume compensation. Stable feedback can still build up level on sustained material.
 
 Please report format, architecture/OS/DAW, source commit, settings, steps and exact
 error text. A successful scan is not yet evidence of reliable playback or exports.

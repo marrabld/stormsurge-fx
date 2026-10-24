@@ -55,7 +55,7 @@ because its bypass is not a monitor-consent gate.
 Preview's parameter order/symbols are in `PreviewParameters.hpp`; append, do not
 reorder. Issue #11 adds switchable Ping-pong; #13 adds tempo sync; #16 adds optional
 wet reverb. Default Amount zero preserves existing delay sessions. Final host/device
-policies and tail reporting remain issue #4 work.
+policies and AU tail reporting remain issue #4 work.
 
 ## Issue-per-task
 
@@ -223,8 +223,11 @@ Follow the constraints already in the spec, and expect tests for them:
   isolated changes; crossfades can still produce audible interference.
 - Smooth parameter changes. Test extremes and transitions, not only steady settings.
 - Host tail reporting must account for feedback/filter decay, not a single delay
-  interval. Pinned DPF's VST3 adapter hardcodes zero tail samples. This preview has
-  no adapter fix; document trailing-silence export tests rather than promise tails.
+  interval. Preview's generated VST3 adapter reports a finite estimate: decay to
+  -60 dB, reverb Space when Amount is above zero, zero when bypassed or fully dry,
+  capped at 10 minutes. The host may query once and not refresh after later edits,
+  so docs still require trailing-silence export tests. AU tail reporting and host
+  suspension remain open.
 - Preview monitor requests read back as zero so consent cannot be saved. Poll the
   separate status output. Its footswitch is effect bypass, not monitor consent.
 - Ping-pong averages only wet input into the left line; dry routing stays unchanged.
@@ -255,9 +258,10 @@ submodule is bumped** ([docs/technology.md](docs/technology.md) says so explicit
   alone lacks the declarations NanoVG needs.
 - Preview VST3 replaces only its build wrapper using `cmake/PreviewVst3Tempo.cmake`.
   The generated adapter preserves raw host tempo validity before DPF can synthesize
-  120 BPM. Its LF-normalized source hash is checked; review on DPF updates. Never
-  hand-edit generated files or the submodule. Foundation is not patched. Use the raw
-  bridge, not `getTimePosition().bbt.valid`, for Preview tempo availability.
+  120 BPM and reports the Preview tail estimate. Its LF-normalized source hash is
+  checked; review both insertions on DPF updates. Never hand-edit generated files or
+  the submodule. Foundation is not patched. Use the raw bridge, not
+  `getTimePosition().bbt.valid`, for Preview tempo availability.
 - Preview AU similarly uses `cmake/PreviewAuTempo.cmake` and `PreviewAuTempo.hpp`.
   Query the host callback once per processing slice, preserve failures/removal, and
   never mistake an adapter's stale/synthetic BBT clock for a valid host tempo.
