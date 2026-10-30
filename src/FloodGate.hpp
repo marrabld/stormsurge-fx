@@ -8,8 +8,8 @@
 namespace stormsurge
 {
 
-// Values are in the units the host shows (dB, ms), matching floodGateSpecs in FloodGateParameters.hpp.
-// Defaults are proposed starting points, not approved values.
+// Values are in the units the host shows (dB, ms), matching floodGateSpecs in
+// FloodGateParameters.hpp. Defaults are proposed starting points, not approved values.
 struct GateParameters {
     double thresholdDb = -60.0;
     double releaseMs = 80.0;

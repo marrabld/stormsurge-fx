@@ -149,9 +149,9 @@ static Audio tone(std::size_t frames, float level)
 {
     auto buffer = audio(frames);
     for (std::size_t i = 0; i < frames; ++i) {
-        const float sample = static_cast<float>(
-            level * std::sin(2.0 * 3.14159265358979323846 * 220.0 * static_cast<double>(i) /
-                             48000.0));
+        const float sample =
+            static_cast<float>(level * std::sin(2.0 * 3.14159265358979323846 * 220.0 *
+                                                static_cast<double>(i) / 48000.0));
         buffer[0][i] = buffer[1][i] = sample;
     }
     return buffer;
@@ -184,11 +184,11 @@ static void audioAndBypass(PluginExporter &plugin)
     run(plugin, hiss, output, 0, 64);
     require(peak(output[0], 0) < 0.0003f * 0.5f, "Bypass must ramp, not cut the gate open");
     run(plugin, hiss, output, 64, frames - 64);
-    require(std::equal(output[0].begin() + frames / 2, output[0].end(),
-                       hiss[0].begin() + frames / 2) &&
-                std::equal(output[1].begin() + frames / 2, output[1].end(),
-                           hiss[1].begin() + frames / 2),
-            "Settled bypass must return the original stereo signal");
+    require(
+        std::equal(output[0].begin() + frames / 2, output[0].end(), hiss[0].begin() + frames / 2) &&
+            std::equal(output[1].begin() + frames / 2, output[1].end(),
+                       hiss[1].begin() + frames / 2),
+        "Settled bypass must return the original stereo signal");
     require(allocations == 0, "Bypass processing allocated memory");
     plugin.setParameterValue(FloodGateBypass, 0.0f);
 }

@@ -44,8 +44,8 @@ class FloodGateUI final : public UI
 #ifdef STORMSURGE_GUI_HARNESS
     bool exerciseControls()
     {
-        if (!knobMaterial.isValid() || !footswitch.isValid() ||
-            !ledOff.isValid() || !ledOn.isValid())
+        if (!knobMaterial.isValid() || !footswitch.isValid() || !ledOff.isValid() ||
+            !ledOn.isValid())
             return false;
         for (const auto &knob : floodGateKnobs) {
             const float before = values[knob.parameter];
@@ -161,9 +161,9 @@ class FloodGateUI final : public UI
             return false;
         const auto index = static_cast<std::uint32_t>(knob);
         const double step = event.mod & kModifierShift ? 0.002 : 0.02;
-        change(index, denormalizedFloodGate(index, normalizedFloodGate(index, values[index]) +
-                                                       static_cast<float>(event.delta.getY() *
-                                                                          step)));
+        change(index,
+               denormalizedFloodGate(index, normalizedFloodGate(index, values[index]) +
+                                                static_cast<float>(event.delta.getY() * step)));
         return true;
     }
 
