@@ -32,8 +32,13 @@ build/linux-debug/vst3_editor_tests --board \
   build/linux-debug/bin/Maelstrom.vst3/Contents/x86_64-linux/Maelstrom.so \
   build/linux-debug/bin/Whitecap.vst3/Contents/x86_64-linux/Whitecap.so \
   build/linux-debug/bin/Squall.vst3/Contents/x86_64-linux/Squall.so \
-  build/linux-debug/bin/Riptide.vst3/Contents/x86_64-linux/Riptide.so
+  build/linux-debug/bin/Riptide.vst3/Contents/x86_64-linux/Riptide.so \
+  build/linux-debug/bin/FloodGate.vst3/Contents/x86_64-linux/FloodGate.so
 ```
+
+A noise gate usually goes first, before drive and time effects, so the hiss it
+removes is not amplified or repeated. Drag FloodGate to the front of the board, or
+list it first on the command line, to try that order.
 
 Building the audio path needs JACK development files at configure time. If they are
 missing, the board still opens the editors but reports audio as off. Start a JACK
