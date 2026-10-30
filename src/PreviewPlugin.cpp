@@ -2,6 +2,8 @@
 #include "DarkDelay.hpp"
 #include "DarkReverb.hpp"
 #include "PreviewParameters.hpp"
+#include "PreviewTail.hpp"
+#include "PreviewTailBridge.hpp"
 #include "TempoSync.hpp"
 #include "PreviewTempoBridge.hpp"
 #include "DistrhoPlugin.hpp"
@@ -32,6 +34,23 @@ class PreviewPlugin final : public Plugin
         rawTempoValid = valid;
         rawBpm = bpm;
         updateTiming();
+    }
+
+    std::uint32_t tailSamples() const noexcept
+    {
+        if (!supportedRate)
+            return 0;
+        PreviewTailSettings settings;
+        const double timeMs = values[Sync].load(std::memory_order_relaxed) >= 0.5f
+                                  ? values[EffectiveTime].load(std::memory_order_relaxed)
+                                  : values[Time].load(std::memory_order_relaxed);
+        settings.delaySeconds = static_cast<double>(timeMs) / 1000.0;
+        settings.feedback = values[Feedback].load(std::memory_order_relaxed) / 100.0;
+        settings.mix = values[Mix].load(std::memory_order_relaxed) / 100.0;
+        settings.bypass = values[Bypass].load(std::memory_order_relaxed) >= 0.5f;
+        settings.reverbSeconds = values[ReverbSpace].load(std::memory_order_relaxed);
+        settings.reverbAmount = values[ReverbAmount].load(std::memory_order_relaxed) / 100.0;
+        return previewTailSamples(getSampleRate(), settings);
     }
 
   protected:
@@ -236,4 +255,9 @@ END_NAMESPACE_DISTRHO
 void stormsurge::setPreviewHostTempo(void *instance, bool valid, double bpm) noexcept
 {
     static_cast<DISTRHO_NAMESPACE::PreviewPlugin *>(instance)->hostTempo(valid, bpm);
+}
+
+std::uint32_t stormsurge::previewTailSamples(void *instance) noexcept
+{
+    return static_cast<DISTRHO_NAMESPACE::PreviewPlugin *>(instance)->tailSamples();
 }

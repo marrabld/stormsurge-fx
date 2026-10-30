@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Preview-only wrapper; all included upstream source retains its original notices.
 #include "PreviewTempoBridge.hpp"
+#include "PreviewTailBridge.hpp"
 #include "@STORMSURGE_DISTRHO@/src/DistrhoPlugin.cpp"
 #include "@STORMSURGE_PREVIEW_ADAPTER@/DistrhoPluginVST3.cpp"
 #define DISTRHO_IS_STANDALONE 0
