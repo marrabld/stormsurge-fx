@@ -9,8 +9,8 @@ namespace stormsurge
 {
 namespace
 {
-// These mirror floodGateSpecs in FloodParameters.hpp. A test keeps the two in step so the DSP never
-// rejects a value the host can legally write.
+// These mirror floodGateSpecs in FloodGateParameters.hpp. A test keeps the two in step so the DSP
+// never rejects a value the host can legally write.
 constexpr double minThresholdDb = -80, maxThresholdDb = -20;
 constexpr double minReleaseMs = 10, maxReleaseMs = 500;
 constexpr double minRangeDb = -80, maxRangeDb = -6;
