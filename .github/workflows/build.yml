@@ -36,12 +36,15 @@ jobs:
           xvfb-run -a build/linux-debug/squall_gui --small
           xvfb-run -a build/linux-debug/riptide_gui
           xvfb-run -a build/linux-debug/riptide_gui --small
+          xvfb-run -a build/linux-debug/floodgate_gui
+          xvfb-run -a build/linux-debug/floodgate_gui --small
           xvfb-run -a -s "-screen 0 1600x1200x24" build/linux-debug/vst3_editor_tests --board-smoke \
             build/linux-debug/bin/UndertowPreview.vst3/Contents/x86_64-linux/UndertowPreview.so \
             build/linux-debug/bin/Maelstrom.vst3/Contents/x86_64-linux/Maelstrom.so \
             build/linux-debug/bin/Whitecap.vst3/Contents/x86_64-linux/Whitecap.so \
             build/linux-debug/bin/Squall.vst3/Contents/x86_64-linux/Squall.so \
-            build/linux-debug/bin/Riptide.vst3/Contents/x86_64-linux/Riptide.so
+            build/linux-debug/bin/Riptide.vst3/Contents/x86_64-linux/Riptide.so \
+            build/linux-debug/bin/FloodGate.vst3/Contents/x86_64-linux/FloodGate.so
           xvfb-run -a build/linux-debug/squall_mockup
           xvfb-run -a build/linux-debug/squall_mockup --small
           xvfb-run -a build/linux-debug/bin/UndertowPreview selftest
@@ -91,7 +94,7 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
       - run: cmake --preset linux-sanitized
-      - run: cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests dark_reverb_tests au_tempo_bridge_tests maelstrom_tests maelstrom_plugin_tests whitecap_tests whitecap_plugin_tests squall_tests squall_plugin_tests riptide_tests riptide_audition riptide_audition_tests riptide_plugin_tests
+      - run: cmake --build --preset linux-sanitized --target foundation_tests dark_delay_tests preview_tests tempo_sync_tests dark_reverb_tests au_tempo_bridge_tests maelstrom_tests maelstrom_plugin_tests whitecap_tests whitecap_plugin_tests squall_tests squall_plugin_tests riptide_tests riptide_audition riptide_audition_tests riptide_plugin_tests floodgate_tests floodgate_plugin_tests
       - run: ctest --preset linux-sanitized
   macos:
     strategy:

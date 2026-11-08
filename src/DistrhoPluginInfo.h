@@ -26,6 +26,10 @@
 #ifdef __APPLE__
 #define DISTRHO_PLUGIN_CLAP_ID "org.stormsurgefx.riptide.au"
 #endif
+#elif defined(STORMSURGE_FLOODGATE)
+#define DISTRHO_PLUGIN_NAME "FloodGate"
+#define DISTRHO_PLUGIN_URI "https://github.com/marrabld/stormsurge-fx/floodgate"
+#define DISTRHO_PLUGIN_UNIQUE_ID UtE0
 #elif defined(STORMSURGE_MAELSTROM)
 // Separate identity from Undertow Preview: existing projects must never acquire
 // an overdrive, and saved Maelstrom settings must not disturb them.

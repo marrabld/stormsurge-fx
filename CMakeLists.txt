@@ -30,6 +30,7 @@ if(APPLE)
     set(whitecap_formats "")
     set(squall_formats "")
     set(riptide_formats vst3 au)
+    set(floodgate_formats "")
 else()
     set(foundation_formats vst3 jack)
     set(preview_formats vst3 jack)
@@ -39,6 +40,9 @@ else()
     set(whitecap_formats vst3)
     set(squall_formats vst3)
     set(riptide_formats vst3)
+    # FloodGate's bypass is effect bypass, not a monitoring consent gate, so it is
+    # plugin-only like Maelstrom and Riptide.
+    set(floodgate_formats vst3)
 endif()
 
 # JACK-only standalone: never silently open a fallback native audio device.
@@ -119,6 +123,20 @@ if(riptide_formats)
     target_compile_definitions(Riptide PUBLIC STORMSURGE_RIPTIDE)
     target_include_directories(Riptide-ui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 endif()
+
+# FloodGate is the noise gate. Its own UtE0 identity and schema keep its state out of
+# every other StormSurge plugin. Its enclosure is drawn in code, but it borrows
+# Maelstrom's prepared LEDs, so the generated Maelstrom artwork header must exist.
+if(floodgate_formats)
+    dpf_add_plugin(FloodGate
+        TARGETS ${floodgate_formats}
+        UI_TYPE opengl
+        FILES_DSP src/FloodGatePlugin.cpp src/FloodGate.cpp
+        FILES_UI src/FloodGateEditor.cpp)
+    target_include_directories(FloodGate PUBLIC src)
+    target_compile_definitions(FloodGate PUBLIC STORMSURGE_FLOODGATE)
+    target_include_directories(FloodGate-ui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+endif()
 # DPF's bundled self-test includes its POSIX thread helper, unavailable to MSVC.
 # Our headless processor tests still run on both platforms.
 if(NOT WIN32)
@@ -132,6 +150,9 @@ if(NOT WIN32)
     endif()
     if(TARGET Riptide)
         target_compile_definitions(Riptide PUBLIC DPF_RUNTIME_TESTING)
+    endif()
+    if(TARGET FloodGate)
+        target_compile_definitions(FloodGate PUBLIC DPF_RUNTIME_TESTING)
     endif()
 endif()
 
@@ -167,6 +188,11 @@ endif()
 if(TARGET Riptide)
     configure_file(assets/runtime/RIPTIDE-NOTICE.md
         "${CMAKE_BINARY_DIR}/bin/notices/Riptide-artwork.md" COPYONLY)
+endif()
+if(TARGET FloodGate)
+    # FloodGate reuses Maelstrom's prepared LEDs, so it carries that notice.
+    configure_file(assets/runtime/MAELSTROM-NOTICE.md
+        "${CMAKE_BINARY_DIR}/bin/notices/FloodGate-artwork.md" COPYONLY)
 endif()
 configure_file(external/dpf/LICENSE "${CMAKE_BINARY_DIR}/bin/notices/DPF-LICENSE.txt" COPYONLY)
 configure_file(external/dpf/dgl/src/pugl-upstream/COPYING "${CMAKE_BINARY_DIR}/bin/notices/Pugl-COPYING.txt" COPYONLY)
@@ -205,6 +231,9 @@ if(BUILD_TESTING)
         tools/AuditionRender.cpp tools/WavFile.cpp src/Riptide.cpp)
     target_include_directories(riptide_audition_tests PRIVATE src tools)
     add_test(NAME riptide_audition COMMAND riptide_audition_tests)
+    add_executable(floodgate_tests tests/FloodGateTests.cpp src/FloodGate.cpp)
+    target_include_directories(floodgate_tests PRIVATE src)
+    add_test(NAME floodgate_core COMMAND floodgate_tests)
     if(APPLE)
         add_executable(mac_au_tests tests/MacAuTests.cpp)
         target_include_directories(mac_au_tests PRIVATE src)
@@ -270,6 +299,10 @@ if(BUILD_TESTING)
                 add_dependencies(vst3_processing_tests Riptide-vst3)
                 add_dependencies(vst3_editor_tests Riptide-vst3)
             endif()
+            if(TARGET FloodGate)
+                add_dependencies(vst3_processing_tests FloodGate-vst3)
+                add_dependencies(vst3_editor_tests FloodGate-vst3)
+            endif()
         endif()
         add_dependencies(vst3_loader_tests UndertowPreview-vst3)
         if(TARGET Whitecap)
@@ -280,6 +313,9 @@ if(BUILD_TESTING)
         endif()
         if(TARGET Riptide)
             add_dependencies(vst3_loader_tests Riptide-vst3)
+        endif()
+        if(TARGET FloodGate)
+            add_dependencies(vst3_loader_tests FloodGate-vst3)
         endif()
         if(WIN32)
             set(preview_module "${CMAKE_BINARY_DIR}/bin/UndertowPreview.vst3/Contents/x86_64-win/UndertowPreview.vst3")
@@ -322,6 +358,14 @@ if(BUILD_TESTING)
                     COMMAND vst3_editor_tests
                         "${CMAKE_BINARY_DIR}/bin/Riptide.vst3/Contents/x86_64-linux/Riptide.so")
             endif()
+            if(TARGET FloodGate)
+                add_test(NAME floodgate_vst3_process
+                    COMMAND vst3_processing_tests
+                        "${CMAKE_BINARY_DIR}/bin/FloodGate.vst3/Contents/x86_64-linux/FloodGate.so")
+                add_test(NAME floodgate_vst3_editor
+                    COMMAND vst3_editor_tests
+                        "${CMAKE_BINARY_DIR}/bin/FloodGate.vst3/Contents/x86_64-linux/FloodGate.so")
+            endif()
         endif()
         if(TARGET Whitecap)
             if(WIN32)
@@ -355,6 +399,17 @@ if(BUILD_TESTING)
             endif()
             add_test(NAME riptide_vst3_loader
                 COMMAND vst3_loader_tests "${riptide_module}" "Riptide" 0.1.0)
+        endif()
+        if(TARGET FloodGate)
+            if(WIN32)
+                set(floodgate_module
+                    "${CMAKE_BINARY_DIR}/bin/FloodGate.vst3/Contents/x86_64-win/FloodGate.vst3")
+            else()
+                set(floodgate_module
+                    "${CMAKE_BINARY_DIR}/bin/FloodGate.vst3/Contents/x86_64-linux/FloodGate.so")
+            endif()
+            add_test(NAME floodgate_vst3_loader
+                COMMAND vst3_loader_tests "${floodgate_module}" "FloodGate" 0.1.0)
         endif()
         if(WIN32)
             set(maelstrom_module
@@ -413,6 +468,15 @@ if(BUILD_TESTING)
         target_link_libraries(riptide_plugin_tests PRIVATE ${CMAKE_DL_LIBS})
     endif()
     add_test(NAME riptide_plugin COMMAND riptide_plugin_tests vst3)
+    add_executable(floodgate_plugin_tests tests/FloodGatePluginTests.cpp
+        src/FloodGatePlugin.cpp src/FloodGate.cpp
+        external/dpf/distrho/src/DistrhoPlugin.cpp)
+    target_include_directories(floodgate_plugin_tests PRIVATE src external/dpf/distrho)
+    target_compile_definitions(floodgate_plugin_tests PRIVATE STORMSURGE_FLOODGATE)
+    if(NOT WIN32)
+        target_link_libraries(floodgate_plugin_tests PRIVATE ${CMAKE_DL_LIBS})
+    endif()
+    add_test(NAME floodgate_plugin COMMAND floodgate_plugin_tests vst3)
     add_executable(preview_tests tests/PreviewTests.cpp src/PreviewPlugin.cpp src/DarkDelay.cpp src/DarkReverb.cpp
         external/dpf/distrho/src/DistrhoPlugin.cpp)
     target_include_directories(preview_tests PRIVATE src external/dpf/distrho)
@@ -468,6 +532,14 @@ if(BUILD_TESTING)
         target_compile_definitions(riptide_gui PRIVATE STORMSURGE_RIPTIDE STORMSURGE_GUI_HARNESS)
         target_link_libraries(riptide_gui PRIVATE dgl-opengl)
     endif()
+    if(TARGET FloodGate)
+        add_executable(floodgate_gui tests/FloodGateGuiSmoke.cpp src/FloodGateEditor.cpp
+            external/dpf/distrho/src/DistrhoUI.cpp)
+        target_include_directories(floodgate_gui PRIVATE src external/dpf/distrho
+            "${CMAKE_CURRENT_BINARY_DIR}/generated")
+        target_compile_definitions(floodgate_gui PRIVATE STORMSURGE_FLOODGATE STORMSURGE_GUI_HARNESS)
+        target_link_libraries(floodgate_gui PRIVATE dgl-opengl)
+    endif()
     # Display-only prototype, not a plugin/standalone processor or release payload.
     configure_file(assets/runtime/MAELSTROM-NOTICE.md
         "${CMAKE_CURRENT_BINARY_DIR}/mockup-notices/Maelstrom-artwork.md" COPYONLY)
@@ -516,6 +588,9 @@ if(BUILD_TESTING)
         if(TARGET riptide_gui)
             target_sources(riptide_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         endif()
+        if(TARGET floodgate_gui)
+            target_sources(floodgate_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
+        endif()
         target_sources(maelstrom_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         target_sources(future_pedal_mockup PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
         target_sources(practice_board_gui PRIVATE external/dpf/distrho/DistrhoUI_macOS.mm)
@@ -532,6 +607,9 @@ if(BUILD_TESTING)
         endif()
         if(TARGET riptide_gui)
             target_link_libraries(riptide_gui PRIVATE ${CMAKE_DL_LIBS})
+        endif()
+        if(TARGET floodgate_gui)
+            target_link_libraries(floodgate_gui PRIVATE ${CMAKE_DL_LIBS})
         endif()
         target_link_libraries(maelstrom_mockup PRIVATE ${CMAKE_DL_LIBS})
         target_link_libraries(future_pedal_mockup PRIVATE ${CMAKE_DL_LIBS})
